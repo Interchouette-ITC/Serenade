@@ -10,3 +10,5 @@ Serenade and apps follow modern Rust error habits (same family as typical `thise
 | Logs | Prefer `Debug` / sources; never put secrets in `Display` |
 
 `Display` is for operators and clients. `Debug` is for developers. Serde is for wire formats, not a substitute for either.
+
+Persistence adapters should reject unsafe SQL parameter bytes via `serenade-contracts` SQL safety (see [PERSISTENCE.md](PERSISTENCE.md)). Map those failures to `PersistenceError::InvalidInput`.

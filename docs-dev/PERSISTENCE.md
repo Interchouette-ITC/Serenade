@@ -36,6 +36,28 @@ Associated types (`Id`, `Product`, `Cart`, …) are defined in the **application
 3. **Snapshots** on cart and order lines (unit price, labels) at mutation time.
 4. **Idempotency** on checkout via `OrderRepository::save_idempotent`.
 5. Integration tests run against Docker Postgres in the application repo.
+6. **SQL safety** (see below) before binding or filtering on request/domain strings.
+
+## SQL safety (injection defense-in-depth)
+
+Parameterized queries / query builders are **mandatory**. Do not build SQL with `format!` or string concat using user or request data. That is not a supported path.
+
+SeaORM (or any ORM) does **not** waive these rules: filter values still go through the same checks.
+
+### Parameter guards (`serenade-contracts`)
+
+Call `reject_unsafe_sql_param` / `SqlSafetyPolicy::reject_param` on strings before `.bind` / `.eq`. The guard rejects NUL and other C0 controls (except tab / LF / CR).
+
+**On by default.** To deliberately take the risk and disable checks:
+
+- process env `SERENADE_DISABLE_SQL_SAFETY=1` (also `true` / `yes` / `on`), or
+- `SqlSafetyPolicy::disabled()` in code
+
+Disabling is an explicit risk acceptance, not a normal production setting.
+
+### Raw SQL with client fragments
+
+Any API that runs SQL text (or fragments) supplied by a client must be behind a product config flag that defaults to **off**. Without that flag, refuse the call. Static migrations and embedded seed SQL are not client fragments.
 
 ## Mock implementations
 

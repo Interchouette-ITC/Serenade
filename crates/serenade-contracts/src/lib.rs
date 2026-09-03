@@ -10,6 +10,7 @@ pub mod error;
 pub mod order;
 pub mod pagination;
 pub mod product;
+pub mod sql_safety;
 pub mod unit_of_work;
 
 pub use cart::CartRepository;
@@ -18,6 +19,10 @@ pub use error::{PersistenceError, RepositoryError};
 pub use order::OrderRepository;
 pub use pagination::PageRequest;
 pub use product::ProductRepository;
+pub use sql_safety::{
+    reject_unsafe_sql_param, reject_unsafe_sql_param_owned, sql_safety_enabled, SqlSafetyPolicy,
+    SQL_SAFETY_DISABLE_ENV,
+};
 pub use unit_of_work::UnitOfWork;
 
 /// Marker for entity identifiers passed into repository traits.
