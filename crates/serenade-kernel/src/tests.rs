@@ -1,8 +1,8 @@
-use super::{App, Application, Bundle, Environment, Kernel, KernelError, KernelPhase};
+use super::{App, Application, BundleInterface, Environment, Kernel, KernelError, KernelPhase};
 
 struct NoopBundle(&'static str);
 
-impl Bundle for NoopBundle {
+impl BundleInterface for NoopBundle {
     fn name(&self) -> &'static str {
         self.0
     }
@@ -10,12 +10,17 @@ impl Bundle for NoopBundle {
 
 struct RecordingBundle {
     name: &'static str,
+    deps: &'static [&'static str],
     events: std::sync::Arc<std::sync::Mutex<Vec<&'static str>>>,
 }
 
-impl Bundle for RecordingBundle {
+impl BundleInterface for RecordingBundle {
     fn name(&self) -> &'static str {
         self.name
+    }
+
+    fn dependencies(&self) -> &'static [&'static str] {
+        self.deps
     }
 
     fn build(&self) -> Result<(), KernelError> {
@@ -42,6 +47,21 @@ impl RecordingBundle {
             })?
             .push(event);
         Ok(())
+    }
+}
+
+struct NamedDeps {
+    name: &'static str,
+    deps: &'static [&'static str],
+}
+
+impl BundleInterface for NamedDeps {
+    fn name(&self) -> &'static str {
+        self.name
+    }
+
+    fn dependencies(&self) -> &'static [&'static str] {
+        self.deps
     }
 }
 
@@ -88,12 +108,14 @@ fn bundles_run_build_boot_then_reverse_shutdown() {
     kernel
         .register_bundle(RecordingBundle {
             name: "first",
+            deps: &[],
             events: events.clone(),
         })
         .unwrap();
     kernel
         .register_bundle(RecordingBundle {
             name: "second",
+            deps: &[],
             events: events.clone(),
         })
         .unwrap();
@@ -105,6 +127,64 @@ fn bundles_run_build_boot_then_reverse_shutdown() {
         ["build", "build", "boot", "boot", "shutdown", "shutdown"]
     );
     assert_eq!(kernel.bundle_names(), ["first", "second"]);
+}
+
+#[test]
+fn dependent_bundle_boots_after_dependency_even_if_registered_first() {
+    let mut kernel = Kernel::new(Environment::Test);
+    kernel
+        .register_bundle(NamedDeps {
+            name: "app",
+            deps: &["framework"],
+        })
+        .unwrap();
+    kernel
+        .register_bundle(NamedDeps {
+            name: "framework",
+            deps: &[],
+        })
+        .unwrap();
+    assert_eq!(kernel.bundle_names(), ["app", "framework"]);
+    kernel.boot().unwrap();
+    assert_eq!(kernel.bundle_names(), ["framework", "app"]);
+}
+
+#[test]
+fn unknown_bundle_dependency_fails_compile() {
+    let mut kernel = Kernel::new(Environment::Test);
+    kernel
+        .register_bundle(NamedDeps {
+            name: "app",
+            deps: &["missing"],
+        })
+        .unwrap();
+    let error = kernel.compile().unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::UnknownBundleDependency {
+            bundle: "app",
+            dependency: "missing",
+        }
+    );
+}
+
+#[test]
+fn cyclic_bundle_dependency_fails_compile() {
+    let mut kernel = Kernel::new(Environment::Test);
+    kernel
+        .register_bundle(NamedDeps {
+            name: "a",
+            deps: &["b"],
+        })
+        .unwrap();
+    kernel
+        .register_bundle(NamedDeps {
+            name: "b",
+            deps: &["a"],
+        })
+        .unwrap();
+    let error = kernel.compile().unwrap_err();
+    assert!(matches!(error, KernelError::CyclicBundleDependency(_)));
 }
 
 #[test]

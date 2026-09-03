@@ -4,11 +4,21 @@ use crate::KernelError;
 
 /// Composition unit registered on a [`Kernel`](crate::Kernel).
 ///
-/// Bundles run `build` during compile, then `boot` and `shutdown` in registration order.
+/// Bundles declare [`Self::dependencies`]; the kernel topologically sorts them
+/// before `build` / `boot` so dependents run after their dependencies.
 /// Default implementations are no-ops so an empty bundle is valid.
-pub trait Bundle: Send + Sync {
+///
+/// `BundleInterface` is the Symfony-shaped name; [`Bundle`] is the same trait.
+pub trait BundleInterface: Send + Sync {
     /// Stable unique name used for duplicate detection and error reports.
     fn name(&self) -> &'static str;
+
+    /// Bundle names that must compile and boot before this one.
+    ///
+    /// Empty by default. Unknown names and cycles fail at [`crate::Kernel::compile`].
+    fn dependencies(&self) -> &'static [&'static str] {
+        &[]
+    }
 
     /// Compile-time wiring (container extensions land with the DI crate).
     ///
@@ -37,3 +47,6 @@ pub trait Bundle: Send + Sync {
         Ok(())
     }
 }
+
+/// Alias for [`BundleInterface`] (Symfony `Bundle` naming habit).
+pub use BundleInterface as Bundle;
