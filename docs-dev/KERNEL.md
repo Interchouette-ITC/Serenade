@@ -49,6 +49,19 @@ Created  →  register bundles (order is preserved)
 
 Factories return `Box<dyn Any + Send + Sync>`; callers downcast with `get_as`.
 
+## Events
+
+`serenade-event` provides a synchronous `EventDispatcher`.
+
+| Concept | Role |
+| --- | --- |
+| `Event` | Named payload (`cart.updated`, `order.placed`, …) |
+| `EventSubscriber` | Handles one event name; higher `priority` runs first |
+| `RegisterEventSubscribersPass` | Collects services tagged `event.subscriber` into `event_dispatcher` |
+| `RecordingSubscriber` / `assert_dispatched` | Test harness for dispatch order |
+
+Dispatch stays in-process. Async transports belong on the messenger component.
+
 ## Request path (intent)
 
 ```text
