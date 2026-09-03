@@ -17,6 +17,6 @@ mod tests {
 
     #[test]
     fn bootstrap_marker_is_non_empty() {
-        assert!(!BOOTSTRAP.is_empty());
+        assert_ne!(BOOTSTRAP, "");
     }
 }
