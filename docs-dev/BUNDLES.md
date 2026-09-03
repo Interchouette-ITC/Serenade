@@ -7,10 +7,10 @@ Bundles are Serenade’s unit of **reusable composition**, analogous to Symfony 
 | Artifact | Example |
 | --- | --- |
 | `DependencyInjection` extension | Register services, parameters |
-| Config schema | `config/packages/serenade_foo.yaml` |
-| Routes | `routes.yaml` or programmatic collection |
+| Config schema | `config/packages/serenade_foo.toml` (YAML still accepted) |
+| Routes | `routes.toml` / `routes.yaml` or programmatic collection |
 | Event subscribers | Tagged listeners |
-| Console commands | `bin/console foo:bar` |
+| Console commands | `bin/console foo:bar` (Serenade console Application) |
 | Public services | Exported interfaces for other bundles |
 
 ## Core vs product bundles
@@ -52,7 +52,7 @@ crates/bundles/serenade-framework/
 ├── src/
 │   ├── SerenadeFrameworkBundle.rs
 │   ├── DependencyInjection/
-│   └── Resources/config/services.yaml
+│   └── Resources/config/services.toml
 └── Cargo.toml
 ```
 

@@ -11,8 +11,8 @@ Serenade
 ├── Event dispatcher
 ├── HTTP foundation / request lifecycle
 ├── Routing
-├── Configuration
-├── Console
+├── Configuration (TOML-first packages)
+├── Console (bin/console analogue)
 ├── Cache
 ├── Security
 ├── Messenger / async jobs
@@ -22,6 +22,17 @@ Serenade
 ├── Extensibility / bundles
 └── Independent components (usable without full stack)
 ```
+
+### Tooling map (concepts, not a PHP port)
+
+| Symfony | Serenade |
+| --- | --- |
+| Composer (`composer.json`, Flex recipes) | **Cargo** + Flex-like **recipes** (`serenade` CLI) |
+| `php bin/console …` | Console application (clap; optional **ratatui** for rich TUI) |
+| `config/packages/*.yaml` | `config/packages/*.toml` preferred; YAML still loaded |
+| `.env` | `.env` / process environment |
+
+Do not invent a second package manager. Cargo owns dependencies; Serenade owns composition (bundles, recipes, console).
 
 Symfony organizes its own features as bundles (`FrameworkBundle`, `SecurityBundle`, `DebugBundle`, …). Serenade follows the same **composition** idea: bundles register services, routes, config, and event subscribers into the kernel.
 

@@ -1,6 +1,6 @@
 # RustaShop on Serenade (illustrative)
 
-**Example only — not a locked RustaShop repo decision.** Shows how a Symfony-shaped product might sit on Serenade.
+**Example only - not a locked RustaShop repo decision.** Shows how a Symfony-shaped product might sit on Serenade.
 
 ## Layering
 
@@ -9,7 +9,7 @@ RustaShop application
 ├── Serenade kernel (lifecycle, DI, events, HTTP foundation, …)
 ├── Serenade + RustaShop bundles
 ├── Chosen persistence (SQLx | SeaORM | Diesel)
-├── Chosen HTTP adapters (Actix kernel API, Axum MCP — current RustaShop doc)
+├── Chosen HTTP adapters (Actix kernel API, Axum MCP - current RustaShop doc)
 └── UIs (Angular, rangular/Leptos) on OpenAPI + realtime
 ```
 
@@ -21,7 +21,7 @@ crates/
 ├── rustashop-api/          # HTTP adapter: Actix (product choice today)
 ├── rustashop-mcp/          # HTTP adapter: Axum MCP sidecar
 ├── rustashop-domain/       # Pure domain (no Serenade imports in entities)
-├── rustashop-persistence/  # SQLx OR SeaORM OR Diesel — app choice
+├── rustashop-persistence/  # SQLx OR SeaORM OR Diesel - app choice
 ├── rustashop-events/       # Domain events + Serenade dispatcher wiring
 ├── rustashop-jobs/         # Messenger transports / workers
 └── rustashop-extension/    # Extension host glue (WIT, sandbox bridges)
@@ -52,7 +52,8 @@ Bundles then **compose** these modules: routes, services, subscribers, config.
 | Checkout side effects | Event dispatcher + messenger |
 | Admin + API auth | Security component |
 | Config per env | Config component |
-| CLI (migrate, seed, worker) | Console |
+| CLI (migrate, seed, worker) | Console (#8; optional ratatui) |
+| App scaffolding / recipes | Flex-like recipes (#30); Cargo for deps |
 | DTO API ↔ JSON | Serializer + validator |
 
 ## What stays RustaShop-specific

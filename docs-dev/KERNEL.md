@@ -12,8 +12,8 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **HTTP foundation** | Request/response types, attributes, lifecycle (framework-agnostic core) |
 | **HTTP kernel** | Middleware pipeline, controller/action resolution |
 | **Routing** | Route collection, requirements, method constraints |
-| **Configuration** | Layered config (defaults, env, bundle config files) |
-| **Console** | CLI application, commands, scheduled task entry |
+| **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
+| **Console** | CLI application (`bin/console` analogue), commands, optional rich TUI |
 | **Cache** | PSR-like cache contracts; in-memory / Redis adapters |
 | **Security** | AuthN/Z hooks, firewall abstraction, voter pattern |
 | **Messenger** | Command/query/event bus; async transport adapters |
@@ -90,16 +90,22 @@ RustaShop jobs (webhooks retry, agent runs, sandbox) should plug into messenger,
 
 ## Configuration layers
 
-`serenade-config` loads YAML and TOML mappings, deep-merges them, interpolates `${VAR}` / `${VAR:-default}`, and flattens dotted keys into the DI `ParameterBag`.
+`serenade-config` loads **TOML** and YAML mappings, deep-merges them, interpolates `${VAR}` / `${VAR:-default}`, and flattens dotted keys into the DI `ParameterBag`.
+
+**Preference:** new apps and Serenade examples use `config/packages/*.toml`. YAML remains supported for Symfony familiarity. There is no PHP/XML config track.
 
 ```text
-defaults (YAML or TOML)
-    + config/packages/*.{yaml,yml,toml}  (sorted by file name)
+defaults (TOML or YAML)
+    + config/packages/*.{toml,yaml,yml}  (sorted by file name)
     + env-specific overlays
     + secrets (environment)
 ```
 
 `load_packages` is the bundle package loader. Mappings merge; scalars and sequences in an overlay replace the base value. Unset variables without a default fail load.
+
+## Console
+
+The console component is Serenade’s `bin/console` analogue: discoverable commands, `--env` / `--no-debug`, kernel boot for ops (migrate, workers, debug). Plain commands use a clap-style Application; interactive debug surfaces may use **ratatui**. Flex-like app scaffolding lives beside console (recipes write TOML packages and register bundles; Cargo remains the package manager).
 
 ## Extension surface (kernel-level)
 
