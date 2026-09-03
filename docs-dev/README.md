@@ -36,6 +36,8 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [#17](https://github.com/Interchouette-ITC/Serenade/issues/17) | Cargo workspace and CI |
 | [#18–#20](https://github.com/Interchouette-ITC/Serenade/issues/18) | Starter tasks (workspace, bundles, Actix adapter) |
 | [#30](https://github.com/Interchouette-ITC/Serenade/issues/30) | Flex-like recipes and app scaffolding |
+| [#56](https://github.com/Interchouette-ITC/Serenade/issues/56) | Web Debug Toolbar / Profiler (logs + DB/query panels) |
+| [#57](https://github.com/Interchouette-ITC/Serenade/issues/57) | Observability / structured logging (Monolog-like) |
 
 Config packages prefer **TOML**; console is the `bin/console` analogue (optional ratatui for rich TUI). Composer maps to **Cargo**, not a second package manager.
 
