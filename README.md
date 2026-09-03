@@ -1,22 +1,27 @@
 # Serenade
 
+<p align="center">
+  <img src="docs/brand/logo-banner-eyes-readme.png" alt="Serenade: Rust application framework" width="480" />
+</p>
+
 Symfony-oriented application framework for Rust. **Not** Rails-style, **not** Django-style: composable kernel components and bundles around which you build products.
 
 Serenade does **not** impose SQLx, SeaORM, Diesel, rangular, Leptos, or Actix vs Axum for your product HTTP surface. It provides architecture, contracts, and reusable components; the application chooses persistence and UI stacks.
 
-**Primary consumer (in progress):** [RustaShop](https://github.com/Interchouette-ITC/RustaShop) — commerce kernel on Serenade, the way PrestaShop builds on Symfony.
+**Primary consumer (in progress):** [RustaShop](https://github.com/Interchouette-ITC/RustaShop) - commerce kernel on Serenade, the way PrestaShop builds on Symfony.
 
-**Status:** specification and Cursor nest. No stable crates yet.
+**Status:** kernel crates on `dev` (lifecycle, DI, events, config, contracts). HTTP foundation and bundles are next.
 
 ## Docs
 
 Implementers start here:
 
-- [`docs-dev/README.md`](docs-dev/README.md) — index
-- [`docs-dev/VISION.md`](docs-dev/VISION.md) — Symfony analogy, non-goals
-- [`docs-dev/KERNEL.md`](docs-dev/KERNEL.md) — kernel components
-- [`docs-dev/BUNDLES.md`](docs-dev/BUNDLES.md) — bundles and extension model
-- [`docs-dev/RUSTASHOP.md`](docs-dev/RUSTASHOP.md) — example application layout (illustrative)
+- [`docs-dev/README.md`](docs-dev/README.md) - index
+- [`docs-dev/VISION.md`](docs-dev/VISION.md) - Symfony analogy, non-goals
+- [`docs-dev/KERNEL.md`](docs-dev/KERNEL.md) - kernel components
+- [`docs-dev/BUNDLES.md`](docs-dev/BUNDLES.md) - bundles and extension model
+- [`docs-dev/RUSTASHOP.md`](docs-dev/RUSTASHOP.md) - example application layout (illustrative)
+- Brand sizes: [`docs/brand/`](docs/brand/)
 
 ## Relationship to RustaShop
 
