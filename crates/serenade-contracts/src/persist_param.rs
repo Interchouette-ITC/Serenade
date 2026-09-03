@@ -26,11 +26,7 @@ const LEGACY_SQL_SAFETY_DISABLE_ENV: &str = "SERENADE_DISABLE_SQL_SAFETY";
 /// mutating the environment.
 #[must_use]
 pub fn persist_param_check_enabled() -> bool {
-    if env_disables(PERSIST_PARAM_CHECK_DISABLE_ENV) || env_disables(LEGACY_SQL_SAFETY_DISABLE_ENV)
-    {
-        return false;
-    }
-    true
+    !(env_disables(PERSIST_PARAM_CHECK_DISABLE_ENV) || env_disables(LEGACY_SQL_SAFETY_DISABLE_ENV))
 }
 
 fn env_disables(name: &str) -> bool {
