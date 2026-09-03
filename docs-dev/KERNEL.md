@@ -62,20 +62,21 @@ Factories return `Box<dyn Any + Send + Sync>`; callers downcast with `get_as`.
 
 Dispatch stays in-process. Async transports belong on the messenger component.
 
-## Request path (intent)
+## Request path
+
+`serenade-http` owns framework-agnostic types. Thin server adapters copy bytes in and out.
 
 ```text
 HTTP adapter (Actix / Axum / …)
-    → HTTP foundation (Request)
-    → Middleware stack
-    → Router
-    → Controller / handler
-    → Domain (application)
-    → Event dispatch
+    → Request (method, path, headers, body, attributes)
+    → Middleware stack (first registered layer is outermost)
+    → Controller (`RequestHandler`)
     → Response
 ```
 
-The **adapter** is thin. Serenade HTTP foundation and kernel stay server-agnostic.
+`HttpKernel::handle` always returns a `Response`. Handler and middleware errors go through `ExceptionHandler` (`DefaultExceptionHandler` maps `HttpError` status and message to `text/plain`).
+
+Routing (route collection, matcher, bundle loaders) is a separate component. Adapters that bind a listener live in their own crates.
 
 ## Messenger and jobs
 
