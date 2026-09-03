@@ -23,6 +23,26 @@ pub trait Application {
 }
 
 /// Default application: a kernel plus ordered bundle registration.
+///
+/// # Examples
+///
+/// ```
+/// use serenade_kernel::{App, Application, Bundle, Environment, KernelPhase};
+///
+/// struct Demo;
+///
+/// impl Bundle for Demo {
+///     fn name(&self) -> &'static str {
+///         "demo"
+///     }
+/// }
+///
+/// let mut app = App::new(Environment::Dev);
+/// app.register_bundle(Demo).expect("register");
+/// app.boot().expect("boot");
+/// assert_eq!(app.kernel().bundle_names(), vec!["demo"]);
+/// assert_eq!(app.kernel().phase(), KernelPhase::Booted);
+/// ```
 pub struct App {
     kernel: Kernel,
 }

@@ -29,6 +29,18 @@ impl Display for KernelPhase {
 }
 
 /// Application kernel: environment, bundle order, and lifecycle.
+///
+/// # Examples
+///
+/// ```
+/// use serenade_kernel::{App, Application, Environment, KernelPhase};
+///
+/// let mut app = App::new(Environment::Test);
+/// app.boot().expect("boot");
+/// assert_eq!(app.kernel().phase(), KernelPhase::Booted);
+/// app.shutdown().expect("shutdown");
+/// assert_eq!(app.kernel().phase(), KernelPhase::Shutdown);
+/// ```
 pub struct Kernel {
     environment: Environment,
     debug: bool,

@@ -11,6 +11,16 @@ pub struct PageRequest {
 
 impl PageRequest {
     /// First page with the given size.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use serenade_contracts::PageRequest;
+    ///
+    /// let page = PageRequest::first(20);
+    /// assert_eq!(page.limit, 20);
+    /// assert_eq!(page.offset, 0);
+    /// ```
     #[must_use]
     pub const fn first(limit: u32) -> Self {
         Self { limit, offset: 0 }

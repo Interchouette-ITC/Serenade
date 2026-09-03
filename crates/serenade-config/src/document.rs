@@ -38,6 +38,19 @@ impl Config {
     /// # Errors
     ///
     /// Returns [`ConfigError`] when TOML is invalid or the root is not a mapping.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use serenade_config::Config;
+    ///
+    /// let base = Config::from_toml("[app]\nname = \"shop\"\n").expect("toml");
+    /// let overlay = Config::from_toml("[app]\ndebug = true\n").expect("toml");
+    /// let merged = base.merged(&overlay);
+    /// let params = merged.parameters();
+    /// assert_eq!(params.get("app.name").map(String::as_str), Some("shop"));
+    /// assert_eq!(params.get("app.debug").map(String::as_str), Some("true"));
+    /// ```
     pub fn from_toml(text: &str) -> Result<Self, ConfigError> {
         let table: toml::Table = text.parse()?;
         Self::from_value(serde_json::to_value(table)?)
