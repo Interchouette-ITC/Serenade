@@ -1,18 +1,24 @@
 # Serenade developer targets
+#
+# Layout (GNU Make includes):
+#   make/common.mk  - shared variables
+#   make/ci.mk      - lint / test / doc / ci
+#   make/cli.mk     - serenade / tui / console aliases
+#   make/docker.mk  - container targets (placeholder until needed)
 
-SHELL := /bin/bash
-ROOT := $(abspath .)
-CARGO ?= cargo
-CLIPPY_FLAGS := -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
-RUSTDOCFLAGS ?= -D warnings
+include make/common.mk
+include make/ci.mk
+include make/cli.mk
+include make/docker.mk
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check test lint format format-check doc doc-open clean ci
+.PHONY: help
 
 help:
 	@echo "Serenade targets"
 	@echo ""
+	@echo "Quality (make/ci.mk):"
 	@echo "  make check        cargo check --workspace"
 	@echo "  make test         cargo test --workspace"
 	@echo "  make lint         fmt check + clippy (workspace)"
@@ -21,29 +27,19 @@ help:
 	@echo "  make format       cargo fmt"
 	@echo "  make ci           lint + test + doc"
 	@echo "  make clean        cargo clean"
-
-check:
-	cd $(ROOT) && $(CARGO) check --workspace
-
-test:
-	cd $(ROOT) && $(CARGO) test --workspace
-
-format:
-	cd $(ROOT) && $(CARGO) fmt
-
-format-check:
-	cd $(ROOT) && $(CARGO) fmt --check
-
-lint: format-check
-	cd $(ROOT) && $(CARGO) clippy --workspace --all-targets -- $(CLIPPY_FLAGS)
-
-doc:
-	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps
-
-doc-open: doc
-	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps --open
-
-ci: lint test doc
-
-clean:
-	cd $(ROOT) && $(CARGO) clean
+	@echo ""
+	@echo "CLI / demo (make/cli.mk) - prefer these over cargo run -p ...:"
+	@echo "  make serenade                 scaffolding CLI (pass ARGS=...)"
+	@echo "  make serenade ARGS='--help'"
+	@echo "  make serenade ARGS='new demo --path /tmp'"
+	@echo "  make serenade ARGS='recipe list'"
+	@echo "  make serenade ARGS='recipe apply security --no-cargo'"
+	@echo "  make tui   / make serenade-tui   guided recipe picker (ARGS for flags)"
+	@echo "  make tui ARGS='--no-cargo'"
+	@echo "  make recipe-list"
+	@echo "  make console ARGS='serenade:about'"
+	@echo "  make console ARGS='--interactive'"
+	@echo "  make demo"
+	@echo ""
+	@echo "Docker (make/docker.mk):"
+	@echo "  make docker-help"

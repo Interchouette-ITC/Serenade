@@ -6,16 +6,16 @@ Serenade’s `bin/console` analogue lives in `serenade-console`.
 
 | Symfony                  | Serenade                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------- |
-| `php bin/console …`      | App binary (for example `cargo run -p serenade-demo-app --bin console`)      |
+| `php bin/console ...`      | App binary (for example `make console` / `make console ARGS='...'`)          |
 | Console component        | `serenade-console` + `Command` trait                                         |
 | Tagged `console.command` | DI tag `console.command` + `RegisterCommandsPass`                            |
 | Flex scaffolding         | [`RECIPES.md`](RECIPES.md) (`serenade` CLI); Cargo stays the package manager |
 
 ## Global flags
 
-- `--env` / `APP_ENV` — runtime environment (`dev`, `test`, `prod`, or custom)
-- `--no-debug` — force debug off even in `dev` / `test`
-- `--interactive` / `-i` — REPL with ↑/↓ history (`rustyline`, file `~/.serenade_history`)
+- `--env` / `APP_ENV` - runtime environment (`dev`, `test`, `prod`, or custom)
+- `--no-debug` - force debug off even in `dev` / `test`
+- `--interactive` / `-i` - REPL with ↑/↓ history (`rustyline`, file `~/.serenade_history`)
 
 With no command (or `list`), the application prints registered commands. Interactive mode lists commands once, then prompts `serenade>` until `quit` / `exit`.
 
@@ -33,5 +33,5 @@ With no command (or `list`), the application prints registered commands. Interac
 Example:
 
 ```bash
-cargo run -p serenade-demo-app --bin console -- --interactive
+make console ARGS='--interactive'
 ```

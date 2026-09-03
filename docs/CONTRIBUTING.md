@@ -31,6 +31,27 @@ make ci
 
 Clippy uses `-D warnings` with the pedantic and nursery groups. Do not add `#[allow(clippy::too_many_arguments)]`, `too_many_lines`, or `dead_code`.
 
+## Make layout
+
+The root `Makefile` includes fragments under `make/`:
+
+| File | Role |
+| --- | --- |
+| `make/common.mk` | Shared variables (`ROOT`, `CARGO`, `ARGS`) |
+| `make/ci.mk` | Quality gates (`lint`, `test`, `doc`, `ci`) |
+| `make/cli.mk` | Day-to-day aliases (`serenade`, `tui`, `console`, `demo`) |
+| `make/docker.mk` | Container targets (placeholder until compose recipes land) |
+
+Examples:
+
+```bash
+make serenade ARGS='recipe list'
+make tui ARGS='--no-cargo'
+make console ARGS='serenade:about'
+```
+
+Run `make help` for the full list.
+
 ## Documentation
 
 - **Rust:** module docs (`//!`) on every crate root; `///` on every `pub` item.

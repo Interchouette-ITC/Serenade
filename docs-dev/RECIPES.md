@@ -19,8 +19,11 @@ clap stays the parser. cling structures implementation. Completions and man page
 Build the CLI from this workspace:
 
 ```bash
-cargo run -p serenade-cli --bin serenade -- --help
+make serenade ARGS='--help'
+# or: make tui / make recipe-list
 ```
+
+Prefer Make aliases (`make/cli.mk`) over `cargo run -p serenade-cli --bin serenade -- ...`.
 
 | Command                       | Role                                                                                                   |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
