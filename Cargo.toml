@@ -1,0 +1,39 @@
+[workspace]
+members = [
+    "crates/serenade-kernel",
+    "crates/serenade-di",
+    "crates/serenade-event",
+    "crates/serenade-http",
+    "crates/serenade-config",
+    "crates/serenade-contracts",
+    "crates/serenade-bundle",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+version = "0.1.0"
+authors = ["Interchouette"]
+repository = "https://github.com/Interchouette-ITC/Serenade"
+rust-version = "1.75"
+
+[workspace.dependencies]
+serenade-kernel = { path = "crates/serenade-kernel", version = "0.1.0" }
+serenade-di = { path = "crates/serenade-di", version = "0.1.0" }
+serenade-event = { path = "crates/serenade-event", version = "0.1.0" }
+serenade-http = { path = "crates/serenade-http", version = "0.1.0" }
+serenade-config = { path = "crates/serenade-config", version = "0.1.0" }
+serenade-contracts = { path = "crates/serenade-contracts", version = "0.1.0" }
+serenade-bundle = { path = "crates/serenade-bundle", version = "0.1.0" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[workspace.lints.rust]
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
