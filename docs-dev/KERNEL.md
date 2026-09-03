@@ -118,7 +118,7 @@ defaults (TOML or YAML)
 
 ## Console
 
-The console component is Serenade’s `bin/console` analogue: discoverable commands, `--env` / `--no-debug`, kernel boot for ops (migrate, workers, debug). Plain commands use a clap-style Application; interactive debug surfaces may use **ratatui**. Flex-like app scaffolding lives beside console (recipes write TOML packages and register bundles; Cargo remains the package manager).
+The console component is Serenade’s `bin/console` analogue: discoverable commands, `--env` / `--no-debug`, kernel boot for ops (migrate, workers, debug). Plain commands use clap; interactive debug surfaces may use **ratatui**. See [CONSOLE.md](CONSOLE.md). Flex-like app scaffolding is separate (#30); Cargo remains the package manager.
 
 ## Extension surface (kernel-level)
 

@@ -16,6 +16,7 @@ path = "src/main.rs"
 [dependencies]
 serenade-bundle = { workspace = true }
 serenade-config = { workspace = true }
+serenade-console = { workspace = true }
 serenade-di = { workspace = true }
 serenade-event = { workspace = true }
 serenade-http = { workspace = true }

@@ -50,6 +50,12 @@ impl Container {
         self.definitions.get(resolved)
     }
 
+    /// All registered service definitions (after alias resolution keys).
+    #[must_use]
+    pub fn definitions(&self) -> Vec<&ServiceDefinition> {
+        self.definitions.values().collect()
+    }
+
     /// Resolves a service by id or alias.
     ///
     /// # Errors

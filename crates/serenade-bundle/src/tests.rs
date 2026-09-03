@@ -87,6 +87,11 @@ fn framework_extension_wires_router_config_and_dispatcher() {
         .get_as::<EventDispatcher>(DISPATCHER_SERVICE)
         .expect("dispatcher");
     assert!(dispatcher.is_empty());
+    let console = container
+        .get_as::<serenade_console::Application>(super::CONSOLE_APPLICATION_SERVICE)
+        .expect("console");
+    assert!(console.find("serenade:about").is_some());
+    assert!(console.find("debug:container").is_some());
     assert!(Arc::strong_count(&router) >= 1);
 }
 
