@@ -17,6 +17,7 @@ pub struct ServiceDefinition {
     id: String,
     scope: Scope,
     dependencies: Vec<Reference>,
+    tags: Vec<String>,
 }
 
 impl ServiceDefinition {
@@ -27,6 +28,7 @@ impl ServiceDefinition {
             id: id.into(),
             scope: Scope::Singleton,
             dependencies: Vec::new(),
+            tags: Vec::new(),
         }
     }
 
@@ -41,6 +43,13 @@ impl ServiceDefinition {
     #[must_use]
     pub fn with_dependencies(mut self, dependencies: Vec<Reference>) -> Self {
         self.dependencies = dependencies;
+        self
+    }
+
+    /// Adds a service tag (for example `event.subscriber`).
+    #[must_use]
+    pub fn with_tag(mut self, tag: impl Into<String>) -> Self {
+        self.tags.push(tag.into());
         self
     }
 
@@ -60,5 +69,11 @@ impl ServiceDefinition {
     #[must_use]
     pub fn dependencies(&self) -> &[Reference] {
         &self.dependencies
+    }
+
+    /// Service tags used by compile passes.
+    #[must_use]
+    pub fn tags(&self) -> &[String] {
+        &self.tags
     }
 }

@@ -94,6 +94,7 @@ name = "serenade-event"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serenade-di",
  "thiserror",
 ]
 

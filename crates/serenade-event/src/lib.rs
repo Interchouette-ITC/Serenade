@@ -2,21 +2,25 @@
 //!
 //! Subscribers are registered by bundles; dispatch stays synchronous by default.
 
+mod compile_pass;
+mod dispatcher;
+mod error;
+mod harness;
+mod subscriber;
+
+pub use compile_pass::{
+    RegisterEventSubscribersPass, SubscriberService, DISPATCHER_SERVICE, SUBSCRIBER_TAG,
+};
+pub use dispatcher::EventDispatcher;
+pub use error::EventError;
+pub use harness::{assert_dispatched, RecordingSubscriber};
+pub use subscriber::{Event, EventSubscriber};
+
 /// Compile-time crate version for diagnostics.
 #[must_use]
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-/// Event integration marker until the dispatcher API lands.
-pub const BOOTSTRAP: &str = "event-bootstrap";
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn version_is_semver_shape() {
-        assert!(version().contains('.'));
-    }
-}
+mod tests;
