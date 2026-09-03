@@ -1,6 +1,6 @@
 //! Default application wrapper around [`Kernel`].
 
-use crate::{Bundle, Environment, Kernel, KernelError};
+use crate::{BundleInterface, Environment, Kernel, KernelError};
 
 /// Host that owns a [`Kernel`].
 pub trait Application {
@@ -27,11 +27,11 @@ pub trait Application {
 /// # Examples
 ///
 /// ```
-/// use serenade_kernel::{App, Application, Bundle, Environment, KernelPhase};
+/// use serenade_kernel::{App, Application, BundleInterface, Environment, KernelPhase};
 ///
 /// struct Demo;
 ///
-/// impl Bundle for Demo {
+/// impl BundleInterface for Demo {
 ///     fn name(&self) -> &'static str {
 ///         "demo"
 ///     }
@@ -68,7 +68,10 @@ impl App {
     /// # Errors
     ///
     /// Propagates [`Kernel::register_bundle`] errors.
-    pub fn register_bundle(&mut self, bundle: impl Bundle + 'static) -> Result<(), KernelError> {
+    pub fn register_bundle(
+        &mut self,
+        bundle: impl BundleInterface + 'static,
+    ) -> Result<(), KernelError> {
         self.kernel.register_bundle(bundle)
     }
 }

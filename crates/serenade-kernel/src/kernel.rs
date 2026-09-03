@@ -2,7 +2,7 @@
 
 use std::fmt::{Display, Formatter};
 
-use crate::{Bundle, Environment, KernelError};
+use crate::{BundleInterface, BundleRegistry, Environment, KernelError};
 
 /// Lifecycle phase of a [`Kernel`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -44,7 +44,8 @@ impl Display for KernelPhase {
 pub struct Kernel {
     environment: Environment,
     debug: bool,
-    bundles: Vec<Box<dyn Bundle>>,
+    registry: BundleRegistry,
+    bundles: Vec<Box<dyn BundleInterface>>,
     phase: KernelPhase,
 }
 
@@ -57,6 +58,7 @@ impl Kernel {
         Self {
             environment,
             debug: environment.is_debug(),
+            registry: BundleRegistry::new(),
             bundles: Vec::new(),
             phase: KernelPhase::Created,
         }
@@ -87,10 +89,16 @@ impl Kernel {
         self.phase
     }
 
-    /// Registered bundle names in order.
+    /// Bundle names in effective order.
+    ///
+    /// Before compile: registration order. After compile: dependency order.
     #[must_use]
     pub fn bundle_names(&self) -> Vec<&'static str> {
-        self.bundles.iter().map(|bundle| bundle.name()).collect()
+        if self.phase == KernelPhase::Created {
+            self.registry.names()
+        } else {
+            self.bundles.iter().map(|bundle| bundle.name()).collect()
+        }
     }
 
     /// Registers a bundle. Must run while the kernel is [`KernelPhase::Created`].
@@ -99,23 +107,24 @@ impl Kernel {
     ///
     /// Returns [`KernelError::InvalidState`] after compile, or
     /// [`KernelError::DuplicateBundle`] when `bundle.name()` is already registered.
-    pub fn register_bundle(&mut self, bundle: impl Bundle + 'static) -> Result<(), KernelError> {
+    pub fn register_bundle(
+        &mut self,
+        bundle: impl BundleInterface + 'static,
+    ) -> Result<(), KernelError> {
         self.ensure_phase("register", KernelPhase::Created)?;
-        let name = bundle.name();
-        if self.bundles.iter().any(|existing| existing.name() == name) {
-            return Err(KernelError::DuplicateBundle(name));
-        }
-        self.bundles.push(Box::new(bundle));
-        Ok(())
+        self.registry.register(bundle)
     }
 
-    /// Runs [`Bundle::build`] on each bundle in registration order.
+    /// Sorts bundles by dependencies, then runs [`BundleInterface::build`] in that order.
     ///
     /// # Errors
     ///
-    /// Returns [`KernelError::InvalidState`] unless the kernel is [`KernelPhase::Created`].
+    /// Returns [`KernelError::InvalidState`] unless the kernel is [`KernelPhase::Created`],
+    /// or a dependency-graph / bundle `build` error.
     pub fn compile(&mut self) -> Result<(), KernelError> {
         self.ensure_phase("compile", KernelPhase::Created)?;
+        let registry = std::mem::take(&mut self.registry);
+        self.bundles = registry.sorted()?;
         for bundle in &self.bundles {
             bundle
                 .build()
@@ -125,7 +134,7 @@ impl Kernel {
         Ok(())
     }
 
-    /// Compiles if needed, then runs [`Bundle::boot`] in registration order.
+    /// Compiles if needed, then runs [`BundleInterface::boot`] in dependency order.
     ///
     /// # Errors
     ///
@@ -144,7 +153,7 @@ impl Kernel {
         Ok(())
     }
 
-    /// Runs [`Bundle::shutdown`] in reverse registration order.
+    /// Runs [`BundleInterface::shutdown`] in reverse dependency order.
     ///
     /// # Errors
     ///
@@ -179,7 +188,7 @@ impl std::fmt::Debug for Kernel {
             .field("debug", &self.debug)
             .field("phase", &self.phase)
             .field("bundles", &self.bundle_names())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

@@ -8,12 +8,14 @@ mod bundle;
 mod environment;
 mod error;
 mod kernel;
+mod registry;
 
 pub use application::{App, Application};
-pub use bundle::Bundle;
+pub use bundle::{Bundle, BundleInterface};
 pub use environment::Environment;
 pub use error::KernelError;
 pub use kernel::{Kernel, KernelPhase};
+pub use registry::BundleRegistry;
 
 /// Compile-time crate version for diagnostics and health surfaces.
 #[must_use]

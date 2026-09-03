@@ -1047,8 +1047,7 @@ dependencies = [
 name = "serenade-bundle"
 version = "0.1.0"
 dependencies = [
- "serde",
- "thiserror",
+ "serenade-kernel",
 ]
 
 [[package]]

@@ -26,13 +26,13 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 ## Lifecycle
 
 ```text
-Created  →  register bundles (order is preserved)
-         →  compile (`Bundle::build`)
-         →  boot (`Bundle::boot`)
-         →  shutdown (`Bundle::shutdown`, reverse order)
+Created  →  register bundles (any order)
+         →  compile (sort by dependencies, then `BundleInterface::build`)
+         →  boot (`BundleInterface::boot`)
+         →  shutdown (`BundleInterface::shutdown`, reverse dependency order)
 ```
 
-`serenade-kernel` exposes `Kernel`, `App`, and `Environment` (`dev` / `test` / `prod`). Debug defaults on for `dev` and `test`. An application with zero bundles is a valid boot.
+`serenade-kernel` exposes `Kernel`, `App`, `BundleInterface` / `Bundle`, `BundleRegistry`, and `Environment` (`dev` / `test` / `prod`). Debug defaults on for `dev` and `test`. An application with zero bundles is a valid boot.
 
 `Kernel::boot` compiles first when the kernel is still in `Created`. After `Shutdown` the kernel is terminal.
 

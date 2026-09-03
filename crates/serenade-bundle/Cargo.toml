@@ -9,8 +9,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-serde = { workspace = true }
-thiserror = { workspace = true }
+serenade-kernel = { workspace = true }
 
 [lints]
 workspace = true

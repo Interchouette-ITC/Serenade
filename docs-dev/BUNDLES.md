@@ -27,11 +27,13 @@ Symfony’s own features ship as bundles; RustaShop commerce features should too
 
 ```text
 Kernel / App
-    ├── register_bundle (dependencies first)
-    ├── compile (`Bundle::build`)
-    ├── boot (`Bundle::boot`)
-    └── shutdown (`Bundle::shutdown`, reverse order)
+    ├── register_bundle (any order)
+    ├── compile (topological sort by BundleInterface::dependencies, then build)
+    ├── boot (`BundleInterface::boot`)
+    └── shutdown (`BundleInterface::shutdown`, reverse dependency order)
 ```
+
+`BundleInterface` (alias `Bundle`) declares `name`, optional `dependencies`, then `build` / `boot` / `shutdown`. `BundleRegistry` sorts dependents after their dependencies; unknown deps and cycles fail at compile.
 
 Bundles implement `RouteLoader` (`serenade-http`) to contribute routes into a `RouteCollection`. Bundle `CompilePass` registrations land with `serenade-di`.
 

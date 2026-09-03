@@ -16,9 +16,20 @@ pub enum KernelError {
         /// Current lifecycle phase.
         state: KernelPhase,
     },
-    /// Two bundles were registered with the same [`Bundle::name`](crate::Bundle::name).
+    /// Two bundles were registered with the same [`BundleInterface::name`](crate::BundleInterface::name).
     #[error("bundle `{0}` is already registered")]
     DuplicateBundle(&'static str),
+    /// A bundle listed a dependency that was never registered.
+    #[error("bundle `{bundle}` depends on unknown bundle `{dependency}`")]
+    UnknownBundleDependency {
+        /// Bundle that declared the dependency.
+        bundle: &'static str,
+        /// Missing dependency name.
+        dependency: &'static str,
+    },
+    /// Bundle dependencies form a cycle; `0` is one member of the cycle.
+    #[error("cyclic bundle dependency involving `{0}`")]
+    CyclicBundleDependency(&'static str),
     /// A bundle returned an error from `build`, `boot`, or `shutdown`.
     #[error("bundle `{bundle}` failed during {phase}: {message}")]
     Bundle {
