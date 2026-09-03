@@ -12,6 +12,7 @@ rust-version.workspace = true
 clap = { workspace = true }
 crossterm = { workspace = true }
 ratatui = { workspace = true }
+rustyline = { workspace = true }
 serenade-di = { workspace = true }
 serenade-kernel = { workspace = true }
 thiserror = { workspace = true }

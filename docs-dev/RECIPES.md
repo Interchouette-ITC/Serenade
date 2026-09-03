@@ -4,12 +4,12 @@ Serenade reproduces the **Flex recipe** concept on top of **Cargo**. Cargo owns 
 
 ## CLI stack
 
-| Crate | Role |
-| --- | --- |
-| **clap** | Command tree and argument parsing |
-| **cling** | Handler dispatch on top of clap (no giant `match`) |
-| **clap_complete** | Shell completions (`serenade completion <shell>`) |
-| **clap_mangen** | Man page (`serenade man [--output PATH]`) |
+| Crate             | Role                                               |
+| ----------------- | -------------------------------------------------- |
+| **clap**          | Command tree and argument parsing                  |
+| **cling**         | Handler dispatch on top of clap (no giant `match`) |
+| **clap_complete** | Shell completions (`serenade completion <shell>`)  |
+| **clap_mangen**   | Man page (`serenade man [--output PATH]`)          |
 
 clap stays the parser. cling structures implementation. Completions and man pages are generated from the same `Command` tree (`CommandFactory` + `debug_assert` in tests).
 
@@ -21,13 +21,13 @@ Build the CLI from this workspace:
 cargo run -p serenade-cli --bin serenade -- --help
 ```
 
-| Command | Role |
-| --- | --- |
-| `serenade new <name>` | Create an app skeleton (`config/packages/*.toml`, `.env.example`, `src/main.rs`, `src/bin/console.rs`) |
-| `serenade recipe list` | List embedded recipes |
-| `serenade recipe apply <id>` | Copy recipe files into an app root; run `cargo add` for declared crates unless `--no-cargo` |
-| `serenade completion <shell>` | Print shell completions |
-| `serenade man` | Print a man page (or `--output PATH`) |
+| Command                       | Role                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `serenade new <name>`         | Create an app skeleton (`config/packages/*.toml`, `.env.example`, `src/main.rs`, `src/bin/console.rs`) |
+| `serenade recipe list`        | List embedded recipes                                                                                  |
+| `serenade recipe apply <id>`  | Copy recipe files into an app root; run `cargo add` for declared crates unless `--no-cargo`            |
+| `serenade completion <shell>` | Print shell completions                                                                                |
+| `serenade man`                | Print a man page (or `--output PATH`)                                                                  |
 
 Flags:
 
@@ -64,9 +64,9 @@ Default format is **TOML** under `config/packages/`. YAML remains loadable throu
 
 ## Console vs CLI
 
-| Surface | Crate | Role |
-| --- | --- | --- |
-| Scaffolding | `serenade-cli` (`serenade` binary) | `new` / `recipe` / completions / man |
-| In-app console | `serenade-console` | `bin/console` analogue (`serenade:about`, `debug:container`, …) |
+| Surface        | Crate                              | Role                                                            |
+| -------------- | ---------------------------------- | --------------------------------------------------------------- |
+| Scaffolding    | `serenade-cli` (`serenade` binary) | `new` / `recipe` / completions / man                            |
+| In-app console | `serenade-console`                 | `bin/console` analogue (`serenade:about`, `debug:container`, …) |
 
 Do not invent a second package manager. In-app console still uses clap (+ optional ratatui for interactive debug); scaffolding uses clap + cling.
