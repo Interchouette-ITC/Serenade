@@ -17,6 +17,9 @@
 //! }
 //! ```
 //!
+//! App skeletons that only need “bind and serve the kernel” can call
+//! [`listen`] instead of wiring `HttpServer` by hand.
+//!
 //! # Examples
 //!
 //! ```
@@ -29,9 +32,11 @@
 
 mod convert;
 mod dispatch;
+mod listen;
 
 pub use convert::{conversion_error, from_actix, to_actix};
 pub use dispatch::dispatch;
+pub use listen::{app, listen};
 
 /// Compile-time crate version for diagnostics.
 #[must_use]

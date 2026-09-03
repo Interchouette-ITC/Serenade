@@ -88,7 +88,7 @@ Server crates stay thin:
 3. Call `HttpKernel::handle`.
 4. Map `serenade_http::Response` back to the server response type.
 
-`serenade-http-actix` implements that bridge for Actix Web (`from_actix`, `to_actix`, `dispatch`). An Axum adapter can reuse the same four steps without changing the foundation crate.
+`serenade-http-actix` implements that bridge for Actix Web (`from_actix`, `to_actix`, `dispatch`). For skeletons that only need to bind and serve a kernel, call `serenade_http_actix::listen(addr, kernel)` (or `app(data)` when composing Actix yourself). An Axum adapter can reuse the same four steps without changing the foundation crate.
 
 ## Messenger and jobs
 
