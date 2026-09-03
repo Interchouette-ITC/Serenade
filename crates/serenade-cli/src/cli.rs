@@ -8,7 +8,9 @@ use clap::{CommandFactory, ValueEnum};
 use clap_complete::{generate, Shell};
 use cling::prelude::*;
 use serenade_cli::recipe::print_hints;
-use serenade_cli::{apply_recipe, list_recipes, scaffold_app, ApplyOptions, NewOptions};
+use serenade_cli::{
+    apply_recipe, list_recipes, run_recipe_tui, scaffold_app, ApplyOptions, NewOptions,
+};
 
 /// Top-level Serenade scaffolding CLI.
 #[derive(Run, Parser, Debug, Clone)]
@@ -33,6 +35,8 @@ enum Commands {
     Completion(CompletionArgs),
     /// Generate a man page (`clap_mangen`).
     Man(ManArgs),
+    /// Guided TUI to pick and apply a recipe.
+    Tui(TuiArgs),
 }
 
 #[derive(Run, Args, Debug, Clone)]
@@ -62,6 +66,20 @@ enum RecipeCommands {
 struct ApplyArgs {
     /// Recipe id (`framework`, `security`, …).
     id: String,
+    /// Application root (default: `.`).
+    #[arg(long, default_value = ".")]
+    root: PathBuf,
+    /// Overwrite existing recipe files.
+    #[arg(long)]
+    force: bool,
+    /// Do not run `cargo add` for declared dependencies.
+    #[arg(long)]
+    no_cargo: bool,
+}
+
+#[derive(Run, Args, Debug, Clone)]
+#[cling(run = "cmd_tui")]
+struct TuiArgs {
     /// Application root (default: `.`).
     #[arg(long, default_value = ".")]
     root: PathBuf,
@@ -147,6 +165,17 @@ fn cmd_recipe_apply(args: &ApplyArgs) -> anyhow::Result<()> {
     );
     print_hints(&recipe);
     Ok(())
+}
+
+fn cmd_tui(args: &TuiArgs) -> anyhow::Result<()> {
+    match run_recipe_tui(&ApplyOptions {
+        root: args.root.clone(),
+        force: args.force,
+        no_cargo: args.no_cargo,
+    }) {
+        Ok(_) | Err(serenade_cli::CliError::Cancelled) => Ok(()),
+        Err(error) => Err(anyhow!("{error}")),
+    }
 }
 
 fn cmd_completion(args: &CompletionArgs) {

@@ -18,7 +18,9 @@ clap = { workspace = true }
 clap_complete = { workspace = true }
 clap_mangen = { workspace = true }
 cling = { workspace = true }
+crossterm = { workspace = true }
 include_dir = { workspace = true }
+ratatui = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 toml = { workspace = true }

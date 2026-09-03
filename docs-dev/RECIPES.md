@@ -10,6 +10,7 @@ Serenade reproduces the **Flex recipe** concept on top of **Cargo**. Cargo owns 
 | **cling**         | Handler dispatch on top of clap (no giant `match`) |
 | **clap_complete** | Shell completions (`serenade completion <shell>`)  |
 | **clap_mangen**   | Man page (`serenade man [--output PATH]`)          |
+| **ratatui**       | Guided recipe picker (`serenade tui`)              |
 
 clap stays the parser. cling structures implementation. Completions and man pages are generated from the same `Command` tree (`CommandFactory` + `debug_assert` in tests).
 
@@ -26,6 +27,7 @@ cargo run -p serenade-cli --bin serenade -- --help
 | `serenade new <name>`         | Create an app skeleton (`config/packages/*.toml`, `.env.example`, `src/main.rs`, `src/bin/console.rs`) |
 | `serenade recipe list`        | List embedded recipes                                                                                  |
 | `serenade recipe apply <id>`  | Copy recipe files into an app root; run `cargo add` for declared crates unless `--no-cargo`            |
+| `serenade tui`                | Guided **ratatui** picker: choose a recipe, Enter applies (same flags as `recipe apply`)               |
 | `serenade completion <shell>` | Print shell completions                                                                                |
 | `serenade man`                | Print a man page (or `--output PATH`)                                                                  |
 
@@ -33,6 +35,7 @@ Flags:
 
 - `new --path DIR --force`
 - `recipe apply --root DIR --force --no-cargo`
+- `tui --root DIR --force --no-cargo`
 
 ## Recipe format
 
@@ -66,7 +69,7 @@ Default format is **TOML** under `config/packages/`. YAML remains loadable throu
 
 | Surface        | Crate                              | Role                                                            |
 | -------------- | ---------------------------------- | --------------------------------------------------------------- |
-| Scaffolding    | `serenade-cli` (`serenade` binary) | `new` / `recipe` / completions / man                            |
+| Scaffolding    | `serenade-cli` (`serenade` binary) | `new` / `recipe` / `tui` / completions / man                    |
 | In-app console | `serenade-console`                 | `bin/console` analogue (`serenade:about`, `debug:container`, …) |
 
-Do not invent a second package manager. In-app console still uses clap (+ optional ratatui for interactive debug); scaffolding uses clap + cling.
+Do not invent a second package manager. In-app console still uses clap (+ optional ratatui for interactive debug). Scaffolding uses clap + cling; `serenade tui` adds a recipe picker (ratatui) on the same CLI binary.

@@ -29,4 +29,10 @@ pub enum CliError {
     /// Invalid package / directory name.
     #[error("invalid name `{0}`")]
     InvalidName(String),
+    /// Interactive TUI requires a terminal.
+    #[error("serenade tui needs a TTY; use `serenade recipe list` / `recipe apply` instead")]
+    NotATty,
+    /// User quit the TUI without applying.
+    #[error("cancelled")]
+    Cancelled,
 }
