@@ -1,7 +1,7 @@
 # **Serenade**
 
 <p align="center">
-  <img src="docs/brand/logo-lockup-wide-desktop.png" alt="Serenade: Rust application framework" width="560" />
+  <img src="brand/logo-lockup-wide-desktop.png" alt="Serenade: Rust application framework" width="560" />
 </p>
 
 <p align="center">
@@ -27,24 +27,24 @@ Serenade is the reusable framework repo. Applications such as RustaShop live in 
 
 ## Docs
 
-- [`docs-dev/README.md`](docs-dev/README.md) - foundations index
-- [`docs-dev/VISION.md`](docs-dev/VISION.md) - Symfony analogy, non-goals
-- [`docs-dev/KERNEL.md`](docs-dev/KERNEL.md) - kernel components
-- [`docs-dev/BUNDLES.md`](docs-dev/BUNDLES.md) - bundles and extension model
-- [`docs-dev/PERSISTENCE.md`](docs-dev/PERSISTENCE.md) - adapter pattern and repository traits
-- [`docs-dev/RUSTASHOP.md`](docs-dev/RUSTASHOP.md) - example application layout (illustrative)
+- [`../docs-dev/README.md`](../docs-dev/README.md) - foundations index
+- [`../docs-dev/VISION.md`](../docs-dev/VISION.md) - Symfony analogy, non-goals
+- [`../docs-dev/KERNEL.md`](../docs-dev/KERNEL.md) - kernel components
+- [`../docs-dev/BUNDLES.md`](../docs-dev/BUNDLES.md) - bundles and extension model
+- [`../docs-dev/PERSISTENCE.md`](../docs-dev/PERSISTENCE.md) - adapter pattern and repository traits
+- [`../docs-dev/RUSTASHOP.md`](../docs-dev/RUSTASHOP.md) - example application layout (illustrative)
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) - make targets, lint bar, PR habits
-- Brand sizes: [`docs/brand/`](docs/brand/)
+- Brand sizes: [`brand/`](brand/)
 
 ## Contributing
 
-1. Read [`docs-dev/README.md`](docs-dev/README.md) and [`docs-dev/VISION.md`](docs-dev/VISION.md).
+1. Read [`../docs-dev/README.md`](../docs-dev/README.md) and [`../docs-dev/VISION.md`](../docs-dev/VISION.md).
 2. Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) (`make lint`, `make test`, `make ci`).
 3. Open issues for kernel or contract debates that span multiple crates.
 4. Commits and docs in **English**; conventional commits when code lands.
 
 <p align="center">
-  <img src="docs/brand/logo-banner-rooftop-readme-on-white.png" alt="Serenade: Paris rooftop night scene" width="360" />
+  <img src="brand/logo-banner-rooftop-readme-on-white.png" alt="Serenade: Paris rooftop night scene" width="360" />
 </p>
 
 ## Thanks
@@ -62,8 +62,8 @@ Thank you to their maintainers and communities.
 
 ## License
 
-Apache-2.0. See [`LICENSE`](LICENSE).
+Apache-2.0. See [`LICENSE`](../LICENSE).
 
 <p align="center">
-  <img src="docs/brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" />
+  <img src="brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" />
 </p>
