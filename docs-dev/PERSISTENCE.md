@@ -25,6 +25,29 @@ Kernel and HTTP crates never depend on `sqlx`, `sea-orm`, or `diesel`.
 
 Associated types (`Id`, `Product`, `Cart`, …) are defined in the **application**. Serenade stays ORM-agnostic.
 
+## Business rules vs persistence hooks
+
+Serenade does **not** provide a global ORM `preSave` / lifecycle callback. It does not own SeaORM, SQLx, or Diesel entities, so it cannot intercept every database write.
+
+Put behavior in the right layer:
+
+| Concern | Where it belongs | Examples |
+| --- | --- | --- |
+| **Business / domain rules** | Application domain or use-case service, **before** calling `Repository::save` | Cart not empty, stock check, price snapshot, invariants on an aggregate |
+| **Technical persistence** | Application adapter (or DB trigger) | `updated_at`, soft-delete flags, ORM `before_save` |
+
+Typical flow:
+
+```text
+HTTP / console
+  → domain service (enforce business rules, mutate aggregate)
+    → repository.save / UnitOfWork (adapter writes SQL or ORM)
+```
+
+ORM-specific hooks (for example SeaORM `ActiveModelBehavior::before_save`) are valid for **technical** fields when the application chose that ORM. They are not a substitute for domain rules, and they are not part of Serenade core.
+
+Older stacks often attached `preSave` to the ORM model. Same idea: hooks live with the persistence choice the application made; the framework kernel stays ORM-agnostic.
+
 ## Errors
 
 `PersistenceError` covers `NotFound`, `Conflict`, `InvalidInput`, and `Internal`. Adapters map driver errors into these variants; HTTP layers map them to status codes.
@@ -68,3 +91,4 @@ Any API that runs SQL text (or fragments) supplied by a client must be behind a 
 - Migration runners
 - Entity definitions for commerce aggregates
 - Choosing SQLx vs SeaORM for applications
+- Global ORM lifecycle callbacks (`preSave` / `preUpdate` across every driver)
