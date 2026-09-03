@@ -20,7 +20,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Serializer** | DTO ↔ JSON (and other formats); normalizers |
 | **Validator** | Constraint validation on DTOs and commands |
 | **Contracts** | Stable traits for persistence, clock, id generation, etc. |
-| **Observability** | Tracing/metrics hooks; structured logging conventions |
+| **Observability** | Structured logging conventions (Monolog-like channels / `var/log` layout); tracing/metrics hooks; profiler bridge later |
 | **Testing** | Kernel test harness, fake container, event assertion helpers |
 
 ## Lifecycle
