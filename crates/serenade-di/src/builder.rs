@@ -16,6 +16,24 @@ struct PendingService {
 }
 
 /// Builds a [`Container`] from definitions, aliases, parameters, and compile passes.
+///
+/// # Examples
+///
+/// ```
+/// use std::sync::Arc;
+/// use serenade_di::{ContainerBuilder, ServiceDefinition};
+///
+/// let mut builder = ContainerBuilder::new();
+/// builder
+///     .register(ServiceDefinition::new("greeting"), |_| {
+///         Ok(Box::new(String::from("hello")))
+///     })
+///     .expect("register");
+/// let container = builder.compile().expect("compile");
+/// let greeting = container.get_as::<String>("greeting").expect("resolve");
+/// assert_eq!(greeting.as_str(), "hello");
+/// assert!(Arc::strong_count(&greeting) >= 1);
+/// ```
 #[derive(Default)]
 pub struct ContainerBuilder {
     services: HashMap<String, PendingService>,

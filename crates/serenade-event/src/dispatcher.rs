@@ -5,6 +5,29 @@ use std::sync::Arc;
 use crate::{Event, EventError, EventSubscriber};
 
 /// Dispatches events to subscribers sorted by priority (high first).
+///
+/// # Examples
+///
+/// ```
+/// use std::sync::{Arc, Mutex};
+/// use serenade_event::{
+///     assert_dispatched, Event, EventDispatcher, RecordingSubscriber,
+/// };
+///
+/// struct Ping;
+///
+/// impl Event for Ping {
+///     fn name(&self) -> &'static str {
+///         "demo.ping"
+///     }
+/// }
+///
+/// let names = Arc::new(Mutex::new(Vec::new()));
+/// let mut dispatcher = EventDispatcher::new();
+/// dispatcher.add(Arc::new(RecordingSubscriber::new("demo.ping", Arc::clone(&names))));
+/// dispatcher.dispatch(&Ping).expect("dispatch");
+/// assert_dispatched(&names.lock().expect("lock"), &["demo.ping"]);
+/// ```
 #[derive(Clone, Default)]
 pub struct EventDispatcher {
     subscribers: Vec<Arc<dyn EventSubscriber>>,
