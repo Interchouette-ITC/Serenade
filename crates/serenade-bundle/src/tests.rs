@@ -63,7 +63,7 @@ fn registry_sorts_framework_before_app() {
 fn framework_extension_wires_router_config_and_dispatcher() {
     let dir = fixtures_packages();
     let (config, container) =
-        build_container(Some(dir.as_path()), &[&FrameworkExtension]).expect("container");
+        build_container(Some(dir.as_path()), "test", &[&FrameworkExtension]).expect("container");
     assert_eq!(
         config
             .parameters()
@@ -92,15 +92,19 @@ fn framework_extension_wires_router_config_and_dispatcher() {
         .expect("console");
     assert!(console.find("serenade:about").is_some());
     assert!(console.find("debug:container").is_some());
+    assert!(console.find("debug:config").is_some());
     assert!(Arc::strong_count(&router) >= 1);
 }
 
 #[test]
 fn demo_extension_reads_package_section() {
     let dir = fixtures_packages();
-    let (_config, container) =
-        build_container(Some(dir.as_path()), &[&FrameworkExtension, &DemoExtension])
-            .expect("container");
+    let (_config, container) = build_container(
+        Some(dir.as_path()),
+        "test",
+        &[&FrameworkExtension, &DemoExtension],
+    )
+    .expect("container");
     let greeting = container
         .get_as::<String>("demo.greeting")
         .expect("greeting");

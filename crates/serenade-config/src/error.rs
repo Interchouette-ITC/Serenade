@@ -41,4 +41,12 @@ pub enum ConfigError {
         /// Variable name.
         name: String,
     },
+    /// A `.env` file could not be loaded.
+    #[error("dotenv error at {path}: {message}")]
+    Dotenv {
+        /// Path that failed.
+        path: PathBuf,
+        /// Human-readable parse or IO message.
+        message: String,
+    },
 }

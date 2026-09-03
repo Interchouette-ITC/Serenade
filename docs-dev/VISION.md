@@ -30,7 +30,7 @@ Serenade
 | Composer (`composer.json`, Flex recipes) | **Cargo** + Flex-like **recipes** ([`RECIPES.md`](RECIPES.md), `serenade` CLI) |
 | `php bin/console …` | Console application (clap; optional **ratatui** for rich TUI) |
 | `config/packages/*.yaml` | `config/packages/*.toml` preferred; YAML still loaded |
-| `.env` | `.env` / process environment |
+| `.env` | `.env` / `.env.local` / `.env.{env}` via `load_dotenv` |
 
 Do not invent a second package manager. Cargo owns dependencies; Serenade owns composition (bundles, recipes, console).
 

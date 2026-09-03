@@ -6,8 +6,8 @@ use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_kernel::Environment;
 
 use crate::{
-    AboutCommand, Application, Command, CommandService, ConsoleError, DebugContainerCommand, Input,
-    RegisterCommandsPass, APPLICATION_SERVICE, COMMAND_TAG,
+    AboutCommand, Application, Command, CommandService, ConsoleError, DebugConfigCommand,
+    DebugContainerCommand, Input, RegisterCommandsPass, APPLICATION_SERVICE, COMMAND_TAG,
 };
 
 struct PingCommand;
@@ -77,6 +77,28 @@ fn debug_container_plain() {
     app.add(Arc::new(DebugContainerCommand));
     app.run_with(["console", "debug:container", "--plain"], Some(container))
         .expect("debug");
+}
+
+#[test]
+fn debug_config_requires_debug_and_redacts() {
+    let mut builder = ContainerBuilder::new();
+    builder.parameters_mut().set("framework.secret", "s3cret");
+    builder.parameters_mut().set("demo.name", "shop");
+    let container = Arc::new(builder.compile().expect("compile"));
+    let mut app = Application::new();
+    app.add(Arc::new(DebugConfigCommand));
+    let err = app
+        .run_with(
+            ["console", "--no-debug", "debug:config", "--plain"],
+            Some(Arc::clone(&container)),
+        )
+        .unwrap_err();
+    assert!(matches!(err, ConsoleError::Failed(_)));
+    app.run_with(
+        ["console", "debug:config", "--plain"],
+        Some(Arc::clone(&container)),
+    )
+    .expect("debug config");
 }
 
 #[test]
