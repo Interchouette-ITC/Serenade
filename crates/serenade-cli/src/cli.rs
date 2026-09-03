@@ -39,7 +39,7 @@ enum Commands {
     Tui(TuiArgs),
 }
 
-#[derive(Run, Args, Debug, Clone)]
+#[derive(Run, Collect, Args, Debug, Clone)]
 #[cling(run = "cmd_new")]
 struct NewArgs {
     /// Package / directory name.
@@ -61,7 +61,7 @@ enum RecipeCommands {
     Apply(ApplyArgs),
 }
 
-#[derive(Run, Args, Debug, Clone)]
+#[derive(Run, Collect, Args, Debug, Clone)]
 #[cling(run = "cmd_recipe_apply")]
 struct ApplyArgs {
     /// Recipe id (`framework`, `security`, …).
@@ -77,7 +77,7 @@ struct ApplyArgs {
     no_cargo: bool,
 }
 
-#[derive(Run, Args, Debug, Clone)]
+#[derive(Run, Collect, Args, Debug, Clone)]
 #[cling(run = "cmd_tui")]
 struct TuiArgs {
     /// Application root (default: `.`).
@@ -91,14 +91,14 @@ struct TuiArgs {
     no_cargo: bool,
 }
 
-#[derive(Run, Args, Debug, Clone)]
+#[derive(Run, Collect, Args, Debug, Clone)]
 #[cling(run = "cmd_completion")]
 struct CompletionArgs {
     /// Shell to generate completions for.
     shell: ShellKind,
 }
 
-#[derive(Run, Args, Debug, Clone)]
+#[derive(Run, Collect, Args, Debug, Clone)]
 #[cling(run = "cmd_man")]
 struct ManArgs {
     /// Output path (default: stdout).
