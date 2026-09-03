@@ -1,0 +1,3 @@
+[framework]
+# Shared secret used by framework services (example only).
+secret = "change-me"

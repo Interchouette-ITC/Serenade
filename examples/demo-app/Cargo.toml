@@ -1,20 +1,25 @@
 [package]
-name = "serenade-bundle"
-description = "Bundle interface and composition helpers"
+name = "serenade-demo-app"
+description = "Sample app: FrameworkBundle + DemoBundle + TOML packages"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "serenade-demo-app"
+path = "src/main.rs"
 
 [dependencies]
+serenade-bundle = { workspace = true }
 serenade-config = { workspace = true }
 serenade-di = { workspace = true }
 serenade-event = { workspace = true }
 serenade-http = { workspace = true }
 serenade-kernel = { workspace = true }
-thiserror = { workspace = true }
 
 [lints]
 workspace = true
