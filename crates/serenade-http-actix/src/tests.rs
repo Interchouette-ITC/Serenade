@@ -2,7 +2,7 @@ use actix_web::test as actix_test;
 use actix_web::{web, App, HttpRequest, HttpResponse};
 use serenade_http::{HttpKernel, Method, Request, Response};
 
-use super::{dispatch, from_actix, to_actix, version};
+use super::{app, dispatch, from_actix, to_actix, version};
 
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
 #[allow(clippy::future_not_send)]
@@ -44,6 +44,20 @@ async fn sample_route_returns_plain_text_via_kernel() {
     assert!(response.status().is_success());
     let body = actix_test::read_body(response).await;
     assert_eq!(body.as_ref(), b"ok");
+}
+
+#[actix_web::test]
+async fn listen_app_default_service_dispatches_kernel() {
+    let kernel = HttpKernel::new(|request: &mut Request| {
+        assert_eq!(request.path(), "/any");
+        Ok(Response::text(200, "served"))
+    });
+    let service = actix_test::init_service(app(web::Data::new(kernel))).await;
+    let request = actix_test::TestRequest::get().uri("/any").to_request();
+    let response = actix_test::call_service(&service, request).await;
+    assert!(response.status().is_success());
+    let body = actix_test::read_body(response).await;
+    assert_eq!(body.as_ref(), b"served");
 }
 
 #[actix_web::test]
