@@ -33,7 +33,7 @@ Kernel / App
     └── shutdown (`Bundle::shutdown`, reverse order)
 ```
 
-Route loading from bundles lands with the HTTP kernel. Container compile passes land with the DI crate.
+Route loading from bundles lands with the HTTP kernel. Bundle `CompilePass` registrations land with `serenade-di`.
 
 ## Bundle vs Wasm plugin
 

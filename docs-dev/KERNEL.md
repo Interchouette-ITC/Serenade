@@ -36,6 +36,19 @@ Created  →  register bundles (order is preserved)
 
 `Kernel::boot` compiles first when the kernel is still in `Created`. After `Shutdown` the kernel is terminal.
 
+## Dependency injection
+
+`serenade-di` provides `ContainerBuilder` → compile passes → `Container`.
+
+| Concept | Role |
+| --- | --- |
+| `ServiceDefinition` | Id, `Scope` (singleton / prototype), declared `Reference` dependencies |
+| `ParameterBag` | String parameters available to factories |
+| `CompilePass` | Extensible pipeline run before the container freezes |
+| `Container::get` / `get_as` | Resolve by id or alias; detects circular dependency at compile and resolve |
+
+Factories return `Box<dyn Any + Send + Sync>`; callers downcast with `get_as`.
+
 ## Request path (intent)
 
 ```text
