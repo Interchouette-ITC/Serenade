@@ -6,10 +6,10 @@ use crate::KernelPhase;
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
 pub enum KernelError {
     /// `Environment::from_name` received an empty name.
-    #[error("unknown environment `{0}`")]
+    #[error("unknown environment `{0}` (use `dev`, `test`, `prod`, or a non-empty custom name)")]
     UnknownEnvironment(String),
     /// An operation was invoked in a phase that does not allow it.
-    #[error("cannot {action} while kernel is {state}")]
+    #[error("cannot `{action}` while kernel is in phase `{state}`")]
     InvalidState {
         /// Attempted operation (`register`, `compile`, `boot`, or `shutdown`).
         action: &'static str,

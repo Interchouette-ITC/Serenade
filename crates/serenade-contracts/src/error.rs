@@ -7,7 +7,7 @@ pub trait RepositoryError: std::error::Error + Send + Sync + 'static {}
 #[derive(Debug, thiserror::Error)]
 pub enum PersistenceError {
     /// Row or aggregate missing for the given identifier.
-    #[error("not found: {entity} id={id}")]
+    #[error("not found: `{entity}` id=`{id}`")]
     NotFound {
         /// Aggregate name (for example `product`).
         entity: &'static str,
@@ -15,7 +15,7 @@ pub enum PersistenceError {
         id: String,
     },
     /// Unique constraint or optimistic lock conflict.
-    #[error("conflict on {constraint}")]
+    #[error("conflict on constraint `{constraint}`")]
     Conflict {
         /// Constraint or field name.
         constraint: &'static str,
@@ -29,7 +29,7 @@ pub enum PersistenceError {
     /// Unexpected adapter or infrastructure failure.
     #[error("internal persistence error: {message}")]
     Internal {
-        /// Human-readable reason.
+        /// Human-readable reason (safe for logs; adapters should avoid secrets).
         message: String,
     },
 }

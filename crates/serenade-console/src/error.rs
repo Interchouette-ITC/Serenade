@@ -6,15 +6,15 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum ConsoleError {
     /// Unknown command name.
-    #[error("command not found: {0}")]
+    #[error("command `{0}` was not found; run with no arguments to list commands")]
     NotFound(String),
     /// Invalid `--env` value.
-    #[error("invalid environment: {0}")]
+    #[error("invalid `--env` value: {0}")]
     InvalidEnvironment(String),
     /// Command execution failed.
-    #[error("{0}")]
+    #[error("command failed: {0}")]
     Failed(String),
     /// Terminal / TUI I/O failed.
-    #[error("console I/O: {0}")]
+    #[error("console I/O failed: {0}")]
     Io(#[from] std::io::Error),
 }
