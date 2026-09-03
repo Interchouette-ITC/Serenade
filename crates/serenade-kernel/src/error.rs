@@ -5,7 +5,7 @@ use crate::KernelPhase;
 /// Failure during kernel registration, compile, boot, or shutdown.
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
 pub enum KernelError {
-    /// `Environment::from_name` received an unknown value.
+    /// `Environment::from_name` received an empty name.
     #[error("unknown environment `{0}`")]
     UnknownEnvironment(String),
     /// An operation was invoked in a phase that does not allow it.
