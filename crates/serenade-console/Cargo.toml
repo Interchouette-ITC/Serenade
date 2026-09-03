@@ -1,6 +1,6 @@
 [package]
-name = "serenade-bundle"
-description = "Bundle interface and composition helpers"
+name = "serenade-console"
+description = "Console Application: discoverable commands (bin/console analogue)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,11 +9,10 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-serenade-config = { workspace = true }
-serenade-console = { workspace = true }
+clap = { workspace = true }
+crossterm = { workspace = true }
+ratatui = { workspace = true }
 serenade-di = { workspace = true }
-serenade-event = { workspace = true }
-serenade-http = { workspace = true }
 serenade-kernel = { workspace = true }
 thiserror = { workspace = true }
 

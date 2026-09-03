@@ -15,6 +15,7 @@ pub use extension::Extension;
 pub use framework::{
     FrameworkBundle, FrameworkExtension, CONFIG_SERVICE, FRAMEWORK_BUNDLE, ROUTER_SERVICE,
 };
+pub use serenade_console::{APPLICATION_SERVICE as CONSOLE_APPLICATION_SERVICE, COMMAND_TAG};
 pub use serenade_kernel::{Bundle, BundleInterface, BundleRegistry};
 
 /// Compile-time crate version for diagnostics.

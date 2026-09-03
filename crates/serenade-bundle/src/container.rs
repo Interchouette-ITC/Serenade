@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use serenade_config::{load_packages, Config};
+use serenade_console::RegisterCommandsPass;
 use serenade_di::{Container, ContainerBuilder, ServiceDefinition};
 use serenade_event::RegisterEventSubscribersPass;
 
@@ -13,8 +14,8 @@ use crate::{BundleError, Extension};
 ///
 /// Flattened package parameters are applied first. The merged root config is
 /// registered as [`CONFIG_SERVICE`]. Each extension then receives
-/// `config.section(extension.alias())`. [`RegisterEventSubscribersPass`] always
-/// runs so tagged subscribers populate `event_dispatcher`.
+/// `config.section(extension.alias())`. Event and console compile passes always
+/// run so tagged subscribers and commands populate their services.
 ///
 /// # Errors
 ///
@@ -34,6 +35,7 @@ pub fn build_container(
         Ok(Box::new(snapshot.clone()))
     })?;
     builder.add_compile_pass(RegisterEventSubscribersPass);
+    builder.add_compile_pass(RegisterCommandsPass);
     for extension in extensions {
         let section = config.section(extension.alias());
         extension.load(&section, &mut builder).map_err(|error| {

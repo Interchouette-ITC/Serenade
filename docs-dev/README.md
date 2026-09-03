@@ -8,6 +8,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | ---------------------------- | ------------------------------------------------------ |
 | [VISION.md](VISION.md)       | Why Symfony-shaped Rust; what Serenade is not          |
 | [KERNEL.md](KERNEL.md)       | Kernel components and responsibilities                 |
+| [CONSOLE.md](CONSOLE.md)     | Console Application, commands, `--env` / ratatui       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model, extension points, composition            |
 | [PERSISTENCE.md](PERSISTENCE.md) | Adapter pattern, repository traits, `UnitOfWork` |
 | [RUSTASHOP.md](RUSTASHOP.md) | Illustrative RustaShop crate map (example, not locked) |
