@@ -86,8 +86,12 @@ fn environment_debug_defaults() {
     assert!(Environment::Dev.is_debug());
     assert!(Environment::Test.is_debug());
     assert!(!Environment::Prod.is_debug());
+    assert!(!Environment::Custom("staging".into()).is_debug());
     assert!(!Kernel::new(Environment::Prod).debug());
     assert!(Kernel::new(Environment::Prod).with_debug(true).debug());
+    assert!(Kernel::new(Environment::Custom("staging".into()))
+        .with_debug(true)
+        .debug());
 }
 
 #[test]
@@ -95,9 +99,21 @@ fn environment_from_name_parses_ascii_case() {
     assert_eq!(Environment::from_name("DEV").unwrap(), Environment::Dev);
     assert_eq!(Environment::from_name("Test").unwrap(), Environment::Test);
     assert_eq!(Environment::from_name("prod").unwrap(), Environment::Prod);
+    assert_eq!(
+        Environment::from_name("Staging").unwrap(),
+        Environment::Custom("staging".into())
+    );
+    assert_eq!(
+        Environment::from_name("recette").unwrap(),
+        Environment::Custom("recette".into())
+    );
     assert!(matches!(
-        Environment::from_name("staging"),
-        Err(KernelError::UnknownEnvironment(name)) if name == "staging"
+        Environment::from_name("  "),
+        Err(KernelError::UnknownEnvironment(_))
+    ));
+    assert!(matches!(
+        Environment::from_name(""),
+        Err(KernelError::UnknownEnvironment(_))
     ));
 }
 

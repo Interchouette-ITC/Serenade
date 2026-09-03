@@ -55,9 +55,10 @@ impl Kernel {
     /// Debug defaults to [`Environment::is_debug`].
     #[must_use]
     pub fn new(environment: Environment) -> Self {
+        let debug = environment.is_debug();
         Self {
             environment,
-            debug: environment.is_debug(),
+            debug,
             registry: BundleRegistry::new(),
             bundles: Vec::new(),
             phase: KernelPhase::Created,
@@ -73,8 +74,8 @@ impl Kernel {
 
     /// Runtime environment.
     #[must_use]
-    pub const fn environment(&self) -> Environment {
-        self.environment
+    pub const fn environment(&self) -> &Environment {
+        &self.environment
     }
 
     /// Effective debug flag.

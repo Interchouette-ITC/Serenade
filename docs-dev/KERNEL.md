@@ -32,7 +32,7 @@ Created  →  register bundles (any order)
          →  shutdown (`BundleInterface::shutdown`, reverse dependency order)
 ```
 
-`serenade-kernel` exposes `Kernel`, `App`, `BundleInterface` / `Bundle`, `BundleRegistry`, and `Environment` (`dev` / `test` / `prod`). Debug defaults on for `dev` and `test`. An application with zero bundles is a valid boot.
+`serenade-kernel` exposes `Kernel`, `App`, `BundleInterface` / `Bundle`, `BundleRegistry`, and `Environment` (`dev` / `test` / `prod`, plus `Custom` for names like `staging` or `recette`). Debug defaults on for `dev` and `test` only. An application with zero bundles is a valid boot.
 
 `Kernel::boot` compiles first when the kernel is still in `Created`. After `Shutdown` the kernel is terminal.
 
