@@ -26,12 +26,14 @@ Symfony’s own features ship as bundles; RustaShop commerce features should too
 ## Registration
 
 ```text
-ApplicationKernel
-├── register Bundles in order (dependencies first)
-├── compile container
-├── load routes from all bundles
-└── boot event (warmup cache, validate config)
+Kernel / App
+    ├── register_bundle (dependencies first)
+    ├── compile (`Bundle::build`)
+    ├── boot (`Bundle::boot`)
+    └── shutdown (`Bundle::shutdown`, reverse order)
 ```
+
+Route loading from bundles lands with the HTTP kernel. Container compile passes land with the DI crate.
 
 ## Bundle vs Wasm plugin
 

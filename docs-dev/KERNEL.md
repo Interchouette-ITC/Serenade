@@ -23,6 +23,19 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Observability** | Tracing/metrics hooks; structured logging conventions |
 | **Testing** | Kernel test harness, fake container, event assertion helpers |
 
+## Lifecycle
+
+```text
+Created  →  register bundles (order is preserved)
+         →  compile (`Bundle::build`)
+         →  boot (`Bundle::boot`)
+         →  shutdown (`Bundle::shutdown`, reverse order)
+```
+
+`serenade-kernel` exposes `Kernel`, `App`, and `Environment` (`dev` / `test` / `prod`). Debug defaults on for `dev` and `test`. An application with zero bundles is a valid boot.
+
+`Kernel::boot` compiles first when the kernel is still in `Created`. After `Shutdown` the kernel is terminal.
+
 ## Request path (intent)
 
 ```text
