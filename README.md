@@ -5,12 +5,12 @@
 </p>
 
 <p align="center">
-  <strong>Symfony-shaped Rust. Your app. Your stack.</strong>
+  <strong>Rust application framework.</strong>
 </p>
 
-Serenade is a **Symfony-oriented** application framework for Rust: kernel, DI, events, HTTP foundation, routing, config, console, Flex-like recipes, and bundles.
+Symfony-oriented application framework for Rust. **Not** Rails-style, **not** Django-style: composable kernel components and bundles around which you build products.
 
-It is **not** Rails or Django. It does **not** force an ORM or an HTTP server. Cargo stays the package manager; Serenade owns composition.
+Serenade does **not** impose SQLx, SeaORM, Diesel, or Actix vs Axum for your product HTTP surface. It provides architecture, contracts, and reusable components; the application chooses persistence and UI stacks. Cargo stays the package manager; Serenade owns composition (bundles, recipes, console).
 
 **Primary consumer (in progress):** [RustaShop](https://github.com/Interchouette-ITC/RustaShop) - commerce kernel on Serenade, the way [PrestaShop](https://www.prestashop.com/) builds on [Symfony](https://symfony.com/).
 
