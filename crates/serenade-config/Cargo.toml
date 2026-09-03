@@ -9,8 +9,11 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+serenade-di = { workspace = true }
 thiserror = { workspace = true }
+toml = { workspace = true }
 
 [lints]
 workspace = true

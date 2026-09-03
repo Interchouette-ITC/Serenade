@@ -90,13 +90,16 @@ RustaShop jobs (webhooks retry, agent runs, sandbox) should plug into messenger,
 
 ## Configuration layers
 
+`serenade-config` loads YAML and TOML mappings, deep-merges them, interpolates `${VAR}` / `${VAR:-default}`, and flattens dotted keys into the DI `ParameterBag`.
+
 ```text
-serenade.yaml (defaults)
-    + config/packages/*.yaml (bundle defaults)
-    + config/services.yaml (app services)
-    + env-specific overrides
-    + secrets (env / operator)
+defaults (YAML or TOML)
+    + config/packages/*.{yaml,yml,toml}  (sorted by file name)
+    + env-specific overlays
+    + secrets (environment)
 ```
+
+`load_packages` is the bundle package loader. Mappings merge; scalars and sequences in an overlay replace the base value. Unset variables without a default fail load.
 
 ## Extension surface (kernel-level)
 

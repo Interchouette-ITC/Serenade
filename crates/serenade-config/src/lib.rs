@@ -1,6 +1,14 @@
-//! Layered configuration: defaults, bundle config, environment overrides.
+//! Layered configuration: defaults, bundle packages, environment interpolation.
 //!
-//! Secrets are read from the environment or operator-provided files, never hard-coded.
+//! Secrets come from the environment or operator-provided files, never hard-coded.
+
+mod document;
+mod error;
+mod packages;
+
+pub use document::Config;
+pub use error::ConfigError;
+pub use packages::load_packages;
 
 /// Compile-time crate version for diagnostics.
 #[must_use]
@@ -8,15 +16,5 @@ pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-/// Config integration marker until the loader API lands.
-pub const BOOTSTRAP: &str = "config-bootstrap";
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn version_matches_workspace() {
-        assert_eq!(version(), "0.1.0");
-    }
-}
+mod tests;
