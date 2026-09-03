@@ -1,8 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    DefaultExceptionHandler, ExceptionHandler, HttpError, HttpKernel, Method, Middleware, Request,
-    RequestHandler, Response,
+    load_routes, DefaultExceptionHandler, ExceptionHandler, HttpError, HttpKernel, Method,
+    Middleware, Request, RequestHandler, Response, Route, RouteCollection, RouteLoader, UrlMatcher,
+    ROUTE_ATTRIBUTE,
 };
 
 struct TraceLayer {
@@ -108,4 +109,70 @@ fn custom_exception_handler_replaces_default() {
     let response = kernel.handle(Request::new(Method::Post, "/"));
     assert_eq!(response.status(), 503);
     assert_eq!(response.body_str(), Some("mapped:nope"));
+}
+
+#[test]
+fn matcher_extracts_path_parameters() {
+    let mut collection = RouteCollection::new();
+    collection
+        .add(Route::with_method("cart_show", "/carts/{id}", Method::Get))
+        .expect("add");
+    let matcher = UrlMatcher::new(collection);
+    let found = matcher
+        .match_request(Method::Get, "/carts/42")
+        .expect("match");
+    assert_eq!(found.route_name(), "cart_show");
+    assert_eq!(found.parameters().get("id").map(String::as_str), Some("42"));
+}
+
+#[test]
+fn matcher_returns_405_for_wrong_method() {
+    let mut collection = RouteCollection::new();
+    collection
+        .add(Route::with_method("healthz", "/healthz", Method::Get))
+        .expect("add");
+    let matcher = UrlMatcher::new(collection);
+    let error = matcher
+        .match_request(Method::Post, "/healthz")
+        .expect_err("method");
+    assert_eq!(error.status_code(), 405);
+}
+
+#[test]
+fn bundle_loader_registers_get_healthz() {
+    let collection = load_routes(&[&HealthzBundle]).expect("load");
+    assert_eq!(collection.len(), 1);
+    let matcher = UrlMatcher::new(collection);
+    let mut request = Request::new(Method::Get, "/healthz");
+    let found = matcher.apply(&mut request).expect("apply");
+    assert_eq!(found.route_name(), "healthz");
+    assert_eq!(
+        request
+            .attributes()
+            .get::<String>(ROUTE_ATTRIBUTE)
+            .map(String::as_str),
+        Some("healthz")
+    );
+
+    let kernel = HttpKernel::new(|req: &mut Request| {
+        match req
+            .attributes()
+            .get::<String>(ROUTE_ATTRIBUTE)
+            .map(String::as_str)
+        {
+            Some("healthz") => Ok(Response::text(200, "ok")),
+            _ => Err(HttpError::status(404, "missing")),
+        }
+    });
+    let response = kernel.handle(request);
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.body_str(), Some("ok"));
+}
+
+struct HealthzBundle;
+
+impl RouteLoader for HealthzBundle {
+    fn load(&self, collection: &mut RouteCollection) -> Result<(), HttpError> {
+        collection.add(Route::with_method("healthz", "/healthz", Method::Get))
+    }
 }

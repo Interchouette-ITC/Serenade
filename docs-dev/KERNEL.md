@@ -69,6 +69,7 @@ Dispatch stays in-process. Async transports belong on the messenger component.
 ```text
 HTTP adapter (Actix / Axum / …)
     → Request (method, path, headers, body, attributes)
+    → UrlMatcher (RouteCollection; writes `_route` + path params)
     → Middleware stack (first registered layer is outermost)
     → Controller (`RequestHandler`)
     → Response
@@ -76,7 +77,7 @@ HTTP adapter (Actix / Axum / …)
 
 `HttpKernel::handle` always returns a `Response`. Handler and middleware errors go through `ExceptionHandler` (`DefaultExceptionHandler` maps `HttpError` status and message to `text/plain`).
 
-Routing (route collection, matcher, bundle loaders) is a separate component. Adapters that bind a listener live in their own crates.
+Routing lives in `serenade-http`: `Route` / `RouteCollection`, `UrlMatcher` (404 / 405), and `RouteLoader` for bundles. Path segments `{name}` become request attributes. Adapters that bind a listener live in their own crates.
 
 ## Messenger and jobs
 
