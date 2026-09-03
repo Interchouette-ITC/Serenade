@@ -9,6 +9,7 @@ pub mod category;
 pub mod error;
 pub mod order;
 pub mod pagination;
+pub mod persist_param;
 pub mod product;
 pub mod unit_of_work;
 
@@ -17,6 +18,10 @@ pub use category::CategoryRepository;
 pub use error::{PersistenceError, RepositoryError};
 pub use order::OrderRepository;
 pub use pagination::PageRequest;
+pub use persist_param::{
+    persist_param_check_enabled, reject_unsafe_sql_param, reject_unsafe_sql_param_owned,
+    PersistParamPolicy, PERSIST_PARAM_CHECK_DISABLE_ENV,
+};
 pub use product::ProductRepository;
 pub use unit_of_work::UnitOfWork;
 
