@@ -62,7 +62,7 @@ Thank you to their maintainers and communities.
 
 ## License
 
-To be decided before first crate publish. Interchouette-ITC projects often use **Apache-2.0**.
+Apache-2.0. See [`LICENSE`](LICENSE).
 
 <p align="center">
   <img src="docs/brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" />
