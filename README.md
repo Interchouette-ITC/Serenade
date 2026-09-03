@@ -1,7 +1,7 @@
 # **Serenade**
 
 <p align="center">
-  <img src="docs/brand/logo-lockup-wide-readme.png" alt="Serenade: Rust application framework" width="640" />
+  <img src="docs/brand/logo-lockup-wide-desktop.png" alt="Serenade: Rust application framework" width="640" />
 </p>
 
 <p align="center">
