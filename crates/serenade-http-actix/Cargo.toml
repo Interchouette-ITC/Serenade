@@ -1,0 +1,19 @@
+[package]
+name = "serenade-http-actix"
+description = "Actix-web adapter for serenade-http"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+actix-web = { workspace = true }
+serenade-http = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+
+[lints]
+workspace = true
