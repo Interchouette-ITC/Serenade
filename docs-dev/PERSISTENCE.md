@@ -15,13 +15,13 @@ Kernel and HTTP crates never depend on `sqlx`, `sea-orm`, or `diesel`.
 
 ## Repository traits (`serenade-contracts`)
 
-| Trait | Responsibility |
-| --- | --- |
-| `ProductRepository` | Read by id, slug, paginated list |
-| `CategoryRepository` | Read by id, slug, children of parent |
-| `CartRepository` | Find by session token, save, delete |
-| `OrderRepository` | Find by number, save, idempotent checkout save |
-| `UnitOfWork` | `begin` / `commit` / `rollback` transaction boundary |
+| Trait                | Responsibility                                       |
+| -------------------- | ---------------------------------------------------- |
+| `ProductRepository`  | Read by id, slug, paginated list                     |
+| `CategoryRepository` | Read by id, slug, children of parent                 |
+| `CartRepository`     | Find by session token, save, delete                  |
+| `OrderRepository`    | Find by number, save, idempotent checkout save       |
+| `UnitOfWork`         | `begin` / `commit` / `rollback` transaction boundary |
 
 Associated types (`Id`, `Product`, `Cart`, …) are defined in the **application**. Serenade stays ORM-agnostic.
 
@@ -36,22 +36,22 @@ Associated types (`Id`, `Product`, `Cart`, …) are defined in the **application
 3. **Snapshots** on cart and order lines (unit price, labels) at mutation time.
 4. **Idempotency** on checkout via `OrderRepository::save_idempotent`.
 5. Integration tests run against Docker Postgres in the application repo.
-6. **SQL safety** (see below) before binding or filtering on request/domain strings.
+6. Run **persist-param hygiene** on request/domain strings before bind/filter (see below).
 
-## SQL safety (injection defense-in-depth)
+## SQL and parameter hygiene
 
-Parameterized queries / query builders are **mandatory**. Do not build SQL with `format!` or string concat using user or request data. That is not a supported path.
+**SQL injection** is prevented by **parameterized queries** and query builders only. Do not build SQL with `format!` or string concat using user or request data. That path is not supported. SeaORM does not change this: still bind/filter with parameters, never interpolate client text into SQL.
 
-SeaORM (or any ORM) does **not** waive these rules: filter values still go through the same checks.
+### Persist-param check (`serenade-contracts`)
 
-### Parameter guards (`serenade-contracts`)
-
-Call `reject_unsafe_sql_param` / `SqlSafetyPolicy::reject_param` on strings before `.bind` / `.eq`. The guard rejects NUL and other C0 controls (except tab / LF / CR).
+`reject_unsafe_sql_param` / `PersistParamPolicy` enforce a **persistence boundary invariant**: reject **NUL (`\0`)** in string parameters. Rationale is input hygiene and C / driver / interop safety (NUL-terminated buffers), **not** injection defense. Tab, LF, CR, and other non-NUL bytes remain allowed.
 
 **On by default.** To deliberately take the risk and disable checks:
 
-- process env `SERENADE_DISABLE_SQL_SAFETY=1` (also `true` / `yes` / `on`), or
-- `SqlSafetyPolicy::disabled()` in code
+- process env `SERENADE_DISABLE_PERSIST_PARAM_CHECK=1` (also `true` / `yes` / `on`), or
+- `PersistParamPolicy::disabled()` in code
+
+(`SERENADE_DISABLE_SQL_SAFETY` is still honored as a legacy alias.)
 
 Disabling is an explicit risk acceptance, not a normal production setting.
 

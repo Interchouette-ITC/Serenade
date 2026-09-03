@@ -1,27 +1,40 @@
-//! Defense-in-depth checks for SQL bind / filter string parameters.
+//! Persistence string-parameter hygiene at the Serenade boundary.
 //!
-//! Parameterized queries and query builders remain mandatory. This layer rejects
-//! NUL and other C0 control bytes in values before they reach a driver.
+//! This is **not** SQL-injection protection. Injection is prevented by
+//! parameterized queries and query builders (application adapters). This module
+//! only rejects NUL (`\0`) in string values so they cannot truncate or confuse
+//! C APIs, drivers, logging, or other NUL-terminated interop layers.
 //!
 //! Checks are **on by default**. Disable only when deliberately accepting risk:
-//! set [`SQL_SAFETY_DISABLE_ENV`] to `1` / `true` / `yes` / `on`, or use
-//! [`SqlSafetyPolicy::disabled`].
+//! set [`PERSIST_PARAM_CHECK_DISABLE_ENV`] to `1` / `true` / `yes` / `on`, or use
+//! [`PersistParamPolicy::disabled`].
 
 use crate::PersistenceError;
 
-/// Process environment variable that turns SQL parameter safety **off**.
+/// Process environment variable that turns persist-param NUL checks **off**.
 ///
 /// Recognized disable values (ASCII case-insensitive for letters): `1`, `true`,
-/// `yes`, `on`. Any other value (including unset) keeps safety **enabled**.
-pub const SQL_SAFETY_DISABLE_ENV: &str = "SERENADE_DISABLE_SQL_SAFETY";
+/// `yes`, `on`. Any other value (including unset) keeps checks **enabled**.
+pub const PERSIST_PARAM_CHECK_DISABLE_ENV: &str = "SERENADE_DISABLE_PERSIST_PARAM_CHECK";
 
-/// Whether SQL parameter safety is active for this process.
+/// Previous env name; still honored so existing opt-outs keep working.
+const LEGACY_SQL_SAFETY_DISABLE_ENV: &str = "SERENADE_DISABLE_SQL_SAFETY";
+
+/// Whether persist-param NUL checks are active for this process.
 ///
-/// Reads [`SQL_SAFETY_DISABLE_ENV`]. Prefer [`SqlSafetyPolicy`] in tests so
-/// parallel suites do not depend on mutating the environment.
+/// Prefer [`PersistParamPolicy`] in tests so parallel suites do not depend on
+/// mutating the environment.
 #[must_use]
-pub fn sql_safety_enabled() -> bool {
-    std::env::var(SQL_SAFETY_DISABLE_ENV).map_or(true, |value| !is_disable_flag(&value))
+pub fn persist_param_check_enabled() -> bool {
+    if env_disables(PERSIST_PARAM_CHECK_DISABLE_ENV) || env_disables(LEGACY_SQL_SAFETY_DISABLE_ENV)
+    {
+        return false;
+    }
+    true
+}
+
+fn env_disables(name: &str) -> bool {
+    std::env::var(name).is_ok_and(|value| is_disable_flag(&value))
 }
 
 fn is_disable_flag(value: &str) -> bool {
@@ -31,24 +44,24 @@ fn is_disable_flag(value: &str) -> bool {
     )
 }
 
-/// Policy for [`reject_unsafe_sql_param`] / [`SqlSafetyPolicy::reject_param`].
+/// Policy for [`reject_unsafe_sql_param`] / [`PersistParamPolicy::reject_param`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SqlSafetyPolicy {
+pub struct PersistParamPolicy {
     enabled: bool,
 }
 
-impl Default for SqlSafetyPolicy {
+impl Default for PersistParamPolicy {
     fn default() -> Self {
         Self::from_env()
     }
 }
 
-impl SqlSafetyPolicy {
-    /// Policy from [`SQL_SAFETY_DISABLE_ENV`] (enabled unless explicitly disabled).
+impl PersistParamPolicy {
+    /// Policy from env (enabled unless an explicit disable flag is set).
     #[must_use]
     pub fn from_env() -> Self {
         Self {
-            enabled: sql_safety_enabled(),
+            enabled: persist_param_check_enabled(),
         }
     }
 
@@ -58,7 +71,7 @@ impl SqlSafetyPolicy {
         Self { enabled: true }
     }
 
-    /// Skip checks. Caller accepts the risk of unsafe parameter bytes.
+    /// Skip checks. Caller accepts the risk of NUL in persistence strings.
     #[must_use]
     pub const fn disabled() -> Self {
         Self { enabled: false }
@@ -75,12 +88,12 @@ impl SqlSafetyPolicy {
     /// # Errors
     ///
     /// Returns [`PersistenceError::InvalidInput`] when enabled and `value`
-    /// contains NUL or a disallowed C0 control character.
+    /// contains a NUL byte.
     pub fn reject_param(self, value: &str) -> Result<&str, PersistenceError> {
         if !self.enabled {
             return Ok(value);
         }
-        validate_param_bytes(value)?;
+        reject_nul(value)?;
         Ok(value)
     }
 
@@ -95,14 +108,17 @@ impl SqlSafetyPolicy {
     }
 }
 
-/// Validates `value` using [`SqlSafetyPolicy::from_env`].
+/// Rejects NUL in `value` using [`PersistParamPolicy::from_env`].
+///
+/// Tab, LF, CR, and other non-NUL bytes are allowed. This is input hygiene for
+/// the persistence boundary, not an SQL-injection filter.
 ///
 /// # Errors
 ///
-/// Returns [`PersistenceError::InvalidInput`] when safety is enabled and the
-/// value fails validation.
+/// Returns [`PersistenceError::InvalidInput`] when checks are enabled and
+/// `value` contains `\0`.
 pub fn reject_unsafe_sql_param(value: &str) -> Result<&str, PersistenceError> {
-    SqlSafetyPolicy::from_env().reject_param(value)
+    PersistParamPolicy::from_env().reject_param(value)
 }
 
 /// Owned variant of [`reject_unsafe_sql_param`].
@@ -111,30 +127,16 @@ pub fn reject_unsafe_sql_param(value: &str) -> Result<&str, PersistenceError> {
 ///
 /// Same as [`reject_unsafe_sql_param`].
 pub fn reject_unsafe_sql_param_owned(value: String) -> Result<String, PersistenceError> {
-    SqlSafetyPolicy::from_env().reject_param_owned(value)
+    PersistParamPolicy::from_env().reject_param_owned(value)
 }
 
-fn validate_param_bytes(value: &str) -> Result<(), PersistenceError> {
-    for (index, byte) in value.as_bytes().iter().copied().enumerate() {
-        if byte == 0 {
-            return Err(PersistenceError::InvalidInput {
-                message: format!("SQL parameter contains NUL at byte index {index}"),
-            });
-        }
-        if is_disallowed_c0_byte(byte) {
-            return Err(PersistenceError::InvalidInput {
-                message: format!(
-                    "SQL parameter contains disallowed control byte 0x{byte:02X} at index {index}"
-                ),
-            });
-        }
+fn reject_nul(value: &str) -> Result<(), PersistenceError> {
+    if let Some(index) = value.as_bytes().iter().position(|&b| b == 0) {
+        return Err(PersistenceError::InvalidInput {
+            message: format!("NUL byte is not allowed in persistence parameter (index {index})"),
+        });
     }
     Ok(())
-}
-
-/// C0 controls other than tab / LF / CR.
-const fn is_disallowed_c0_byte(byte: u8) -> bool {
-    byte < 0x20 && byte != 0x09 && byte != 0x0A && byte != 0x0D
 }
 
 #[cfg(test)]
@@ -142,8 +144,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn accepts_clean_values() {
-        let policy = SqlSafetyPolicy::enabled();
+    fn accepts_clean_and_whitespace_controls() {
+        let policy = PersistParamPolicy::enabled();
         assert_eq!(policy.reject_param("").unwrap(), "");
         assert_eq!(
             policy
@@ -155,33 +157,24 @@ mod tests {
             policy.reject_param("hello-world_1").unwrap(),
             "hello-world_1"
         );
-        assert_eq!(policy.reject_param("line\nok\t").unwrap(), "line\nok\t");
+        assert_eq!(policy.reject_param("line\nok\t\r").unwrap(), "line\nok\t\r");
+        // Other C0 bytes (except NUL) are allowed: valid in many strings.
+        assert_eq!(policy.reject_param("x\u{0001}y").unwrap(), "x\u{0001}y");
     }
 
     #[test]
     fn rejects_nul_when_enabled() {
-        let policy = SqlSafetyPolicy::enabled();
+        let policy = PersistParamPolicy::enabled();
         let error = policy.reject_param("ab\0c").unwrap_err();
         assert!(matches!(error, PersistenceError::InvalidInput { .. }));
         assert!(error.to_string().contains("NUL"));
     }
 
     #[test]
-    fn rejects_other_c0_when_enabled() {
-        let policy = SqlSafetyPolicy::enabled();
-        let error = policy.reject_param("x\u{0001}y").unwrap_err();
-        assert!(matches!(error, PersistenceError::InvalidInput { .. }));
-    }
-
-    #[test]
     fn disabled_policy_skips_checks() {
-        let policy = SqlSafetyPolicy::disabled();
+        let policy = PersistParamPolicy::disabled();
         assert!(!policy.is_enabled());
         assert_eq!(policy.reject_param("ab\0c").unwrap(), "ab\0c");
-        assert_eq!(
-            policy.reject_param_owned("x\u{0001}y".into()).unwrap(),
-            "x\u{0001}y"
-        );
     }
 
     #[test]
