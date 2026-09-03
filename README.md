@@ -12,6 +12,8 @@ Serenade is a **Symfony-oriented** application framework for Rust: kernel, DI, e
 
 It is **not** Rails or Django. It does **not** force an ORM or an HTTP server. Cargo stays the package manager; Serenade owns composition.
 
+**Primary consumer (in progress):** [RustaShop](https://github.com/Interchouette-ITC/RustaShop) - commerce kernel on Serenade, the way [PrestaShop](https://www.prestashop.com/) builds on [Symfony](https://symfony.com/).
+
 ## What you get today
 
 | Piece | Role |
@@ -89,6 +91,7 @@ See [`docs-dev/KERNEL.md`](docs-dev/KERNEL.md).
 | [`docs-dev/RECIPES.md`](docs-dev/RECIPES.md) | Flex-like recipes + `serenade` CLI |
 | [`docs-dev/BUNDLES.md`](docs-dev/BUNDLES.md) | Bundles and extensions |
 | [`docs-dev/PERSISTENCE.md`](docs-dev/PERSISTENCE.md) | Contracts, adapters, domain vs hooks |
+| [`docs-dev/RUSTASHOP.md`](docs-dev/RUSTASHOP.md) | Illustrative application layout |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Lint bar, Make layout, PR habits |
 | [`docs/brand/`](docs/brand/) | Brand assets |
 
