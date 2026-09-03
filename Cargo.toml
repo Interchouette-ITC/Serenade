@@ -8,6 +8,7 @@ members = [
     "crates/serenade-config",
     "crates/serenade-contracts",
     "crates/serenade-bundle",
+    "examples/demo-app",
 ]
 resolver = "2"
 

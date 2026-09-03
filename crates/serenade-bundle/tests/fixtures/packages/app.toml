@@ -1,0 +1,5 @@
+[framework]
+secret = "test"
+
+[demo]
+name = "serenade"

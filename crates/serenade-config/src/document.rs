@@ -121,6 +121,20 @@ impl Config {
         &self.value
     }
 
+    /// Returns the object at `key`, or an empty mapping when missing.
+    ///
+    /// Non-object values are ignored and yield an empty mapping so extensions
+    /// always receive a document root they can merge against.
+    #[must_use]
+    pub fn section(&self, key: &str) -> Self {
+        match self.value.get(key) {
+            Some(Value::Object(map)) => Self {
+                value: Value::Object(map.clone()),
+            },
+            _ => Self::empty(),
+        }
+    }
+
     fn from_value(value: Value) -> Result<Self, ConfigError> {
         if value.is_object() {
             Ok(Self { value })

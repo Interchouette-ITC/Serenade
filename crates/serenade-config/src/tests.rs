@@ -98,3 +98,23 @@ fn load_packages_merges_sorted_files() {
     );
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn section_returns_nested_object_or_empty() {
+    let config = Config::from_toml(
+        r#"
+[framework]
+secret = "x"
+
+[demo]
+name = "y"
+"#,
+    )
+    .unwrap();
+    let framework = config.section("framework");
+    assert_eq!(
+        framework.parameters().get("secret").map(String::as_str),
+        Some("x")
+    );
+    assert!(config.section("missing").parameters().is_empty());
+}

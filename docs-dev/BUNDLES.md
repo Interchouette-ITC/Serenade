@@ -35,7 +35,13 @@ Kernel / App
 
 `BundleInterface` (alias `Bundle`) declares `name`, optional `dependencies`, then `build` / `boot` / `shutdown`. `BundleRegistry` sorts dependents after their dependencies; unknown deps and cycles fail at compile.
 
-Bundles implement `RouteLoader` (`serenade-http`) to contribute routes into a `RouteCollection`. Bundle `CompilePass` registrations land with `serenade-di`.
+## Extensions and package config
+
+`Extension` loads one package alias into a `ContainerBuilder`. `build_container` merges `config/packages/*.{toml,yaml,yml}`, applies flattened parameters, registers the root `config` service, runs each extension on `config.section(alias)`, and compiles with `RegisterEventSubscribersPass` so `event_dispatcher` exists.
+
+`FrameworkBundle` / `FrameworkExtension` register the empty `router` (`RouteCollection`). Sample app: `examples/demo-app` (`DemoBundle` + `config/packages/*.toml`).
+
+Bundles may also implement `RouteLoader` (`serenade-http`) to contribute routes.
 
 ## Bundle vs Wasm plugin
 
@@ -45,17 +51,13 @@ Bundles implement `RouteLoader` (`serenade-http`) to contribute routes into a `R
 | Use | First-party features, trusted extensions | Merchant code, polyglot scripts |
 | Serenade role | DI + lifecycle | Host capability bus (product) |
 
-Both can coexist in RustaShop; Serenade bundles are the **in-process** story.
+Both can coexist in product apps; Serenade bundles are the **in-process** story.
 
-## Minimal bundle skeleton (future layout)
+## Layout today
 
 ```text
-crates/bundles/serenade-framework/
-├── src/
-│   ├── SerenadeFrameworkBundle.rs
-│   ├── DependencyInjection/
-│   └── Resources/config/services.toml
-└── Cargo.toml
+crates/serenade-bundle/     FrameworkBundle, Extension, build_container
+examples/demo-app/
+├── config/packages/*.toml
+└── src/main.rs             DemoBundle + FrameworkBundle
 ```
-
-Exact crate naming TBD when code starts; this doc locks the **model**, not the repo tree yet.
