@@ -77,7 +77,18 @@ HTTP adapter (Actix / Axum / …)
 
 `HttpKernel::handle` always returns a `Response`. Handler and middleware errors go through `ExceptionHandler` (`DefaultExceptionHandler` maps `HttpError` status and message to `text/plain`).
 
-Routing lives in `serenade-http`: `Route` / `RouteCollection`, `UrlMatcher` (404 / 405), and `RouteLoader` for bundles. Path segments `{name}` become request attributes. Adapters that bind a listener live in their own crates.
+Routing lives in `serenade-http`: `Route` / `RouteCollection`, `UrlMatcher` (404 / 405), and `RouteLoader` for bundles. Path segments `{name}` become request attributes.
+
+## HTTP adapters
+
+Server crates stay thin:
+
+1. Map the server request (method, path, headers, body) into `serenade_http::Request`.
+2. Optionally run `UrlMatcher::apply` to set `_route` and path parameters.
+3. Call `HttpKernel::handle`.
+4. Map `serenade_http::Response` back to the server response type.
+
+`serenade-http-actix` implements that bridge for Actix Web (`from_actix`, `to_actix`, `dispatch`). An Axum adapter can reuse the same four steps without changing the foundation crate.
 
 ## Messenger and jobs
 
