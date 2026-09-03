@@ -1,0 +1,4 @@
+[security]
+# Placeholder until SecurityBundle ships.
+# firewalls and authenticators will load from this package.
+enabled = false

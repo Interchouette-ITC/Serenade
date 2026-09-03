@@ -41,8 +41,9 @@ impl Application {
 
     /// Parses `argv` (program name first) and runs the selected command.
     ///
-    /// Global flags: `--env` / `APP_ENV`, `--no-debug`. With no command or
-    /// `list`, prints available commands.
+    /// Global flags: `--env` / `APP_ENV`, `--no-debug`, `--interactive`.
+    /// With no command or `list`, prints available commands. With
+    /// `--interactive`, enters a rustyline REPL (↑/↓ history).
     ///
     /// # Errors
     ///
@@ -85,6 +86,10 @@ impl Application {
             environment.is_debug()
         };
 
+        if matches.get_flag("interactive") {
+            return self.run_interactive(&environment, debug, container.as_ref());
+        }
+
         let command_name = matches.get_one::<String>("command").map(String::as_str);
         let trailing: Vec<String> = matches
             .get_many::<String>("args")
@@ -106,7 +111,7 @@ impl Application {
         }
     }
 
-    fn print_list(&self) -> Result<(), ConsoleError> {
+    pub(crate) fn print_list(&self) -> Result<(), ConsoleError> {
         let mut out = io::stdout().lock();
         writeln!(out, "Serenade Console")?;
         writeln!(out)?;
@@ -119,7 +124,7 @@ impl Application {
         writeln!(out)?;
         writeln!(
             out,
-            "Usage: <binary> [--env ENV] [--no-debug] <command> [args…]"
+            "Usage: <binary> [--env ENV] [--no-debug] [--interactive] <command> [args…]"
         )?;
         Ok(())
     }
@@ -142,6 +147,13 @@ fn clap_command() -> ClapCommand {
                 .long("no-debug")
                 .action(ArgAction::SetTrue)
                 .help("Disable debug even in dev/test"),
+        )
+        .arg(
+            Arg::new("interactive")
+                .long("interactive")
+                .short('i')
+                .action(ArgAction::SetTrue)
+                .help("Interactive REPL with ↑/↓ command history"),
         )
         .arg(
             Arg::new("command")

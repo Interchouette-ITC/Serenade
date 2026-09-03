@@ -7,7 +7,7 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use crossterm::ExecutableCommand;
-use ratatui::prelude::{Constraint, CrosstermBackend, Layout, Rect, Style, Stylize, Terminal};
+use ratatui::prelude::{Constraint, CrosstermBackend, Layout, Rect, Style, Terminal};
 use ratatui::widgets::{Block, Borders, Paragraph, Row, Table};
 
 use crate::application::stdout_is_terminal;

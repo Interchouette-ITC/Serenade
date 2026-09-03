@@ -1,0 +1,33 @@
+[package]
+name = "serenade-cli"
+description = "Serenade CLI: Flex-like recipes and app scaffolding (Cargo remains the package manager)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "serenade"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }
+clap_complete = { workspace = true }
+clap_mangen = { workspace = true }
+cling = { workspace = true }
+crossterm = { workspace = true }
+include_dir = { workspace = true }
+ratatui = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+toml = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

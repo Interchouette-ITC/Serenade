@@ -1,0 +1,21 @@
+id = "framework"
+description = "Framework package config and registration hints"
+
+[cargo]
+dependencies = [
+  { crate = "serenade-bundle", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-kernel", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-config", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-console", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-di", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-event", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-http", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+]
+
+[[files]]
+src = "files/config/packages/framework.toml"
+dest = "config/packages/framework.toml"
+
+[hints]
+bundles = ["FrameworkBundle"]
+note = "Register FrameworkBundle and load FrameworkExtension (see docs-dev/RECIPES.md)."

@@ -1,0 +1,13 @@
+id = "security"
+description = "Security package stub (SecurityBundle lands with issue #10)"
+
+[cargo]
+dependencies = []
+
+[[files]]
+src = "files/config/packages/security.toml"
+dest = "config/packages/security.toml"
+
+[hints]
+bundles = ["SecurityBundle"]
+note = "Placeholder config only. SecurityBundle is not shipped yet; keep this file for future wiring."
