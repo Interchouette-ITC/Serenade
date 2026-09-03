@@ -13,11 +13,16 @@ name = "serenade"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = { workspace = true }
 clap = { workspace = true }
+clap_complete = { workspace = true }
+clap_mangen = { workspace = true }
+cling = { workspace = true }
 include_dir = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 toml = { workspace = true }
+tokio = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

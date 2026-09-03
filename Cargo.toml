@@ -20,7 +20,7 @@ license = "Apache-2.0"
 version = "0.1.0"
 authors = ["Interchouette"]
 repository = "https://github.com/Interchouette-ITC/Serenade"
-rust-version = "1.75"
+rust-version = "1.77"
 
 [workspace.dependencies]
 serenade-kernel = { path = "crates/serenade-kernel", version = "0.1.0" }
@@ -34,7 +34,11 @@ serenade-bundle = { path = "crates/serenade-bundle", version = "0.1.0" }
 serenade-console = { path = "crates/serenade-console", version = "0.1.0" }
 serenade-cli = { path = "crates/serenade-cli", version = "0.1.0" }
 actix-web = "4"
+anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+clap_mangen = "0.3"
+cling = "0.1.3"
 crossterm = "0.28"
 include_dir = "0.7"
 ratatui = "0.29"
