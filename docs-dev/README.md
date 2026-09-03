@@ -1,6 +1,6 @@
 # Serenade — developer docs
 
-English only. Specification phase: no published crates yet.
+English only. Workspace crates publish through normal PR flow to `dev`.
 
 ## Index
 
@@ -9,6 +9,7 @@ English only. Specification phase: no published crates yet.
 | [VISION.md](VISION.md)       | Why Symfony-shaped Rust; what Serenade is not          |
 | [KERNEL.md](KERNEL.md)       | Kernel components and responsibilities                 |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model, extension points, composition            |
+| [PERSISTENCE.md](PERSISTENCE.md) | Adapter pattern, repository traits, `UnitOfWork` |
 | [RUSTASHOP.md](RUSTASHOP.md) | Illustrative RustaShop crate map (example, not locked) |
 
 ## Design rules

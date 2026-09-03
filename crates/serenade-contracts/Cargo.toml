@@ -12,5 +12,8 @@ rust-version.workspace = true
 serde = { workspace = true }
 thiserror = { workspace = true }
 
+[dev-dependencies]
+tokio = { workspace = true, features = ["sync", "rt", "macros"] }
+
 [lints]
 workspace = true
