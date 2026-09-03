@@ -3,11 +3,11 @@
 /// Failure while handling a request.
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
 pub enum HttpError {
-    /// Handler failed without a specific status.
-    #[error("{0}")]
+    /// Handler failed without a specific status (maps to HTTP 500).
+    #[error("request handler failed: {0}")]
     Failed(String),
     /// Handler failed with an HTTP status to map onto the response.
-    #[error("{status}: {message}")]
+    #[error("HTTP {status}: {message}")]
     Status {
         /// Suggested status code.
         status: u16,
@@ -32,6 +32,24 @@ impl HttpError {
         }
     }
 
+    /// Convenience: HTTP 404.
+    #[must_use]
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self::status(404, message)
+    }
+
+    /// Convenience: HTTP 400.
+    #[must_use]
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self::status(400, message)
+    }
+
+    /// Convenience: HTTP 422.
+    #[must_use]
+    pub fn unprocessable(message: impl Into<String>) -> Self {
+        Self::status(422, message)
+    }
+
     /// Status used by [`crate::DefaultExceptionHandler`].
     #[must_use]
     pub const fn status_code(&self) -> u16 {
@@ -41,7 +59,7 @@ impl HttpError {
         }
     }
 
-    /// Human-readable message.
+    /// Human-readable message (without the `HTTP {status}:` prefix).
     #[must_use]
     pub fn message(&self) -> &str {
         match self {
