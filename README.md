@@ -44,7 +44,7 @@ Serenade is the reusable framework repo. Applications such as RustaShop live in 
 4. Commits and docs in **English**; conventional commits when code lands.
 
 <p align="center">
-  <img src="docs/brand/logo-banner-rooftop-readme.png" alt="Serenade: Paris rooftop night scene" width="360" style="background:#ffffff" />
+  <img src="docs/brand/logo-banner-rooftop-readme-on-white.png" alt="Serenade: Paris rooftop night scene" width="360" />
 </p>
 
 ## Thanks
