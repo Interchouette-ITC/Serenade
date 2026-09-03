@@ -37,7 +37,7 @@ Kernel / App
 
 ## Extensions and package config
 
-`Extension` loads one package alias into a `ContainerBuilder`. `build_container` merges `config/packages/*.{toml,yaml,yml}`, applies flattened parameters, registers the root `config` service, runs each extension on `config.section(alias)`, and compiles with `RegisterEventSubscribersPass` so `event_dispatcher` exists.
+`Extension` loads one package alias into a `ContainerBuilder`. `build_container` merges `config/packages/*.{toml,yaml,yml}`, then `config/packages/{env}/*` when that directory exists, applies flattened parameters, registers the root `config` service, runs each extension on `config.section(alias)`, and compiles with `RegisterEventSubscribersPass` so `event_dispatcher` exists. Pass the environment name (same as `APP_ENV`) as the second argument.
 
 `FrameworkBundle` / `FrameworkExtension` register the empty `router` (`RouteCollection`). Sample app: `examples/demo-app` (`DemoBundle` + `config/packages/*.toml`).
 

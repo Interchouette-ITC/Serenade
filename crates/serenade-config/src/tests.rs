@@ -1,6 +1,6 @@
 use serenade_di::{ContainerBuilder, ParameterBag};
 
-use super::{load_packages, version, Config};
+use super::{load_dotenv, load_packages, load_packages_for_env, version, Config};
 
 #[test]
 fn version_matches_workspace() {
@@ -68,14 +68,7 @@ fn missing_env_without_default_is_error() {
 
 #[test]
 fn load_packages_merges_sorted_files() {
-    let dir = std::env::temp_dir().join(format!(
-        "serenade-config-packages-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("time")
-            .as_nanos()
-    ));
+    let dir = unique_temp_dir("packages");
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(
         dir.join("00-framework.yaml"),
@@ -100,6 +93,68 @@ fn load_packages_merges_sorted_files() {
 }
 
 #[test]
+fn load_packages_for_env_applies_overlay_directory() {
+    let dir = unique_temp_dir("packages-env");
+    std::fs::create_dir_all(dir.join("dev")).unwrap();
+    std::fs::write(
+        dir.join("framework.toml"),
+        "[framework]\nname = \"base\"\ndebug = false\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("dev").join("framework.toml"),
+        "[framework]\ndebug = true\n",
+    )
+    .unwrap();
+    let loaded = load_packages_for_env(&dir, "dev").unwrap();
+    let params = loaded.parameters();
+    assert_eq!(
+        params.get("framework.name").map(String::as_str),
+        Some("base")
+    );
+    assert_eq!(
+        params.get("framework.debug").map(String::as_str),
+        Some("true")
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn load_dotenv_sets_missing_vars_in_order() {
+    let dir = unique_temp_dir("dotenv");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::env::remove_var("SERENADE_DOTENV_A");
+    std::env::remove_var("SERENADE_DOTENV_B");
+    std::fs::write(
+        dir.join(".env"),
+        "SERENADE_DOTENV_A=from-env\nSERENADE_DOTENV_B=base\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join(".env.local"), "SERENADE_DOTENV_B=local\n").unwrap();
+    std::fs::write(dir.join(".env.dev"), "SERENADE_DOTENV_B=dev\n").unwrap();
+    load_dotenv(&dir, "dev").unwrap();
+    assert_eq!(std::env::var("SERENADE_DOTENV_A").unwrap(), "from-env");
+    // Later dotenv files override earlier ones; process env still wins.
+    assert_eq!(std::env::var("SERENADE_DOTENV_B").unwrap(), "dev");
+    std::env::remove_var("SERENADE_DOTENV_A");
+    std::env::remove_var("SERENADE_DOTENV_B");
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn load_dotenv_skips_local_in_prod() {
+    let dir = unique_temp_dir("dotenv-prod");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::env::remove_var("SERENADE_DOTENV_PROD");
+    std::fs::write(dir.join(".env"), "SERENADE_DOTENV_PROD=base\n").unwrap();
+    std::fs::write(dir.join(".env.local"), "SERENADE_DOTENV_PROD=local\n").unwrap();
+    load_dotenv(&dir, "prod").unwrap();
+    assert_eq!(std::env::var("SERENADE_DOTENV_PROD").unwrap(), "base");
+    std::env::remove_var("SERENADE_DOTENV_PROD");
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
 fn section_returns_nested_object_or_empty() {
     let config = Config::from_toml(
         r#"
@@ -117,4 +172,15 @@ name = "y"
         Some("x")
     );
     assert!(config.section("missing").parameters().is_empty());
+}
+
+fn unique_temp_dir(label: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "serenade-config-{label}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("time")
+            .as_nanos()
+    ))
 }

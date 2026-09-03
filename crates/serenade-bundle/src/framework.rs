@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use serenade_config::Config;
-use serenade_console::{AboutCommand, CommandService, DebugContainerCommand, COMMAND_TAG};
+use serenade_console::{
+    AboutCommand, CommandService, DebugConfigCommand, DebugContainerCommand, COMMAND_TAG,
+};
 use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_http::RouteCollection;
 use serenade_kernel::{BundleInterface, KernelError};
@@ -59,6 +61,10 @@ impl Extension for FrameworkExtension {
         builder.register(
             ServiceDefinition::new("console.command.debug_container").with_tag(COMMAND_TAG),
             |_| Ok(Box::new(CommandService(Arc::new(DebugContainerCommand)))),
+        )?;
+        builder.register(
+            ServiceDefinition::new("console.command.debug_config").with_tag(COMMAND_TAG),
+            |_| Ok(Box::new(CommandService(Arc::new(DebugConfigCommand)))),
         )?;
         Ok(())
     }

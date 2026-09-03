@@ -2,7 +2,7 @@
 //!
 //! Plain commands use clap for argv (`--env`, `--no-debug`). Interactive mode
 //! (`--interactive`) uses rustyline for ↑/↓ history. Debug surfaces may use
-//! ratatui (see [`DebugContainerCommand`]).
+//! ratatui (see [`DebugContainerCommand`], [`DebugConfigCommand`]).
 
 mod application;
 mod command;
@@ -14,7 +14,7 @@ mod interactive;
 
 pub use application::{stdout_is_terminal, Application};
 pub use command::Command;
-pub use commands::{AboutCommand, DebugContainerCommand};
+pub use commands::{AboutCommand, DebugConfigCommand, DebugContainerCommand};
 pub use compile_pass::{CommandService, RegisterCommandsPass, APPLICATION_SERVICE, COMMAND_TAG};
 pub use error::ConsoleError;
 pub use input::Input;

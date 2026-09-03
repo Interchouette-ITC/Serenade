@@ -66,7 +66,7 @@ Shipped recipes: `framework`, `security` (config stub until SecurityBundle lands
 
 ## Package config
 
-Default format is **TOML** under `config/packages/`. YAML remains loadable through `serenade-config`; recipes ship TOML.
+Default format is **TOML** under `config/packages/`. YAML remains loadable through `serenade-config`; recipes ship TOML. Environment overlays live in `config/packages/{env}/` (for example `config/packages/dev/`). Scaffolded apps call `load_dotenv` then `build_container(..., env, ...)`.
 
 ## Console vs CLI
 

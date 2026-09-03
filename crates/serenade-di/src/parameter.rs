@@ -39,4 +39,11 @@ impl ParameterBag {
     pub fn contains(&self, key: &str) -> bool {
         self.values.contains_key(key)
     }
+
+    /// Iterates all parameters (order is not guaranteed).
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &str)> + '_ {
+        self.values
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+    }
 }

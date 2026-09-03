@@ -11,12 +11,24 @@ fn main() -> Result<(), BundleError> {
         alias: "app",
         message: error.to_string(),
     })?;
-    let mut app = App::new(environment);
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    serenade_config::load_dotenv(&root, environment.as_str()).map_err(|error| {
+        BundleError::Extension {
+            alias: "app",
+            message: error.to_string(),
+        }
+    })?;
+
+    let mut app = App::new(environment.clone());
     app.register_bundle(FrameworkBundle)?;
     app.boot()?;
 
-    let packages = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config/packages");
-    let (_config, container) = build_container(Some(packages.as_path()), &[&FrameworkExtension])?;
+    let packages = root.join("config/packages");
+    let (_config, container) = build_container(
+        Some(packages.as_path()),
+        environment.as_str(),
+        &[&FrameworkExtension],
+    )?;
 
     println!("bundles: {:?}", app.kernel().bundle_names());
     let _ = container;

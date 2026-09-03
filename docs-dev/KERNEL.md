@@ -108,13 +108,18 @@ RustaShop jobs (webhooks retry, agent runs, sandbox) should plug into messenger,
 **Preference:** new apps and Serenade examples use `config/packages/*.toml`. YAML remains supported for Symfony familiarity. There is no PHP/XML config track.
 
 ```text
+load_dotenv(project_root, APP_ENV)
+    .env → .env.local (not in prod) → .env.{env} → .env.{env}.local
+    (later files override earlier; process env never overwritten)
 defaults (TOML or YAML)
-    + config/packages/*.{toml,yaml,yml}  (sorted by file name)
-    + env-specific overlays
-    + secrets (environment)
+    + config/packages/*.{toml,yaml,yml}  (sorted by file name; files only)
+    + config/packages/{env}/*.{toml,yaml,yml}  (env overlay when the directory exists)
+    + ${VAR} interpolation from the process environment
 ```
 
-`load_packages` is the bundle package loader. Mappings merge; scalars and sequences in an overlay replace the base value. Unset variables without a default fail load.
+`load_packages` loads the base directory only. `load_packages_for_env` applies the overlay. `build_container(packages_dir, environment, extensions)` uses the env-aware loader. Apps should call `load_dotenv` on the project root before building the container when they ship `.env` files.
+
+Mappings merge; scalars and sequences in an overlay replace the base value. Unset variables without a default fail load.
 
 ## Console
 
