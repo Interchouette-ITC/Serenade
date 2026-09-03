@@ -1,7 +1,7 @@
 # **Serenade**
 
 <p align="center">
-  <img src="docs/brand/logo-lockup-wide-desktop.png" alt="Serenade: Rust application framework" width="640" />
+  <img src="docs/brand/logo-lockup-wide-desktop.png" alt="Serenade: Rust application framework" width="560" />
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@ Serenade is the reusable framework repo. Applications such as RustaShop live in 
 4. Commits and docs in **English**; conventional commits when code lands.
 
 <p align="center">
-  <img src="docs/brand/logo-banner-rooftop-readme.png" alt="Serenade: Paris rooftop night scene" width="360" style="background-color:#ffffff" />
+  <img src="docs/brand/logo-banner-rooftop-readme-on-white.png" alt="Serenade: Paris rooftop night scene" width="360" />
 </p>
 
 ## Thanks
