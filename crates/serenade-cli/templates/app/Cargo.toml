@@ -1,0 +1,18 @@
+[package]
+name = "__PACKAGE_NAME__"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "__PACKAGE_NAME__"
+path = "src/main.rs"
+
+[dependencies]
+serenade-bundle = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
+serenade-config = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
+serenade-console = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
+serenade-di = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
+serenade-event = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
+serenade-http = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
+serenade-kernel = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }

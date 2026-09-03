@@ -9,7 +9,7 @@ Serenade’s `bin/console` analogue lives in `serenade-console`.
 | `php bin/console …` | App binary (for example `cargo run -p serenade-demo-app --bin console`) |
 | Console component | `serenade-console` + `Command` trait |
 | Tagged `console.command` | DI tag `console.command` + `RegisterCommandsPass` |
-| Flex scaffolding | Separate recipes work (#30); Cargo stays the package manager |
+| Flex scaffolding | [`RECIPES.md`](RECIPES.md) (`serenade` CLI); Cargo stays the package manager |
 
 ## Global flags
 
