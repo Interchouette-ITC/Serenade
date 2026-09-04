@@ -2443,6 +2443,7 @@ dependencies = [
 name = "serenade-di"
 version = "0.1.0"
 dependencies = [
+ "rstest",
  "serde",
  "thiserror 2.0.20",
 ]

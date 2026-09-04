@@ -223,6 +223,92 @@ fn interpolate_arrays_and_rejects_bad_idents() {
     assert!(empty.interpolate_env().is_err());
 }
 
+#[test]
+fn load_packages_for_env_skips_empty_environment_name() {
+    let dir = unique_temp_dir("packages-empty-env");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("base.toml"), "[app]\nname = \"base\"\n").unwrap();
+    let loaded = load_packages_for_env(&dir, "   ").unwrap();
+    assert_eq!(
+        loaded.parameters().get("app.name").map(String::as_str),
+        Some("base")
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn load_packages_skips_hidden_and_non_config_files() {
+    let dir = unique_temp_dir("packages-skip");
+    std::fs::create_dir_all(dir.join("nested")).unwrap();
+    std::fs::write(dir.join(".hidden.toml"), "[x]\nv = 1\n").unwrap();
+    std::fs::write(dir.join("notes.txt"), "ignore").unwrap();
+    std::fs::write(dir.join("noext"), "ignore").unwrap();
+    std::fs::write(dir.join("ok.toml"), "[app]\nname = \"ok\"\n").unwrap();
+    std::fs::write(dir.join("nested").join("child.toml"), "[nested]\nv = 1\n").unwrap();
+    let loaded = load_packages(&dir).unwrap();
+    assert_eq!(
+        loaded.parameters().get("app.name").map(String::as_str),
+        Some("ok")
+    );
+    assert!(!loaded.parameters().contains_key("nested.v"));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn load_packages_missing_directory_is_io_error() {
+    let missing = unique_temp_dir("packages-missing");
+    let err = load_packages(&missing).unwrap_err();
+    assert!(matches!(err, super::ConfigError::Io { .. }));
+}
+
+#[test]
+fn from_path_missing_file_is_io_error() {
+    let missing = unique_temp_dir("from-path-missing").join("gone.yaml");
+    let err = Config::from_path(&missing).unwrap_err();
+    assert!(matches!(err, super::ConfigError::Io { .. }));
+}
+
+#[test]
+fn flatten_skips_null_and_array_roots() {
+    let config = Config::from_yaml(
+        "
+nullable: null
+list:
+  - a
+  - b
+keep: yes
+",
+    )
+    .unwrap();
+    let params = config.parameters();
+    assert_eq!(params.get("keep").map(String::as_str), Some("yes"));
+    assert!(!params.contains_key("nullable"));
+    assert!(!params.contains_key("list"));
+}
+
+#[test]
+fn load_dotenv_keeps_preexisting_and_errors_on_unreadable() {
+    let dir = unique_temp_dir("dotenv-unreadable");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::env::set_var("SERENADE_DOTENV_KEEP", "process");
+    std::fs::write(dir.join(".env"), "SERENADE_DOTENV_KEEP=file\n").unwrap();
+    load_dotenv(&dir, "dev").unwrap();
+    assert_eq!(std::env::var("SERENADE_DOTENV_KEEP").unwrap(), "process");
+
+    let bad = dir.join(".env.dev");
+    std::fs::write(&bad, "SERENADE_DOTENV_X=1\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&bad, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let result = load_dotenv(&dir, "dev");
+        std::fs::set_permissions(&bad, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(matches!(result, Err(super::ConfigError::Dotenv { .. })));
+    }
+    std::env::remove_var("SERENADE_DOTENV_KEEP");
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 fn unique_temp_dir(label: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
         "serenade-config-{label}-{}-{}",

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use serenade_di::{ContainerBuilder, ServiceDefinition};
+use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
 use serenade_kernel::Environment;
 
 use crate::{
@@ -105,6 +105,7 @@ fn debug_config_requires_debug_and_redacts() {
 fn compile_pass_collects_tagged_commands() {
     let mut builder = ContainerBuilder::new();
     builder.add_compile_pass(RegisterCommandsPass);
+    assert_eq!(RegisterCommandsPass.name(), "register_console_commands");
     builder
         .register(
             ServiceDefinition::new("cmd.ping").with_tag(COMMAND_TAG),
@@ -116,5 +117,26 @@ fn compile_pass_collects_tagged_commands() {
         .get_as::<Application>(APPLICATION_SERVICE)
         .expect("application");
     assert!(application.find("app:ping").is_some());
+    assert_eq!(application.commands().len(), 1);
     assert_eq!(Environment::from_name("dev").unwrap().as_str(), "dev");
+}
+
+#[test]
+fn version_and_stdout_terminal_helpers() {
+    assert_ne!(crate::version(), "");
+    let _ = crate::stdout_is_terminal();
+}
+
+#[test]
+fn invalid_environment_flag_errors() {
+    let app = Application::new();
+    let err = app.run(["console", "--env", "   ", "list"]).unwrap_err();
+    assert!(matches!(err, ConsoleError::InvalidEnvironment(_)));
+}
+
+#[test]
+fn list_command_name_prints_available() {
+    let mut app = Application::new();
+    app.add(Arc::new(PingCommand));
+    app.run(["console", "list"]).expect("list");
 }
