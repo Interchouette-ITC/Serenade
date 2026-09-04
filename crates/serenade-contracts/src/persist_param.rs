@@ -183,4 +183,20 @@ mod tests {
         assert!(!is_disable_flag("false"));
         assert!(!is_disable_flag(""));
     }
+
+    #[test]
+    fn reject_param_owned_and_free_fns() {
+        let policy = PersistParamPolicy::enabled();
+        assert_eq!(policy.reject_param_owned("ok".to_owned()).unwrap(), "ok");
+        assert!(policy
+            .reject_param_owned("a\0b".to_owned())
+            .unwrap_err()
+            .to_string()
+            .contains("NUL"));
+        assert_eq!(reject_unsafe_sql_param("clean").unwrap(), "clean");
+        assert!(reject_unsafe_sql_param("x\0y").is_err());
+        assert_eq!(reject_unsafe_sql_param_owned("z".to_owned()).unwrap(), "z");
+        assert!(PersistParamPolicy::enabled().is_enabled());
+        assert!(!PersistParamPolicy::disabled().is_enabled());
+    }
 }
