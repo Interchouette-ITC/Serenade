@@ -13,5 +13,9 @@ serde = { workspace = true }
 serenade-di = { workspace = true }
 thiserror = { workspace = true }
 
+[dev-dependencies]
+insta = { workspace = true }
+mockall = { workspace = true }
+
 [lints]
 workspace = true

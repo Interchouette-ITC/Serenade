@@ -1,0 +1,6 @@
+---
+source: crates/serenade-event/src/tests.rs
+expression: recorded
+---
+- cart.updated
+- order.placed
