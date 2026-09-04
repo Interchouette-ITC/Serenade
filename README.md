@@ -123,7 +123,7 @@ Thank you to their maintainers and communities.
 
 ## License
 
-Apache-2.0. See [`LICENSE`](LICENSE).
+**Apache-2.0** (Apache License, Version 2.0). See [`LICENSE`](LICENSE).
 
 <p align="center">
   <img src="docs/brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" />

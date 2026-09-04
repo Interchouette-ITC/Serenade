@@ -20,4 +20,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-Apache-2.0. See [`../LICENSE`](../LICENSE).
+**Apache-2.0** (Apache License, Version 2.0). See [`../LICENSE`](../LICENSE).
+
+<p align="center">
+  <img src="brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" />
+</p>
