@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use serenade_di::{ContainerBuilder, ServiceDefinition};
+use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
 
 use super::{
     assert_dispatched, Event, EventDispatcher, EventSubscriber, RecordingSubscriber,
@@ -156,4 +156,64 @@ fn subscriber_default_priority_is_zero() {
     let mut dispatcher = EventDispatcher::new();
     dispatcher.add(Arc::new(listener));
     dispatcher.dispatch(&NamedEvent("noop.default")).unwrap();
+}
+
+struct FailingListener {
+    message: &'static str,
+}
+
+impl EventSubscriber for FailingListener {
+    fn event_name(&self) -> &'static str {
+        "fail.once"
+    }
+
+    fn handle(&self, event: &dyn Event) -> Result<(), super::EventError> {
+        Err(super::EventError::Subscriber {
+            subscriber: self.event_name().to_owned(),
+            event: event.name(),
+            message: self.message.to_owned(),
+        })
+    }
+}
+
+#[test]
+fn dispatch_returns_first_subscriber_error_and_reports_len() {
+    let mut dispatcher = EventDispatcher::new();
+    dispatcher.add(Arc::new(FailingListener { message: "first" }));
+    dispatcher.add(Arc::new(FailingListener { message: "second" }));
+    assert_eq!(dispatcher.len(), 2);
+    let err = dispatcher
+        .dispatch(&NamedEvent("fail.once"))
+        .expect_err("first failure wins");
+    assert!(matches!(
+        err,
+        super::EventError::Subscriber { message, .. } if message == "first"
+    ));
+}
+
+#[test]
+fn recording_subscriber_maps_poisoned_lock() {
+    let names = Arc::new(Mutex::new(Vec::new()));
+    let poison = Arc::clone(&names);
+    let _ = std::thread::spawn(move || {
+        let _guard = poison.lock().expect("lock");
+        panic!("poison recording mutex");
+    })
+    .join();
+    let subscriber = RecordingSubscriber::new("poison.event", names);
+    let err = subscriber
+        .handle(&NamedEvent("poison.event"))
+        .expect_err("poisoned lock");
+    assert!(matches!(
+        err,
+        super::EventError::Subscriber { message, .. } if message == "lock poisoned"
+    ));
+}
+
+#[test]
+fn register_pass_name_is_stable() {
+    assert_eq!(
+        RegisterEventSubscribersPass.name(),
+        "register_event_subscribers"
+    );
 }
