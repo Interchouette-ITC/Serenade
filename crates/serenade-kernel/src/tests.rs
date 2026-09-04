@@ -94,25 +94,22 @@ fn environment_debug_defaults() {
         .debug());
 }
 
-#[test]
-fn environment_from_name_parses_ascii_case() {
-    assert_eq!(Environment::from_name("DEV").unwrap(), Environment::Dev);
-    assert_eq!(Environment::from_name("Test").unwrap(), Environment::Test);
-    assert_eq!(Environment::from_name("prod").unwrap(), Environment::Prod);
-    assert_eq!(
-        Environment::from_name("Staging").unwrap(),
-        Environment::Custom("staging".into())
-    );
-    assert_eq!(
-        Environment::from_name("recette").unwrap(),
-        Environment::Custom("recette".into())
-    );
+#[rstest::rstest]
+#[case::dev("DEV", Environment::Dev)]
+#[case::test_mixed("Test", Environment::Test)]
+#[case::prod("prod", Environment::Prod)]
+#[case::staging("Staging", Environment::Custom("staging".into()))]
+#[case::recette("recette", Environment::Custom("recette".into()))]
+fn environment_from_name_parses_ascii_case(#[case] input: &str, #[case] expected: Environment) {
+    assert_eq!(Environment::from_name(input).unwrap(), expected);
+}
+
+#[rstest::rstest]
+#[case::blank("  ")]
+#[case::empty("")]
+fn environment_from_name_rejects_empty(#[case] input: &str) {
     assert!(matches!(
-        Environment::from_name("  "),
-        Err(KernelError::UnknownEnvironment(_))
-    ));
-    assert!(matches!(
-        Environment::from_name(""),
+        Environment::from_name(input),
         Err(KernelError::UnknownEnvironment(_))
     ));
 }

@@ -32,6 +32,18 @@ make ci
 
 Clippy uses `-D warnings` with the pedantic and nursery groups. Do not add `#[allow(clippy::too_many_arguments)]`, `too_many_lines`, or `dead_code`.
 
+## Rust test DX
+
+Runner stays **`cargo test`** (via `make test` / `make ci`). Prefer these workspace `dev-dependencies` when they fit:
+
+| Crate | Use for |
+| --- | --- |
+| **rstest** | Parametrized cases and fixtures |
+| **mockall** | Sync trait doubles when a real collaborator is heavy |
+| **insta** | Stable JSON / YAML / text snapshots (`*.snap` committed; `*.snap.new` gitignored) |
+
+Kernel boot / HTTP helpers live in **`serenade-testing`** (`SerenadeTestKernel`, `HttpTestClient`, re-exports of event harness helpers).
+
 ## Make layout
 
 The root `Makefile` includes fragments under `make/`:

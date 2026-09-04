@@ -12,5 +12,8 @@ fn framework_bundle_boots_under_test_kernel() {
     app.boot().expect("boot");
     assert_eq!(app.kernel().phase(), KernelPhase::Booted);
     assert!(app.kernel().bundle_names().contains(&"framework"));
+    let mut names = app.kernel().bundle_names();
+    names.sort_unstable();
+    insta::assert_yaml_snapshot!("framework_bundle_names", names);
     app.shutdown().expect("shutdown");
 }

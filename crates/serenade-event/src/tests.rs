@@ -78,6 +78,35 @@ fn harness_records_matching_events() {
 }
 
 #[test]
+fn harness_dispatch_order_snapshot() {
+    let names = Arc::new(Mutex::new(Vec::new()));
+    let mut dispatcher = EventDispatcher::new();
+    dispatcher.add(Arc::new(
+        RecordingSubscriber::new("cart.updated", names.clone()).with_priority(1),
+    ));
+    dispatcher.add(Arc::new(
+        RecordingSubscriber::new("order.placed", names.clone()).with_priority(0),
+    ));
+    dispatcher.dispatch(&NamedEvent("cart.updated")).unwrap();
+    dispatcher.dispatch(&NamedEvent("order.placed")).unwrap();
+    let recorded: Vec<&str> = names.lock().expect("lock").clone();
+    insta::assert_yaml_snapshot!(recorded);
+}
+
+/// Sync collaborator double for bundle authors (mockall + `cargo test`).
+#[mockall::automock]
+trait LabelSource {
+    fn label(&self) -> &'static str;
+}
+
+#[test]
+fn mockall_label_source_returns_configured_value() {
+    let mut source = MockLabelSource::new();
+    source.expect_label().return_const("cart.updated");
+    assert_eq!(source.label(), "cart.updated");
+}
+
+#[test]
 fn compile_pass_collects_tagged_subscribers() {
     let names = Arc::new(Mutex::new(Vec::new()));
     let listener = RecordingSubscriber::new("cart.updated", names.clone());
