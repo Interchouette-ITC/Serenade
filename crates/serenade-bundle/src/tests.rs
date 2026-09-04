@@ -112,6 +112,38 @@ fn demo_extension_reads_package_section() {
 }
 
 #[test]
+fn build_container_without_packages_dir() {
+    let (config, container) = build_container(None, "test", &[]).expect("empty");
+    assert!(config.parameters().is_empty());
+    assert!(container.definitions().is_empty() || container.definition(CONFIG_SERVICE).is_some());
+    let stored = container.get_as::<Config>(CONFIG_SERVICE).expect("config");
+    assert!(stored.parameters().is_empty());
+}
+
+struct WrappingExtension;
+
+impl Extension for WrappingExtension {
+    fn alias(&self) -> &'static str {
+        "wrap"
+    }
+
+    fn load(&self, _config: &Config, _builder: &mut ContainerBuilder) -> Result<(), BundleError> {
+        Err(BundleError::Config(
+            serenade_config::ConfigError::InvalidRoot,
+        ))
+    }
+}
+
+#[test]
+fn build_container_wraps_non_extension_errors() {
+    let result = build_container(None, "test", &[&WrappingExtension]);
+    let Err(err) = result else {
+        panic!("expected extension wrap");
+    };
+    assert!(matches!(err, BundleError::Extension { alias: "wrap", .. }));
+}
+
+#[test]
 fn framework_bundle_boots_on_kernel() {
     let mut app = App::new(Environment::Test);
     app.register_bundle(FrameworkBundle).expect("register");

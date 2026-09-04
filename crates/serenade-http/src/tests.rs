@@ -42,11 +42,32 @@ fn method_parses_ascii_case() {
 }
 
 #[test]
+fn method_as_str_and_display_cover_all_variants() {
+    let cases = [
+        (Method::Get, "GET"),
+        (Method::Head, "HEAD"),
+        (Method::Post, "POST"),
+        (Method::Put, "PUT"),
+        (Method::Patch, "PATCH"),
+        (Method::Delete, "DELETE"),
+        (Method::Options, "OPTIONS"),
+    ];
+    for (method, token) in cases {
+        assert_eq!(method.as_str(), token);
+        assert_eq!(method.to_string(), token);
+        assert_eq!(token.parse::<Method>().unwrap(), method);
+    }
+}
+
+#[test]
 fn headers_are_case_insensitive() {
     let mut headers = super::Headers::new();
+    assert!(headers.is_empty());
     headers.insert("Content-Type", "application/json");
     assert_eq!(headers.get("content-type"), Some("application/json"));
     assert_eq!(headers.len(), 1);
+    assert!(!headers.is_empty());
+    assert!(headers.iter().any(|(name, _)| name == "content-type"));
 }
 
 #[test]
@@ -54,8 +75,55 @@ fn attributes_roundtrip() {
     let mut request = Request::new(Method::Get, "/items/1");
     request.attributes_mut().insert("item_id", 1_u64);
     assert_eq!(request.attributes().get::<u64>("item_id"), Some(&1));
+    assert!(request.attributes().contains("item_id"));
+    assert_eq!(request.attributes().len(), 1);
     assert_eq!(request.attributes_mut().remove::<u64>("item_id"), Some(1));
     assert!(request.attributes().is_empty());
+    let debug = format!("{:?}", request.attributes());
+    assert!(debug.contains("AttributeBag"));
+}
+
+#[test]
+fn route_collection_rejects_duplicate_and_allows_any_method() {
+    let route = Route::new("any", "/ping", []);
+    assert_eq!(route.methods(), []);
+    assert!(route.allows(Method::Delete));
+    assert_eq!(route.path(), "/ping");
+    let mut collection = RouteCollection::new();
+    assert_eq!(collection.len(), 0);
+    collection.add(route).expect("add");
+    let err = collection
+        .add(Route::with_method("any", "/other", Method::Get))
+        .expect_err("duplicate");
+    assert!(err.to_string().contains("already registered"));
+    assert_eq!(collection.routes().len(), 1);
+}
+
+#[test]
+fn matcher_returns_404_and_exposes_collection() {
+    let mut collection = RouteCollection::new();
+    collection
+        .add(Route::with_method("item", "/items/{id}", Method::Get))
+        .expect("add");
+    let matcher = UrlMatcher::new(collection);
+    assert_eq!(matcher.collection().len(), 1);
+    let missing = matcher
+        .match_request(Method::Get, "/nope")
+        .expect_err("404");
+    assert_eq!(missing.status_code(), 404);
+    let wrong_len = matcher
+        .match_request(Method::Get, "/items/1/extra")
+        .expect_err("segment count");
+    assert_eq!(wrong_len.status_code(), 404);
+}
+
+#[test]
+fn closure_route_loader_registers_routes() {
+    let collection = load_routes(&[&|routes: &mut RouteCollection| {
+        routes.add(Route::with_method("closure", "/closure", Method::Get))
+    }])
+    .expect("load");
+    assert_eq!(collection.len(), 1);
 }
 
 #[test]
