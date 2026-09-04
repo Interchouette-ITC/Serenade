@@ -2,7 +2,9 @@ use actix_web::test as actix_test;
 use actix_web::{web, App, HttpRequest, HttpResponse};
 use serenade_http::{HttpKernel, Method, Request, Response};
 
-use super::{app, conversion_error, dispatch, from_actix, to_actix, version};
+use super::{
+    app, await_bound, bind_server, conversion_error, dispatch, from_actix, to_actix, version,
+};
 
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
 #[allow(clippy::future_not_send)]
@@ -124,9 +126,9 @@ async fn listen_binds_serves_then_stops() {
     drop(probe);
 
     let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "listen-ok")));
-    let server = actix_web::rt::spawn(async move {
-        super::listen(addr, kernel).await.expect("listen");
-    });
+    let server = bind_server(addr, kernel).expect("bind");
+    let handle = server.handle();
+    let server = actix_web::rt::spawn(server);
 
     let mut body = None;
     for _ in 0..50 {
@@ -152,10 +154,28 @@ async fn listen_binds_serves_then_stops() {
         break;
     }
 
-    server.abort();
-    let _ = server.await;
+    handle.stop(true).await;
+    server.await.expect("join").expect("server stopped cleanly");
     let body = body.expect("listen did not become ready");
     let text = String::from_utf8_lossy(&body);
     assert!(text.contains("200"), "{text}");
     assert!(text.contains("listen-ok"), "{text}");
+}
+
+#[actix_web::test]
+async fn listen_awaits_until_server_stops() {
+    use std::net::TcpListener;
+    use std::time::Duration;
+
+    let probe = TcpListener::bind("127.0.0.1:0").expect("bind probe");
+    let addr = probe.local_addr().expect("addr");
+    drop(probe);
+
+    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "ok")));
+    let server = bind_server(addr, kernel).expect("bind");
+    let handle = server.handle();
+    let task = actix_web::rt::spawn(async move { await_bound(server).await });
+    actix_web::rt::time::sleep(Duration::from_millis(40)).await;
+    handle.stop(true).await;
+    task.await.expect("join").expect("listen await completed");
 }

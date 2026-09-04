@@ -1,6 +1,6 @@
 //! Console Application runner (clap argv + registered commands).
 
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, IsTerminal};
 use std::sync::Arc;
 
 use clap::{Arg, ArgAction, Command as ClapCommand};
@@ -112,7 +112,10 @@ impl Application {
     }
 
     pub(crate) fn print_list(&self) -> Result<(), ConsoleError> {
-        let mut out = io::stdout().lock();
+        self.print_list_to(&mut io::stdout().lock())
+    }
+
+    pub(crate) fn print_list_to(&self, out: &mut dyn io::Write) -> Result<(), ConsoleError> {
         writeln!(out, "Serenade Console")?;
         writeln!(out)?;
         writeln!(out, "Available commands:")?;

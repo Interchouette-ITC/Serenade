@@ -27,6 +27,32 @@ pub fn app(
         .default_service(web::to(serenade_service))
 }
 
+/// Binds `addr` and returns the Actix [`actix_web::dev::Server`] (does not await).
+///
+/// Prefer [`listen`] for the usual "run until stop" path. Use this when the caller
+/// needs a [`actix_web::dev::ServerHandle`] for graceful shutdown in tests.
+///
+/// # Errors
+///
+/// Propagates bind errors.
+pub fn bind_server(
+    addr: impl ToSocketAddrs,
+    kernel: HttpKernel,
+) -> std::io::Result<actix_web::dev::Server> {
+    let data = web::Data::new(kernel);
+    Ok(HttpServer::new(move || app(data.clone())).bind(addr)?.run())
+}
+
+/// Awaits a server from [`bind_server`] until it stops.
+///
+/// # Errors
+///
+/// Propagates server IO errors.
+#[allow(clippy::future_not_send)]
+pub async fn await_bound(server: actix_web::dev::Server) -> std::io::Result<()> {
+    server.await
+}
+
 /// Binds `addr` and serves every request through `kernel`.
 ///
 /// Prefer this over hand-rolling `HttpServer::bind` in app skeletons.
@@ -38,11 +64,7 @@ pub fn app(
 /// Actix's server future is intentionally `!Send` (same as typical Actix handlers).
 #[allow(clippy::future_not_send)]
 pub async fn listen(addr: impl ToSocketAddrs, kernel: HttpKernel) -> std::io::Result<()> {
-    let data = web::Data::new(kernel);
-    HttpServer::new(move || app(data.clone()))
-        .bind(addr)?
-        .run()
-        .await
+    await_bound(bind_server(addr, kernel)?).await
 }
 
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
