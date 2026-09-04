@@ -8,6 +8,11 @@
   <strong>Rust application framework.</strong>
 </p>
 
+<p align="center">
+  <a href="https://github.com/Interchouette-ITC/Serenade/actions/workflows/ci.yml"><img src="https://github.com/Interchouette-ITC/Serenade/actions/workflows/ci.yml/badge.svg?branch=dev" alt="CI" /></a>
+  <a href="https://codecov.io/gh/Interchouette-ITC/Serenade"><img src="https://codecov.io/gh/Interchouette-ITC/Serenade/branch/dev/graph/badge.svg" alt="codecov" /></a>
+</p>
+
 Symfony-oriented application framework for Rust. **Not** Rails-style, **not** Django-style: composable kernel components and bundles around which you build products.
 
 Serenade does **not** impose SQLx, SeaORM, Diesel, or Actix vs Axum for your product HTTP surface. It provides architecture, contracts, and reusable components; the application chooses persistence and UI stacks. Cargo stays the package manager; Serenade owns composition (bundles, recipes, console).

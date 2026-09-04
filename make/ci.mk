@@ -1,12 +1,17 @@
 # CI / quality gates.
 
-.PHONY: check test lint format format-check doc doc-open clean ci audit deny
+.PHONY: check test lint format format-check doc doc-open clean ci audit deny coverage
 
 check:
 	cd $(ROOT) && $(CARGO) check --workspace
 
 test:
 	cd $(ROOT) && $(CARGO) test --workspace
+
+## Requires `cargo install cargo-llvm-cov`. Writes `coverage/lcov.info`.
+## Uses the stable toolchain so llvm-cov finds instrumented objects.
+coverage:
+	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --lcov --output-path coverage/lcov.info
 
 format:
 	cd $(ROOT) && $(CARGO) fmt

@@ -2,7 +2,7 @@ use actix_web::test as actix_test;
 use actix_web::{web, App, HttpRequest, HttpResponse};
 use serenade_http::{HttpKernel, Method, Request, Response};
 
-use super::{app, dispatch, from_actix, to_actix, version};
+use super::{app, conversion_error, dispatch, from_actix, to_actix, version};
 
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
 #[allow(clippy::future_not_send)]
@@ -93,4 +93,11 @@ async fn from_actix_rejects_unsupported_method_in_isolation() {
         .to_http_request();
     let error = from_actix(&request, []).expect_err("TRACE unsupported");
     assert_eq!(error.status_code(), 405);
+}
+
+#[test]
+fn conversion_error_maps_to_405_response() {
+    let error = serenade_http::HttpError::status(405, "method not allowed");
+    let response = conversion_error(&error);
+    assert_eq!(response.status(), 405);
 }

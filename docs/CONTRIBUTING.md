@@ -26,6 +26,7 @@ make ci
 | --- | --- |
 | Format + Clippy | `make lint` |
 | Tests | `make test` |
+| Coverage (lcov) | `make coverage` (needs `cargo llvm-cov`) |
 | Rustdoc | `make doc` |
 | Full CI slice | `make ci` |
 

@@ -40,8 +40,10 @@ impl EventSubscriber for OrderListener {
 }
 
 #[test]
-fn version_is_semver_shape() {
-    assert!(super::version().contains('.'));
+fn empty_dispatcher_is_empty_and_dispatch_ok() {
+    let dispatcher = EventDispatcher::new();
+    assert!(dispatcher.is_empty());
+    dispatcher.dispatch(&NamedEvent("noop")).unwrap();
 }
 
 #[test]
