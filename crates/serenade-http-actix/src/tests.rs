@@ -103,6 +103,17 @@ fn conversion_error_maps_to_405_response() {
 }
 
 #[actix_web::test]
+async fn dispatch_maps_from_actix_errors() {
+    let kernel = HttpKernel::new(|_: &mut Request| Ok(Response::text(200, "ok")));
+    let request = actix_test::TestRequest::default()
+        .method(actix_web::http::Method::TRACE)
+        .uri("/")
+        .to_http_request();
+    let response = dispatch(&kernel, &request, []);
+    assert_eq!(response.status(), 405);
+}
+
+#[actix_web::test]
 async fn listen_binds_serves_then_stops() {
     use std::io::{Read, Write};
     use std::net::{TcpListener, TcpStream};

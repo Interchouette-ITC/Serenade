@@ -93,6 +93,18 @@ fn framework_extension_wires_router_config_and_dispatcher() {
     assert!(console.find("serenade:about").is_some());
     assert!(console.find("debug:container").is_some());
     assert!(console.find("debug:config").is_some());
+    let about = container
+        .get_as::<serenade_console::CommandService>("console.command.about")
+        .expect("about command service");
+    let debug_container = container
+        .get_as::<serenade_console::CommandService>("console.command.debug_container")
+        .expect("debug container command");
+    let debug_config = container
+        .get_as::<serenade_console::CommandService>("console.command.debug_config")
+        .expect("debug config command");
+    assert_eq!(about.0.name(), "serenade:about");
+    assert_eq!(debug_container.0.name(), "debug:container");
+    assert_eq!(debug_config.0.name(), "debug:config");
     assert!(Arc::strong_count(&router) >= 1);
 }
 
@@ -141,6 +153,40 @@ fn build_container_wraps_non_extension_errors() {
         panic!("expected extension wrap");
     };
     assert!(matches!(err, BundleError::Extension { alias: "wrap", .. }));
+}
+
+#[test]
+fn build_container_passthrough_extension_errors() {
+    struct AlreadyExtension;
+
+    impl Extension for AlreadyExtension {
+        fn alias(&self) -> &'static str {
+            "already"
+        }
+
+        fn load(
+            &self,
+            _config: &Config,
+            _builder: &mut ContainerBuilder,
+        ) -> Result<(), BundleError> {
+            Err(BundleError::Extension {
+                alias: "already",
+                message: "prewrapped".to_owned(),
+            })
+        }
+    }
+
+    let result = build_container(None, "test", &[&AlreadyExtension]);
+    let Err(err) = result else {
+        panic!("expected extension passthrough");
+    };
+    assert!(matches!(
+        err,
+        BundleError::Extension {
+            alias: "already",
+            message,
+        } if message == "prewrapped"
+    ));
 }
 
 #[test]

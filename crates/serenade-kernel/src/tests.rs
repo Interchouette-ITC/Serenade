@@ -1,4 +1,7 @@
-use super::{App, Application, BundleInterface, Environment, Kernel, KernelError, KernelPhase};
+use super::{
+    App, Application, BundleInterface, BundleRegistry, Environment, Kernel, KernelError,
+    KernelPhase,
+};
 
 struct NoopBundle(&'static str);
 
@@ -281,4 +284,62 @@ fn app_with_debug_overrides_kernel_flag() {
     let app = App::new(Environment::Prod).with_debug(true);
     assert!(app.kernel().debug());
     assert_eq!(app.kernel().environment(), &Environment::Prod);
+}
+
+#[test]
+fn environment_display_fromstr_and_conversions() {
+    assert_eq!(Environment::Test.as_str(), "test");
+    assert_eq!(Environment::Prod.as_str(), "prod");
+    assert_eq!(Environment::Dev.to_string(), "dev");
+    assert_eq!(
+        "staging".parse::<Environment>().unwrap(),
+        Environment::Custom("staging".into())
+    );
+    let custom: String = Environment::Custom("recette".into()).into();
+    assert_eq!(custom, "recette");
+    let parsed = Environment::try_from(String::from("PROD")).unwrap();
+    assert_eq!(parsed, Environment::Prod);
+    assert!(Environment::try_from(String::from("  ")).is_err());
+}
+
+#[test]
+fn bundle_registry_len_and_is_empty() {
+    let mut registry = BundleRegistry::new();
+    assert_eq!(registry.len(), 0);
+    assert!(registry.is_empty());
+    registry.register(NoopBundle("solo")).unwrap();
+    assert_eq!(registry.len(), 1);
+    assert!(!registry.is_empty());
+    assert_eq!(registry.names(), ["solo"]);
+}
+
+#[test]
+fn kernel_passthrough_preserves_bundle_errors() {
+    struct AlreadyBundle;
+
+    impl BundleInterface for AlreadyBundle {
+        fn name(&self) -> &'static str {
+            "already"
+        }
+
+        fn build(&self) -> Result<(), KernelError> {
+            Err(KernelError::Bundle {
+                bundle: "already",
+                phase: "build",
+                message: "prewrapped".to_owned(),
+            })
+        }
+    }
+
+    let mut kernel = Kernel::new(Environment::Test);
+    kernel.register_bundle(AlreadyBundle).unwrap();
+    let error = kernel.compile().unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::Bundle {
+            bundle: "already",
+            phase: "build",
+            message: "prewrapped".to_owned(),
+        }
+    );
 }

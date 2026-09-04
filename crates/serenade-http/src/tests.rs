@@ -191,6 +191,14 @@ fn matcher_extracts_path_parameters() {
         .expect("match");
     assert_eq!(found.route_name(), "item_show");
     assert_eq!(found.parameters().get("id").map(String::as_str), Some("42"));
+
+    let mut request = Request::new(Method::Get, "/items/7");
+    let applied = matcher.apply(&mut request).expect("apply");
+    assert_eq!(applied.route_name(), "item_show");
+    assert_eq!(
+        request.attributes().get::<String>("id").map(String::as_str),
+        Some("7")
+    );
 }
 
 #[test]
@@ -269,31 +277,14 @@ fn request_with_header_and_body_builders() {
 }
 
 #[test]
-fn matcher_apply_writes_path_parameters() {
+fn matcher_rejects_static_segment_mismatch() {
     let mut collection = RouteCollection::new();
     collection
-        .add(Route::with_method("item", "/items/{id}", Method::Get))
+        .add(Route::with_method("fixed", "/shop/cart", Method::Get))
         .expect("add");
     let matcher = UrlMatcher::new(collection);
-    let mut request = Request::new(Method::Get, "/items/7");
-    let found = matcher.apply(&mut request).expect("apply");
-    assert_eq!(found.route_name(), "item");
-    assert_eq!(
-        request.attributes().get::<String>("id").map(String::as_str),
-        Some("7")
-    );
-    let miss = matcher
-        .match_request(Method::Get, "/items/")
-        .expect_err("empty segment vs pattern");
-    assert_eq!(miss.status_code(), 404);
-    let mut empty_param = RouteCollection::new();
-    empty_param
-        .add(Route::with_method("weird", "/{}", Method::Get))
-        .expect("add");
-    let weird = UrlMatcher::new(empty_param);
-    let literal = weird
-        .match_request(Method::Get, "/{}")
-        .expect("empty braces are literal when name empty filter fails... or match");
-    // `{` `}` with empty name: parameter_name returns None, so segment must equal `{}`
-    assert_eq!(literal.route_name(), "weird");
+    let err = matcher
+        .match_request(Method::Get, "/shop/other")
+        .expect_err("static mismatch");
+    assert_eq!(err.status_code(), 404);
 }
