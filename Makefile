@@ -21,6 +21,7 @@ help:
 	@echo "Quality (make/ci.mk):"
 	@echo "  make check        cargo check --workspace"
 	@echo "  make test         cargo test --workspace"
+	@echo "  make coverage     cargo llvm-cov → coverage/lcov.info"
 	@echo "  make lint         fmt check + clippy (workspace)"
 	@echo "  make doc          rustdoc for all crates (-D warnings)"
 	@echo "  make doc-open     build docs and open in browser"

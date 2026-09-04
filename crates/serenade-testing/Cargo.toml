@@ -1,0 +1,20 @@
+[package]
+name = "serenade-testing"
+description = "Test harness helpers for Serenade kernel, HTTP, and events"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serenade-event = { workspace = true }
+serenade-http = { workspace = true }
+serenade-kernel = { workspace = true }
+
+[dev-dependencies]
+serenade-bundle = { workspace = true }
+
+[lints]
+workspace = true

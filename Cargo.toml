@@ -10,6 +10,7 @@ members = [
     "crates/serenade-bundle",
     "crates/serenade-console",
     "crates/serenade-cli",
+    "crates/serenade-testing",
     "examples/demo-app",
 ]
 resolver = "2"
@@ -33,6 +34,7 @@ serenade-contracts = { path = "crates/serenade-contracts", version = "0.1.0" }
 serenade-bundle = { path = "crates/serenade-bundle", version = "0.1.0" }
 serenade-console = { path = "crates/serenade-console", version = "0.1.0" }
 serenade-cli = { path = "crates/serenade-cli", version = "0.1.0" }
+serenade-testing = { path = "crates/serenade-testing", version = "0.1.0" }
 actix-web = "4"
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
