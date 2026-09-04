@@ -135,3 +135,28 @@ fn parameter_bag_missing_key() {
         Err(DiError::ParameterNotFound(_))
     ));
 }
+
+#[test]
+fn definition_and_definitions_list() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(ServiceDefinition::new("svc"), |_| Ok(Box::new(9_u8)))
+        .unwrap();
+    builder.set_alias("alias", "svc").unwrap();
+    let container = builder.compile().unwrap();
+    assert!(container.definition("svc").is_some());
+    assert!(container.definition("alias").is_some());
+    assert!(container.definition("missing").is_none());
+    assert_eq!(container.definitions().len(), 1);
+}
+
+#[test]
+fn get_as_downcast_failure() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(ServiceDefinition::new("n"), |_| Ok(Box::new(3_u8)))
+        .unwrap();
+    let container = builder.compile().unwrap();
+    let err = container.get_as::<String>("n").unwrap_err();
+    assert!(matches!(err, DiError::Factory { .. }));
+}

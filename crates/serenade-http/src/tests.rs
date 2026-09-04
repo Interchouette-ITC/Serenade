@@ -176,3 +176,15 @@ impl RouteLoader for HealthzBundle {
         collection.add(Route::with_method("healthz", "/healthz", Method::Get))
     }
 }
+
+#[test]
+fn http_error_convenience_constructors() {
+    let not_found = HttpError::not_found("gone");
+    assert_eq!(not_found.status_code(), 404);
+    assert_eq!(not_found.message(), "gone");
+    let bad = HttpError::bad_request("nope");
+    assert_eq!(bad.status_code(), 400);
+    let unprocessable = HttpError::unprocessable("bad body");
+    assert_eq!(unprocessable.status_code(), 422);
+    assert!(unprocessable.to_string().contains("422"));
+}
