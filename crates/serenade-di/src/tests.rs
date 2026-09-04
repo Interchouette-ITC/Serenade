@@ -160,3 +160,18 @@ fn get_as_downcast_failure() {
     let err = container.get_as::<String>("n").unwrap_err();
     assert!(matches!(err, DiError::Factory { .. }));
 }
+
+#[test]
+fn reference_from_str_and_missing_service() {
+    let reference = Reference::from("catalog");
+    assert_eq!(reference.id(), "catalog");
+    let owned = Reference::from(String::from("orders"));
+    assert_eq!(owned.id(), "orders");
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(ServiceDefinition::new("only"), |_| Ok(Box::new(1_u8)))
+        .unwrap();
+    let container = builder.compile().unwrap();
+    let err = container.get("missing").unwrap_err();
+    assert!(matches!(err, DiError::NotFound(_)));
+}
