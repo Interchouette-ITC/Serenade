@@ -62,7 +62,7 @@ bundles = ["FrameworkBundle"]
 note = "Register FrameworkBundle and load FrameworkExtension."
 ```
 
-Shipped recipes: `framework`, `security` (config stub until SecurityBundle lands).
+Shipped recipes: `framework`, `security` (config package scaffold; authenticator wiring is application-owned).
 
 ## Package config
 

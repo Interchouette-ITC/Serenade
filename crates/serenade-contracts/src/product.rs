@@ -3,7 +3,7 @@
 use crate::{EntityId, PageRequest, RepositoryError};
 use std::future::Future;
 
-/// Catalog product reads. Writes stay in product/admin slices until needed.
+/// Catalog product reads. Product writes live in the application.
 ///
 /// Adapters in applications implement this trait with `SQLx`, `SeaORM`, or other stores.
 /// Serenade never depends on a database crate.

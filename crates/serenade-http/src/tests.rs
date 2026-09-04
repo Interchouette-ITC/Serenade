@@ -51,10 +51,10 @@ fn headers_are_case_insensitive() {
 
 #[test]
 fn attributes_roundtrip() {
-    let mut request = Request::new(Method::Get, "/carts/1");
-    request.attributes_mut().insert("cart_id", 1_u64);
-    assert_eq!(request.attributes().get::<u64>("cart_id"), Some(&1));
-    assert_eq!(request.attributes_mut().remove::<u64>("cart_id"), Some(1));
+    let mut request = Request::new(Method::Get, "/items/1");
+    request.attributes_mut().insert("item_id", 1_u64);
+    assert_eq!(request.attributes().get::<u64>("item_id"), Some(&1));
+    assert_eq!(request.attributes_mut().remove::<u64>("item_id"), Some(1));
     assert!(request.attributes().is_empty());
 }
 
@@ -115,13 +115,13 @@ fn custom_exception_handler_replaces_default() {
 fn matcher_extracts_path_parameters() {
     let mut collection = RouteCollection::new();
     collection
-        .add(Route::with_method("cart_show", "/carts/{id}", Method::Get))
+        .add(Route::with_method("item_show", "/items/{id}", Method::Get))
         .expect("add");
     let matcher = UrlMatcher::new(collection);
     let found = matcher
-        .match_request(Method::Get, "/carts/42")
+        .match_request(Method::Get, "/items/42")
         .expect("match");
-    assert_eq!(found.route_name(), "cart_show");
+    assert_eq!(found.route_name(), "item_show");
     assert_eq!(found.parameters().get("id").map(String::as_str), Some("42"));
 }
 

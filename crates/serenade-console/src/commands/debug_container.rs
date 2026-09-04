@@ -53,7 +53,7 @@ fn print_plain(input: &Input, ids: &[String]) {
     println!("Environment: {}", input.environment());
     println!("Debug: {}", input.debug());
     if ids.is_empty() {
-        println!("Services: (none — pass a container via Application::run_with)");
+        println!("Services: (none - pass a container via Application::run_with)");
         return;
     }
     println!("Services ({}):", ids.len());

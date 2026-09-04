@@ -1,4 +1,3 @@
 [security]
-# Placeholder until SecurityBundle ships.
-# firewalls and authenticators will load from this package.
+# Security package scaffold. Authenticators and firewalls load from here when enabled.
 enabled = false
