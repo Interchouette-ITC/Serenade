@@ -103,7 +103,7 @@ See [`docs-dev/KERNEL.md`](docs-dev/KERNEL.md).
 4. One concern per PR. Commits and docs in **English**.
 
 <p align="center">
-  <img src="docs/brand/logo-banner-rooftop-readme-on-white.png" alt="Serenade: Paris rooftop night scene" width="360" />
+  <img src="docs/brand/logo-banner-rooftop-readme-on-white.png" alt="Serenade: Paris rooftop night scene" width="360" style="margin-top: 1.5rem; margin-bottom: 0.25rem;" />
 </p>
 
 ## Thanks
@@ -126,5 +126,5 @@ Thank you to their maintainers and communities.
 **Apache-2.0** (Apache License, Version 2.0). See [`LICENSE`](LICENSE).
 
 <p align="center">
-  <img src="docs/brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" />
+  <img src="docs/brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" height="128" style="margin-top: 1.25rem; margin-bottom: 0; vertical-align: middle;" />
 </p>

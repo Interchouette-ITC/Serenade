@@ -23,5 +23,5 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 **Apache-2.0** (Apache License, Version 2.0). See [`../LICENSE`](../LICENSE).
 
 <p align="center">
-  <img src="brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" />
+  <img src="brand/icon-circle-s-fill-128.png" alt="Serenade mark: S in circle" width="128" height="128" style="margin-top: 1.25rem; margin-bottom: 0; vertical-align: middle;" />
 </p>
