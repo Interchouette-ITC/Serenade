@@ -126,3 +126,8 @@ fn compile_pass_collects_tagged_subscribers() {
     let actual = names.lock().expect("lock").clone();
     assert_dispatched(&actual, &["cart.updated"]);
 }
+
+#[test]
+fn crate_version_is_non_empty() {
+    assert_ne!(super::version(), "");
+}

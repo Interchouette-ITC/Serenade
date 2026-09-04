@@ -12,7 +12,7 @@ test:
 ## Uses the stable toolchain so llvm-cov finds instrumented objects.
 coverage:
 	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --lcov \
-		--ignore-filename-regex 'examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)' \
+		--ignore-filename-regex 'examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs' \
 		--output-path coverage/lcov.info
 
 format:

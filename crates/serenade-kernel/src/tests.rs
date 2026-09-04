@@ -236,3 +236,28 @@ fn boot_after_shutdown_is_rejected() {
         }
     ));
 }
+
+#[test]
+fn kernel_phase_display_and_debug() {
+    assert_eq!(KernelPhase::Created.to_string(), "created");
+    assert_eq!(KernelPhase::Compiled.to_string(), "compiled");
+    assert_eq!(KernelPhase::Booted.to_string(), "booted");
+    assert_eq!(KernelPhase::Shutdown.to_string(), "shutdown");
+    let kernel = Kernel::new(Environment::Test);
+    let rendered = format!("{kernel:?}");
+    assert!(rendered.contains("Kernel"));
+    assert!(rendered.contains("phase"));
+}
+
+#[test]
+fn environment_display_fromstr_and_conversions() {
+    assert_eq!(Environment::Dev.to_string(), "dev");
+    assert_eq!(Environment::Custom("staging".into()).as_str(), "staging");
+    assert_eq!("Prod".parse::<Environment>().unwrap(), Environment::Prod);
+    let as_string: String = Environment::Test.into();
+    assert_eq!(as_string, "test");
+    assert_eq!(
+        Environment::try_from("DEV".to_owned()).unwrap(),
+        Environment::Dev
+    );
+}
