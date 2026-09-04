@@ -11,7 +11,9 @@ test:
 ## Requires `cargo install cargo-llvm-cov`. Writes `coverage/lcov.info`.
 ## Uses the stable toolchain so llvm-cov finds instrumented objects.
 coverage:
-	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --lcov --output-path coverage/lcov.info
+	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --lcov \
+		--ignore-filename-regex 'examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)' \
+		--output-path coverage/lcov.info
 
 format:
 	cd $(ROOT) && $(CARGO) fmt
