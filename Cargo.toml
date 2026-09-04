@@ -39,7 +39,7 @@ clap = { version = "4", features = ["derive", "env"] }
 clap_complete = "4"
 clap_mangen = "0.3"
 cling = "0.1.3"
-crossterm = "0.28"
+crossterm = "0.29"
 dotenvy = "0.15"
 include_dir = "0.7"
 ratatui = "0.30"
