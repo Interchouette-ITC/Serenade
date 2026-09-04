@@ -175,3 +175,115 @@ fn reference_from_str_and_missing_service() {
     let err = container.get("missing").unwrap_err();
     assert!(matches!(err, DiError::NotFound(_)));
 }
+
+#[test]
+fn duplicate_service_and_alias_ids_are_rejected() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(ServiceDefinition::new("svc"), |_| Ok(Box::new(1_u8)))
+        .unwrap();
+    let err = builder
+        .register(ServiceDefinition::new("svc"), |_| Ok(Box::new(2_u8)))
+        .unwrap_err();
+    assert!(matches!(err, DiError::DuplicateService(_)));
+    builder.set_alias("alias", "svc").unwrap();
+    let err = builder.set_alias("alias", "svc").unwrap_err();
+    assert!(matches!(err, DiError::DuplicateService(_)));
+    let err = builder.set_alias("svc", "other").unwrap_err();
+    assert!(matches!(err, DiError::DuplicateService(_)));
+}
+
+#[test]
+fn invalid_alias_and_missing_dependency_fail_compile() {
+    let mut missing_target = ContainerBuilder::new();
+    missing_target
+        .register(ServiceDefinition::new("svc"), |_| Ok(Box::new(1_u8)))
+        .unwrap();
+    missing_target.set_alias("alias", "gone").unwrap();
+    let Err(err) = missing_target.compile() else {
+        panic!("expected invalid alias");
+    };
+    assert!(matches!(err, DiError::InvalidAlias { .. }));
+
+    let mut missing_dep = ContainerBuilder::new();
+    missing_dep
+        .register(
+            ServiceDefinition::new("consumer").with_dependencies(vec![Reference::new("missing")]),
+            |_| Ok(Box::new(1_u8)),
+        )
+        .unwrap();
+    let Err(err) = missing_dep.compile() else {
+        panic!("expected missing dependency");
+    };
+    assert!(matches!(err, DiError::NotFound(_)));
+}
+
+#[test]
+fn dependency_resolved_through_alias_and_circular_alias_chain() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(ServiceDefinition::new("core"), |_| Ok(Box::new(9_u8)))
+        .unwrap();
+    builder.set_alias("core_alias", "core").unwrap();
+    builder
+        .register(
+            ServiceDefinition::new("consumer")
+                .with_dependencies(vec![Reference::new("core_alias")]),
+            |container| {
+                let value = container.get_as::<u8>("core_alias")?;
+                Ok(Box::new(*value))
+            },
+        )
+        .unwrap();
+    let container = builder.compile().unwrap();
+    assert_eq!(*container.get_as::<u8>("consumer").unwrap(), 9);
+
+    let mut cyclic = ContainerBuilder::new();
+    cyclic
+        .register(ServiceDefinition::new("svc"), |_| Ok(Box::new(1_u8)))
+        .unwrap();
+    cyclic.set_alias("a", "b").unwrap();
+    cyclic.set_alias("b", "a").unwrap();
+    let Err(err) = cyclic.compile() else {
+        panic!("expected circular alias");
+    };
+    assert!(matches!(err, DiError::CircularDependency(_)));
+}
+
+#[test]
+fn factory_non_factory_errors_are_remapped() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(ServiceDefinition::new("bad"), |_| {
+            Err(DiError::ParameterNotFound("x".into()))
+        })
+        .unwrap();
+    let container = builder.compile().unwrap();
+    let err = container.get("bad").unwrap_err();
+    assert!(matches!(
+        err,
+        DiError::Factory {
+            service,
+            ..
+        } if service == "bad"
+    ));
+}
+
+#[test]
+fn definitions_lists_registered_services() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(ServiceDefinition::new("one"), |_| Ok(Box::new(1_u8)))
+        .unwrap();
+    builder
+        .register(ServiceDefinition::new("two"), |_| Ok(Box::new(2_u8)))
+        .unwrap();
+    let ids: Vec<_> = builder
+        .definitions()
+        .into_iter()
+        .map(ServiceDefinition::id)
+        .collect();
+    assert_eq!(ids.len(), 2);
+    assert!(ids.contains(&"one"));
+    assert!(ids.contains(&"two"));
+}

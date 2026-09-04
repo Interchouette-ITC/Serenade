@@ -101,3 +101,50 @@ fn conversion_error_maps_to_405_response() {
     let response = conversion_error(&error);
     assert_eq!(response.status(), 405);
 }
+
+#[actix_web::test]
+async fn listen_binds_serves_then_stops() {
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+
+    let probe = TcpListener::bind("127.0.0.1:0").expect("bind probe");
+    let addr = probe.local_addr().expect("addr");
+    drop(probe);
+
+    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "listen-ok")));
+    let server = actix_web::rt::spawn(async move {
+        super::listen(addr, kernel).await.expect("listen");
+    });
+
+    let mut body = None;
+    for _ in 0..50 {
+        actix_web::rt::time::sleep(Duration::from_millis(20)).await;
+        let Ok(mut stream) = TcpStream::connect(addr) else {
+            continue;
+        };
+        stream
+            .set_read_timeout(Some(Duration::from_millis(200)))
+            .expect("read timeout");
+        stream
+            .set_write_timeout(Some(Duration::from_millis(200)))
+            .expect("write timeout");
+        let request = format!("GET / HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
+        if stream.write_all(request.as_bytes()).is_err() {
+            continue;
+        }
+        let mut buf = Vec::new();
+        if stream.read_to_end(&mut buf).is_err() || buf.is_empty() {
+            continue;
+        }
+        body = Some(buf);
+        break;
+    }
+
+    server.abort();
+    let _ = server.await;
+    let body = body.expect("listen did not become ready");
+    let text = String::from_utf8_lossy(&body);
+    assert!(text.contains("200"), "{text}");
+    assert!(text.contains("listen-ok"), "{text}");
+}

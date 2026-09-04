@@ -319,3 +319,17 @@ async fn unit_of_work_mock_runs_transaction_lifecycle() {
     let err = UnitOfWork::commit(&mut uow).await.expect_err("no tx");
     assert!(matches!(err, PersistenceError::InvalidInput { .. }));
 }
+
+#[test]
+fn entity_id_string_and_version() {
+    use super::EntityId;
+    let id = String::from("sku-1");
+    assert_eq!(EntityId::as_str(&id), "sku-1");
+    assert_eq!(super::version(), env!("CARGO_PKG_VERSION"));
+}
+
+#[test]
+fn persist_param_policy_default_from_env() {
+    use super::PersistParamPolicy;
+    let _ = PersistParamPolicy::default();
+}

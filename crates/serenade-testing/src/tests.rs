@@ -39,6 +39,12 @@ fn test_kernel_boots_in_test_environment() {
 }
 
 #[test]
+fn test_kernel_default_matches_new() {
+    let app = SerenadeTestKernel::default();
+    assert_eq!(app.kernel().phase(), KernelPhase::Created);
+}
+
+#[test]
 fn http_client_get_and_post() {
     let kernel = HttpKernel::new(|request: &mut Request| {
         if request.method() == Method::Post {

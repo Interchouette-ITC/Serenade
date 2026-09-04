@@ -256,3 +256,44 @@ fn http_error_convenience_constructors() {
     assert_eq!(unprocessable.status_code(), 422);
     assert!(unprocessable.to_string().contains("422"));
 }
+
+#[test]
+fn request_with_header_and_body_builders() {
+    let request = Request::new(Method::Post, "/echo")
+        .with_header("X-Trace", "abc")
+        .with_body(b"ping".as_slice());
+    assert_eq!(request.method(), Method::Post);
+    assert_eq!(request.path(), "/echo");
+    assert_eq!(request.headers().get("x-trace"), Some("abc"));
+    assert_eq!(request.body(), b"ping");
+}
+
+#[test]
+fn matcher_apply_writes_path_parameters() {
+    let mut collection = RouteCollection::new();
+    collection
+        .add(Route::with_method("item", "/items/{id}", Method::Get))
+        .expect("add");
+    let matcher = UrlMatcher::new(collection);
+    let mut request = Request::new(Method::Get, "/items/7");
+    let found = matcher.apply(&mut request).expect("apply");
+    assert_eq!(found.route_name(), "item");
+    assert_eq!(
+        request.attributes().get::<String>("id").map(String::as_str),
+        Some("7")
+    );
+    let miss = matcher
+        .match_request(Method::Get, "/items/")
+        .expect_err("empty segment vs pattern");
+    assert_eq!(miss.status_code(), 404);
+    let mut empty_param = RouteCollection::new();
+    empty_param
+        .add(Route::with_method("weird", "/{}", Method::Get))
+        .expect("add");
+    let weird = UrlMatcher::new(empty_param);
+    let literal = weird
+        .match_request(Method::Get, "/{}")
+        .expect("empty braces are literal when name empty filter fails... or match");
+    // `{` `}` with empty name: parameter_name returns None, so segment must equal `{}`
+    assert_eq!(literal.route_name(), "weird");
+}

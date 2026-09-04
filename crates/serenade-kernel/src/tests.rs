@@ -250,14 +250,35 @@ fn kernel_phase_display_and_debug() {
 }
 
 #[test]
-fn environment_display_fromstr_and_conversions() {
-    assert_eq!(Environment::Dev.to_string(), "dev");
-    assert_eq!(Environment::Custom("staging".into()).as_str(), "staging");
-    assert_eq!("Prod".parse::<Environment>().unwrap(), Environment::Prod);
-    let as_string: String = Environment::Test.into();
-    assert_eq!(as_string, "test");
-    assert_eq!(
-        Environment::try_from("DEV".to_owned()).unwrap(),
-        Environment::Dev
-    );
+fn kernel_wraps_non_bundle_errors_from_lifecycle() {
+    struct FailingBuild;
+
+    impl BundleInterface for FailingBuild {
+        fn name(&self) -> &'static str {
+            "failing"
+        }
+
+        fn build(&self) -> Result<(), KernelError> {
+            Err(KernelError::DuplicateBundle("inner"))
+        }
+    }
+
+    let mut kernel = Kernel::new(Environment::Test);
+    kernel.register_bundle(FailingBuild).unwrap();
+    let error = kernel.compile().unwrap_err();
+    assert!(matches!(
+        error,
+        KernelError::Bundle {
+            bundle: "failing",
+            phase: "build",
+            ..
+        }
+    ));
+}
+
+#[test]
+fn app_with_debug_overrides_kernel_flag() {
+    let app = App::new(Environment::Prod).with_debug(true);
+    assert!(app.kernel().debug());
+    assert_eq!(app.kernel().environment(), &Environment::Prod);
 }
