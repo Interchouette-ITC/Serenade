@@ -131,3 +131,29 @@ fn compile_pass_collects_tagged_subscribers() {
 fn crate_version_is_non_empty() {
     assert_ne!(super::version(), "");
 }
+
+struct DefaultPriorityListener {
+    log: Arc<Mutex<Vec<&'static str>>>,
+}
+
+impl EventSubscriber for DefaultPriorityListener {
+    fn event_name(&self) -> &'static str {
+        "noop.default"
+    }
+
+    fn handle(&self, event: &dyn Event) -> Result<(), super::EventError> {
+        self.log.lock().expect("lock").push(event.name());
+        Ok(())
+    }
+}
+
+#[test]
+fn subscriber_default_priority_is_zero() {
+    let listener = DefaultPriorityListener {
+        log: Arc::new(Mutex::new(Vec::new())),
+    };
+    assert_eq!(listener.priority(), 0);
+    let mut dispatcher = EventDispatcher::new();
+    dispatcher.add(Arc::new(listener));
+    dispatcher.dispatch(&NamedEvent("noop.default")).unwrap();
+}
