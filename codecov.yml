@@ -12,3 +12,5 @@ coverage:
 ignore:
   - "examples/**/*"
   - "crates/serenade-cli/**/*"
+  - "crates/serenade-console/src/interactive.rs"
+  - "crates/serenade-console/src/commands/**/*"
