@@ -171,4 +171,110 @@ impl Container {
         drop(stack);
         Ok(())
     }
+
+    #[cfg(test)]
+    fn poison_singletons_for_test(&self) {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = self.singletons.lock().expect("lock");
+            panic!("poison singletons");
+        }));
+    }
+
+    #[cfg(test)]
+    fn poison_resolving_for_test(&self) {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = self.resolving.lock().expect("lock");
+            panic!("poison resolving");
+        }));
+    }
+}
+
+#[cfg(test)]
+mod poison_and_alias_tests {
+    use std::collections::HashMap;
+
+    use crate::{DiError, ParameterBag, ServiceDefinition};
+
+    use super::Container;
+
+    #[test]
+    fn resolve_alias_reports_runtime_cycle() {
+        let aliases = HashMap::from([
+            ("a".to_owned(), "b".to_owned()),
+            ("b".to_owned(), "a".to_owned()),
+        ]);
+        let container = Container::from_parts(
+            ParameterBag::new(),
+            aliases,
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        let err = container.get("a").unwrap_err();
+        assert!(matches!(err, DiError::CircularDependency(_)));
+    }
+
+    #[test]
+    fn get_reports_poisoned_singleton_lock() {
+        let mut builder = crate::ContainerBuilder::new();
+        builder
+            .register(ServiceDefinition::new("n"), |_| Ok(Box::new(1_u8)))
+            .unwrap();
+        let container = builder.compile().unwrap();
+        container.poison_singletons_for_test();
+        let err = container.get("n").unwrap_err();
+        assert!(matches!(
+            err,
+            DiError::Factory { message, .. } if message == "singleton lock poisoned"
+        ));
+    }
+
+    #[test]
+    fn get_reports_poisoned_singleton_insert_lock() {
+        let mut builder = crate::ContainerBuilder::new();
+        builder
+            .register(ServiceDefinition::new("n"), |container| {
+                container.poison_singletons_for_test();
+                Ok(Box::new(1_u8))
+            })
+            .unwrap();
+        let container = builder.compile().unwrap();
+        let err = container.get("n").unwrap_err();
+        assert!(matches!(
+            err,
+            DiError::Factory { message, .. } if message == "singleton lock poisoned"
+        ));
+    }
+
+    #[test]
+    fn get_reports_poisoned_resolving_lock_on_push() {
+        let mut builder = crate::ContainerBuilder::new();
+        builder
+            .register(ServiceDefinition::new("n"), |_| Ok(Box::new(1_u8)))
+            .unwrap();
+        let container = builder.compile().unwrap();
+        container.poison_resolving_for_test();
+        let err = container.get("n").unwrap_err();
+        assert!(matches!(
+            err,
+            DiError::Factory { message, .. } if message == "resolving lock poisoned"
+        ));
+    }
+
+    #[test]
+    fn get_reports_poisoned_resolving_lock_on_pop() {
+        let mut builder = crate::ContainerBuilder::new();
+        builder
+            .register(ServiceDefinition::new("n"), |container| {
+                container.poison_resolving_for_test();
+                Ok(Box::new(1_u8))
+            })
+            .unwrap();
+        let container = builder.compile().unwrap();
+        let err = container.get("n").unwrap_err();
+        assert!(matches!(
+            err,
+            DiError::Factory { message, .. } if message == "resolving lock poisoned"
+        ));
+    }
 }

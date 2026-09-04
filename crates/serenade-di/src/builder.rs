@@ -233,12 +233,14 @@ fn visit<'a>(
 
     marks.insert(id, VisitMark::Visiting);
     stack.push(id);
-    if let Some(pending) = services.get(id) {
-        for dependency in pending.definition.dependencies() {
-            let dep_id = dependency.id();
-            if services.contains_key(dep_id) {
-                visit(dep_id, services, marks, stack)?;
-            }
+    // `detect_cycles` only visits ids present in `services`.
+    let pending = services
+        .get(id)
+        .expect("visit is only called for registered service ids");
+    for dependency in pending.definition.dependencies() {
+        let dep_id = dependency.id();
+        if services.contains_key(dep_id) {
+            visit(dep_id, services, marks, stack)?;
         }
     }
     stack.pop();

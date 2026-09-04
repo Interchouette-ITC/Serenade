@@ -1,5 +1,6 @@
 //! Console component tests.
 
+use std::io::IsTerminal;
 use std::sync::Arc;
 
 use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
@@ -139,4 +140,14 @@ fn list_command_name_prints_available() {
     let mut app = Application::new();
     app.add(Arc::new(PingCommand));
     app.run(["console", "list"]).expect("list");
+}
+
+#[test]
+fn interactive_flag_on_non_tty_exits_on_eof() {
+    if std::io::stdin().is_terminal() {
+        return;
+    }
+    let app = Application::new();
+    app.run(["console", "--interactive"])
+        .expect("interactive eof");
 }

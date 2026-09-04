@@ -309,6 +309,37 @@ fn load_dotenv_keeps_preexisting_and_errors_on_unreadable() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+#[test]
+fn load_dotenv_errors_on_malformed_line() {
+    let dir = unique_temp_dir("dotenv-malformed");
+    std::fs::create_dir_all(&dir).unwrap();
+    // dotenvy accepts the file open but fails while iterating items.
+    std::fs::write(dir.join(".env"), "NO_EQUALS_SIGN\n").unwrap();
+    let err = load_dotenv(&dir, "dev").unwrap_err();
+    assert!(matches!(err, super::ConfigError::Dotenv { .. }));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn load_packages_skips_non_utf8_filenames() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    let dir = unique_temp_dir("packages-non-utf8");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("ok.toml"), "[app]\nname = \"ok\"\n").unwrap();
+    let weird = dir.join(OsStr::from_bytes(b"bad\xff.toml"));
+    std::fs::write(&weird, "[bad]\nv = 1\n").unwrap();
+    let loaded = load_packages(&dir).unwrap();
+    assert_eq!(
+        loaded.parameters().get("app.name").map(String::as_str),
+        Some("ok")
+    );
+    assert!(!loaded.parameters().contains_key("bad.v"));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 fn unique_temp_dir(label: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
         "serenade-config-{label}-{}-{}",
