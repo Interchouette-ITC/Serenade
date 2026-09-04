@@ -93,6 +93,8 @@ See [`../docs-dev/KERNEL.md`](../docs-dev/KERNEL.md).
 | [`../docs-dev/PERSISTENCE.md`](../docs-dev/PERSISTENCE.md) | Contracts, adapters, domain vs hooks |
 | [`../docs-dev/RUSTASHOP.md`](../docs-dev/RUSTASHOP.md) | Illustrative application layout |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Lint bar, Make layout, PR habits |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Community standards |
+| [`SECURITY.md`](SECURITY.md) | Vulnerability reporting |
 | [`brand/`](brand/) | Brand assets |
 
 ## Contributing

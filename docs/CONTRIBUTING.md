@@ -57,6 +57,8 @@ Run `make help` for the full list.
 - **Rust:** module docs (`//!`) on every crate root; `///` on every `pub` item.
 - **Framework docs:** English in `docs-dev/`. No plan jargon or host-absolute paths in shipped text.
 - **OpenAPI:** lives in product HTTP crates when routes exist; Serenade stays adapter-agnostic.
+- **Code of Conduct:** [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- **Security policy:** [`SECURITY.md`](SECURITY.md)
 
 ## Persistence boundary
 
@@ -64,8 +66,10 @@ Serenade defines traits in `serenade-contracts`. SQLx, SeaORM, and Diesel adapte
 
 ## Commits and PRs
 
-Use conventional commits (`feat:`, `fix:`, `docs:`, `ci:`, …). PR body: **Summary** + **Test plan** only.
+Use conventional commits (`feat:`, `fix:`, `docs:`, `ci:`, …). PR body follows
+[`pull_request_template.md`](pull_request_template.md) (**Summary** + **Test plan** only).
 
 ## Questions
 
-Open a GitHub issue on `Interchouette-ITC/Serenade` for design questions that affect multiple crates.
+Use GitHub issue forms (Bug report / Feature request) when opening issues on
+`Interchouette-ITC/Serenade` for design questions that affect multiple crates.
