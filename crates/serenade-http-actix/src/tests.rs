@@ -3,7 +3,8 @@ use actix_web::{web, App, HttpRequest, HttpResponse};
 use serenade_http::{HttpKernel, Method, Request, Response};
 
 use super::{
-    app, await_bound, bind_server, conversion_error, dispatch, from_actix, to_actix, version,
+    app, await_bound, bind_server, conversion_error, dispatch, from_actix, listen, to_actix,
+    version,
 };
 
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
@@ -178,4 +179,58 @@ async fn listen_awaits_until_server_stops() {
     actix_web::rt::time::sleep(Duration::from_millis(40)).await;
     handle.stop(true).await;
     task.await.expect("join").expect("listen await completed");
+}
+
+#[actix_web::test]
+async fn listen_public_entry_binds_and_serves() {
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+
+    let probe = TcpListener::bind("127.0.0.1:0").expect("bind probe");
+    let addr = probe.local_addr().expect("addr");
+    drop(probe);
+
+    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "entry-ok")));
+    let task = actix_web::rt::spawn(async move { listen(addr, kernel).await });
+
+    let mut body = None;
+    for _ in 0..50 {
+        actix_web::rt::time::sleep(Duration::from_millis(20)).await;
+        let Ok(mut stream) = TcpStream::connect(addr) else {
+            continue;
+        };
+        stream
+            .set_read_timeout(Some(Duration::from_millis(200)))
+            .expect("read timeout");
+        stream
+            .set_write_timeout(Some(Duration::from_millis(200)))
+            .expect("write timeout");
+        let request = format!("GET / HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
+        if stream.write_all(request.as_bytes()).is_err() {
+            continue;
+        }
+        let mut buf = Vec::new();
+        if stream.read_to_end(&mut buf).is_err() || buf.is_empty() {
+            continue;
+        }
+        body = Some(buf);
+        break;
+    }
+
+    assert!(
+        body.as_ref()
+            .is_some_and(|b| String::from_utf8_lossy(b).contains("entry-ok")),
+        "listen entry did not become ready"
+    );
+    task.abort();
+    let _ = task.await;
+}
+
+#[actix_web::test]
+async fn listen_propagates_bind_error() {
+    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "unused")));
+    // Privileged port fails for non-root runners (CI and local).
+    let err = listen("127.0.0.1:1", kernel).await;
+    assert!(err.is_err(), "expected bind failure on privileged port");
 }
