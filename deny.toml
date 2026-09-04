@@ -1,0 +1,37 @@
+# cargo-deny configuration (run: `make deny`)
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+all-features = false
+
+[advisories]
+yanked = "warn"
+# actix-http 3.x depends on h2 0.3; the fix is only published on h2 >= 0.4.16.
+ignore = [
+    { id = "RUSTSEC-2026-0258", reason = "actix-http 3.x pins h2 0.3; patched line is h2 0.4.x only" },
+]
+
+[licenses]
+unused-allowed-license = "allow"
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "OpenSSL",
+    "CDLA-Permissive-2.0",
+    "BSL-1.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

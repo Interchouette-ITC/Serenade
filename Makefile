@@ -25,6 +25,8 @@ help:
 	@echo "  make doc          rustdoc for all crates (-D warnings)"
 	@echo "  make doc-open     build docs and open in browser"
 	@echo "  make format       cargo fmt"
+	@echo "  make audit        cargo audit"
+	@echo "  make deny         cargo deny check"
 	@echo "  make ci           lint + test + doc"
 	@echo "  make clean        cargo clean"
 	@echo ""
