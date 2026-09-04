@@ -1,5 +1,5 @@
 # Docker / compose targets for Serenade (integration DB, etc.).
-# Add targets here when compose recipes land; keep Hub/GHCR publish habits out of CI slices.
+# Prefer Docker MCP or compose docs for ephemeral Postgres in tests.
 
 .PHONY: docker-help
 

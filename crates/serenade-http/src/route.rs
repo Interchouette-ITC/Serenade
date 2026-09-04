@@ -4,7 +4,7 @@ use crate::Method;
 
 /// A single route: name, path pattern, and allowed methods.
 ///
-/// Path segments wrapped in `{…}` are parameters (for example `/carts/{id}`).
+/// Path segments wrapped in `{…}` are parameters (for example `/items/{id}`).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Route {
     name: String,

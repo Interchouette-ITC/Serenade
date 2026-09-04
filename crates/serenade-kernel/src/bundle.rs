@@ -20,7 +20,7 @@ pub trait BundleInterface: Send + Sync {
         &[]
     }
 
-    /// Compile-time wiring (container extensions land with the DI crate).
+    /// Compile-time wiring (register services on the DI container).
     ///
     /// # Errors
     ///

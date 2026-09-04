@@ -93,7 +93,7 @@ fn print_plain(input: &Input, reveal: bool, rows: &[(String, String)]) {
     println!("Debug: {}", input.debug());
     println!("Reveal: {reveal}");
     if rows.is_empty() {
-        println!("Parameters: (none — pass a container via Application::run_with)");
+        println!("Parameters: (none - pass a container via Application::run_with)");
         return;
     }
     println!("Parameters ({}):", rows.len());

@@ -40,7 +40,7 @@ The root `Makefile` includes fragments under `make/`:
 | `make/common.mk` | Shared variables (`ROOT`, `CARGO`, `ARGS`) |
 | `make/ci.mk` | Quality gates (`lint`, `test`, `doc`, `ci`) |
 | `make/cli.mk` | Day-to-day aliases (`serenade`, `tui`, `console`, `demo`) |
-| `make/docker.mk` | Container targets (placeholder until compose recipes land) |
+| `make/docker.mk` | Container help stub (`docker-help`); compose targets land here when added |
 
 Examples:
 

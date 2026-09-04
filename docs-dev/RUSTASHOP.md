@@ -30,7 +30,7 @@ crates/
 ## Example domain modules (inside domain or bundles)
 
 ```text
-rustashop-domain/   (or bundle-per-boundary later)
+rustashop-domain/
 ├── catalog/
 ├── cart/
 ├── checkout/
@@ -64,12 +64,4 @@ Bundles then **compose** these modules: routes, services, subscribers, config.
 - WIT / Wasmer extension lanes
 - AI-native tools and MCP ([RustaShop AI-NATIVE.md](https://github.com/Interchouette-ITC/RustaShop/blob/dev/docs-dev/AI-NATIVE.md))
 
-## Delivery order (suggested)
-
-1. Serenade: kernel boot + DI + config + event dispatcher (minimal)
-2. Serenade: HTTP foundation + one adapter (Actix or Axum)
-3. RustaShop: domain types + persistence adapter choice
-4. RustaShop: `CatalogBundle` + read API
-5. Expand bundles along MVP epics in RustaShop GitHub
-
-Track framework work in **this** repo; track commerce epics in **RustaShop**.
+Framework work tracks in **this** repo; commerce epics track in the application repo.
