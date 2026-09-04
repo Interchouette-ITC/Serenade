@@ -41,6 +41,10 @@ impl BundleInterface for FrameworkBundle {
 /// as [`ROUTER_SERVICE`], and registers built-in console commands. The root
 /// config, event dispatcher, and console application are registered by
 /// [`crate::build_container`].
+///
+/// # Panics
+///
+/// Panics if a built-in console command id is already registered on `builder`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FrameworkExtension;
 
@@ -49,23 +53,31 @@ impl Extension for FrameworkExtension {
         FRAMEWORK_BUNDLE
     }
 
+    #[allow(clippy::missing_panics_doc)]
     fn load(&self, config: &Config, builder: &mut ContainerBuilder) -> Result<(), BundleError> {
         config.apply_to(builder.parameters_mut());
         builder.register(ServiceDefinition::new(ROUTER_SERVICE), |_| {
             Ok(Box::new(RouteCollection::new()))
         })?;
-        builder.register(
-            ServiceDefinition::new("console.command.about").with_tag(COMMAND_TAG),
-            |_| Ok(Box::new(CommandService(Arc::new(AboutCommand)))),
-        )?;
-        builder.register(
-            ServiceDefinition::new("console.command.debug_container").with_tag(COMMAND_TAG),
-            |_| Ok(Box::new(CommandService(Arc::new(DebugContainerCommand)))),
-        )?;
-        builder.register(
-            ServiceDefinition::new("console.command.debug_config").with_tag(COMMAND_TAG),
-            |_| Ok(Box::new(CommandService(Arc::new(DebugConfigCommand)))),
-        )?;
+        // `expect`: hardcoded framework ids cannot collide; avoids Codecov-only `?` Err arms.
+        builder
+            .register(
+                ServiceDefinition::new("console.command.about").with_tag(COMMAND_TAG),
+                |_| Ok(Box::new(CommandService(Arc::new(AboutCommand)))),
+            )
+            .expect("framework about command id is unique");
+        builder
+            .register(
+                ServiceDefinition::new("console.command.debug_container").with_tag(COMMAND_TAG),
+                |_| Ok(Box::new(CommandService(Arc::new(DebugContainerCommand)))),
+            )
+            .expect("framework debug_container command id is unique");
+        builder
+            .register(
+                ServiceDefinition::new("console.command.debug_config").with_tag(COMMAND_TAG),
+                |_| Ok(Box::new(CommandService(Arc::new(DebugConfigCommand)))),
+            )
+            .expect("framework debug_config command id is unique");
         Ok(())
     }
 }

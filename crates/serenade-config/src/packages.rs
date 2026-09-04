@@ -54,11 +54,7 @@ fn list_package_files(dir: &Path) -> Result<Vec<PathBuf>, ConfigError> {
         path: dir.to_path_buf(),
         source,
     })?;
-    for entry in read {
-        let entry = entry.map_err(|source| ConfigError::Io {
-            path: dir.to_path_buf(),
-            source,
-        })?;
+    for entry in read.flatten() {
         let path = entry.path();
         if !path.is_file() {
             continue;

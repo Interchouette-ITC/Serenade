@@ -61,15 +61,20 @@ impl BundleRegistry {
     ///
     /// - [`KernelError::UnknownBundleDependency`] when a dependency was never registered.
     /// - [`KernelError::CyclicBundleDependency`] when the graph has a cycle.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a sorted index does not map to a registered bundle (internal invariant).
     pub fn sorted(self) -> Result<Vec<Box<dyn BundleInterface>>, KernelError> {
         let order = topological_order(&self.bundles)?;
         let mut slots: Vec<Option<Box<dyn BundleInterface>>> =
             self.bundles.into_iter().map(Some).collect();
         let mut sorted = Vec::with_capacity(order.len());
         for index in order {
-            let Some(bundle) = slots[index].take() else {
-                return Err(KernelError::CyclicBundleDependency("internal"));
-            };
+            // `topological_order` returns each index exactly once when it succeeds.
+            let bundle = slots[index]
+                .take()
+                .expect("sorted indexes each registered bundle once");
             sorted.push(bundle);
         }
         Ok(sorted)

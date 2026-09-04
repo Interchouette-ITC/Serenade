@@ -151,3 +151,34 @@ fn interactive_flag_on_non_tty_exits_on_eof() {
     app.run(["console", "--interactive"])
         .expect("interactive eof");
 }
+
+#[test]
+fn print_list_to_maps_io_errors_on_usage_line() {
+    struct FailOnWrite {
+        fail_at: usize,
+        count: usize,
+    }
+
+    impl std::io::Write for FailOnWrite {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.count += 1;
+            if self.count >= self.fail_at {
+                return Err(std::io::Error::other("forced write failure"));
+            }
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    let app = Application::new();
+    // Empty command list: Console, blank, Available, blank, Usage (5th write).
+    let mut fail = FailOnWrite {
+        fail_at: 5,
+        count: 0,
+    };
+    let err = app.print_list_to(&mut fail).expect_err("io");
+    assert!(matches!(err, ConsoleError::Io(_)));
+}

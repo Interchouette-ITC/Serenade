@@ -36,7 +36,7 @@ mod listen;
 
 pub use convert::{conversion_error, from_actix, to_actix};
 pub use dispatch::dispatch;
-pub use listen::{app, listen};
+pub use listen::{app, await_bound, bind_server, listen};
 
 /// Compile-time crate version for diagnostics.
 #[must_use]
