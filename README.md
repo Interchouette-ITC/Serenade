@@ -102,6 +102,10 @@ See [`docs-dev/KERNEL.md`](docs-dev/KERNEL.md).
 3. Gate: **`make ci`** on **stable** Rust (`rust-version` in root `Cargo.toml` is the MSRV floor).
 4. One concern per PR. Commits and docs in **English**.
 
+<p align="center">
+  <img src="docs/brand/logo-banner-rooftop-readme-on-white.png" alt="Serenade: Paris rooftop night scene" width="360" />
+</p>
+
 ## Thanks
 
 **Serenade** stands on excellent open-source projects:
