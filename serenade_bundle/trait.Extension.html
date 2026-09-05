@@ -3,16 +3,16 @@
     fn <a href="#tymethod.alias" class="fn">alias</a>(&amp;self) -&gt; &amp;'static <a class="primitive" href="https://doc.rust-lang.org/1.98.1/std/primitive.str.html">str</a>;
 <span class="item-spacer"></span>    fn <a href="#tymethod.load" class="fn">load</a>(
         &amp;self,
-        config: &amp;<a class="struct" href="../serenade_config/document/struct.Config.html" title="struct serenade_config::document::Config">Config</a>,
-        builder: &amp;mut <a class="struct" href="../serenade_di/builder/struct.ContainerBuilder.html" title="struct serenade_di::builder::ContainerBuilder">ContainerBuilder</a>,
+        config: &amp;Config,
+        builder: &amp;mut ContainerBuilder,
     ) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.98.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.98.1/std/primitive.unit.html">()</a>, <a class="enum" href="enum.BundleError.html" title="enum serenade_bundle::BundleError">BundleError</a>&gt;;
-}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Loads package config for one alias into a <a href="../serenade_di/builder/struct.ContainerBuilder.html" title="struct serenade_di::builder::ContainerBuilder"><code>ContainerBuilder</code></a>.</p>
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Loads package config for one alias into a [<code>ContainerBuilder</code>].</p>
 <p>Bundles expose an extension; <a href="fn.build_container.html" title="fn serenade_bundle::build_container"><code>crate::build_container</code></a> calls each in order.</p>
 </div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.alias" class="method"><a class="src rightside" href="../src/serenade_bundle/extension.rs.html#13">Source</a><h4 class="code-header">fn <a href="#tymethod.alias" class="fn">alias</a>(&amp;self) -&gt; &amp;'static <a class="primitive" href="https://doc.rust-lang.org/1.98.1/std/primitive.str.html">str</a></h4></section></summary><div class="docblock"><p>Config key and diagnostic name (for example <code>framework</code>).</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="tymethod.load" class="method"><a class="src rightside" href="../src/serenade_bundle/extension.rs.html#20">Source</a><h4 class="code-header">fn <a href="#tymethod.load" class="fn">load</a>(
     &amp;self,
-    config: &amp;<a class="struct" href="../serenade_config/document/struct.Config.html" title="struct serenade_config::document::Config">Config</a>,
-    builder: &amp;mut <a class="struct" href="../serenade_di/builder/struct.ContainerBuilder.html" title="struct serenade_di::builder::ContainerBuilder">ContainerBuilder</a>,
+    config: &amp;Config,
+    builder: &amp;mut ContainerBuilder,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.98.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.98.1/std/primitive.unit.html">()</a>, <a class="enum" href="enum.BundleError.html" title="enum serenade_bundle::BundleError">BundleError</a>&gt;</h4></section></summary><div class="docblock"><p>Registers services and parameters from <code>config</code> (already scoped to this alias).</p>
 <h5 id="errors"><a class="doc-anchor" href="#errors">§</a>Errors</h5>
 <p>Returns <a href="enum.BundleError.html" title="enum serenade_bundle::BundleError"><code>BundleError</code></a> when registration fails.</p>

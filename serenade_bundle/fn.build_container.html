@@ -2,12 +2,12 @@
     packages_dir: <a class="enum" href="https://doc.rust-lang.org/1.98.1/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="https://doc.rust-lang.org/1.98.1/std/path/struct.Path.html" title="struct std::path::Path">Path</a>&gt;,
     environment: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.98.1/std/primitive.str.html">str</a>,
     extensions: &amp;[&amp;dyn <a class="trait" href="trait.Extension.html" title="trait serenade_bundle::Extension">Extension</a>],
-) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.98.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;(<a class="struct" href="../serenade_config/document/struct.Config.html" title="struct serenade_config::document::Config">Config</a>, <a class="struct" href="../serenade_di/container/struct.Container.html" title="struct serenade_di::container::Container">Container</a>), <a class="enum" href="enum.BundleError.html" title="enum serenade_bundle::BundleError">BundleError</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Loads <code>config/packages</code> (plus <code>{environment}/</code> overlay), runs <code>extensions</code>, and compiles.</p>
+) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.98.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;(Config, Container), <a class="enum" href="enum.BundleError.html" title="enum serenade_bundle::BundleError">BundleError</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Loads <code>config/packages</code> (plus <code>{environment}/</code> overlay), runs <code>extensions</code>, and compiles.</p>
 <p>Flattened package parameters are applied first. The merged root config is
 registered as <a href="constant.CONFIG_SERVICE.html" title="constant serenade_bundle::CONFIG_SERVICE"><code>CONFIG_SERVICE</code></a>. Each extension then receives
 <code>config.section(extension.alias())</code>. Event and console compile passes always
 run so tagged subscribers and commands populate their services.</p>
-<p>Call <a href="../serenade_config/dotenv/fn.load_dotenv.html" title="fn serenade_config::dotenv::load_dotenv"><code>serenade_config::load_dotenv</code></a> on the project root before this when
+<p>Call [<code>serenade_config::load_dotenv</code>] on the project root before this when
 apps use <code>.env</code> files.</p>
 <h2 id="errors"><a class="doc-anchor" href="#errors">§</a>Errors</h2>
 <p>Returns <a href="enum.BundleError.html" title="enum serenade_bundle::BundleError"><code>BundleError</code></a> on config, extension, or DI failures.</p>
