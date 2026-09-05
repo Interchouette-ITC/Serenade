@@ -28,7 +28,7 @@ Serenade does **not** impose SQLx, SeaORM, Diesel, or Actix vs Axum for your pro
 | Config | TOML-first packages (`config/packages/*.toml`); YAML still loadable |
 | Contracts | Repository / `UnitOfWork` traits (no DB driver in core) |
 | HTTP + routing | Framework-agnostic request path + matcher |
-| Actix adapter | `from_actix` / `to_actix` / `dispatch` + **`listen(addr, kernel)`** |
+| Actix adapter | `from_actix` / `to_actix` / `dispatch` / `dispatch_async` + **`listen(addr, AsyncHttpKernel)`** |
 | Console | `bin/console` analogue (`serenade:about`, `debug:container`, `--interactive`) |
 | Scaffolding CLI | `serenade new` / `recipe` / **`serenade tui`** (ratatui recipe picker) |
 | Make aliases | `make serenade`, `make tui`, `make console`, `make ci`, … |
@@ -77,9 +77,12 @@ Console docs: [`../docs-dev/CONSOLE.md`](../docs-dev/CONSOLE.md).
 ### Actix listen helper
 
 ```rust
-use serenade_http::HttpKernel;
+use serenade_http::{AsyncHttpKernel, Request, Response};
 use serenade_http_actix::listen;
 
+let kernel = AsyncHttpKernel::from_sync(|_request: &mut Request| {
+    Ok(Response::text(200, "ok"))
+});
 // listen("127.0.0.1:8080", kernel).await?;
 ```
 
