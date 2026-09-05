@@ -2,6 +2,8 @@
 //!
 //! Server adapters (Actix, Axum, and others) stay thin wrappers over this layer.
 
+mod async_handler;
+mod async_kernel;
 mod attributes;
 mod error;
 mod exception;
@@ -16,6 +18,8 @@ mod request;
 mod response;
 mod route;
 
+pub use async_handler::{box_future, AsyncFn, AsyncRequestHandler, BoxFuture, SyncToAsync};
+pub use async_kernel::AsyncHttpKernel;
 pub use attributes::AttributeBag;
 pub use error::HttpError;
 pub use exception::{DefaultExceptionHandler, ExceptionHandler};

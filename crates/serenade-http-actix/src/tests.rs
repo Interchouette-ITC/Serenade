@@ -1,20 +1,30 @@
 use actix_web::test as actix_test;
 use actix_web::{web, App, HttpRequest, HttpResponse};
-use serenade_http::{HttpKernel, Method, Request, Response};
+use serenade_http::{AsyncHttpKernel, HttpKernel, Method, Request, Response};
 
 use super::{
-    app, await_bound, bind_server, conversion_error, dispatch, from_actix, listen, to_actix,
-    version,
+    app, await_bound, bind_server, conversion_error, dispatch, dispatch_async, from_actix, listen,
+    to_actix, version,
 };
 
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
 #[allow(clippy::future_not_send)]
-async fn healthz(
+async fn healthz_sync(
     request: HttpRequest,
     body: web::Bytes,
     kernel: web::Data<HttpKernel>,
 ) -> HttpResponse {
     dispatch(kernel.get_ref(), &request, body)
+}
+
+/// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
+#[allow(clippy::future_not_send)]
+async fn healthz_async(
+    request: HttpRequest,
+    body: web::Bytes,
+    kernel: web::Data<AsyncHttpKernel>,
+) -> HttpResponse {
+    dispatch_async(kernel.get_ref(), &request, body).await
 }
 
 #[test]
@@ -38,7 +48,7 @@ async fn sample_route_returns_plain_text_via_kernel() {
     let app = actix_test::init_service(
         App::new()
             .app_data(web::Data::new(kernel))
-            .route("/healthz", web::get().to(healthz)),
+            .route("/healthz", web::get().to(healthz_sync)),
     )
     .await;
 
@@ -51,7 +61,7 @@ async fn sample_route_returns_plain_text_via_kernel() {
 
 #[actix_web::test]
 async fn listen_app_default_service_dispatches_kernel() {
-    let kernel = HttpKernel::new(|request: &mut Request| {
+    let kernel = AsyncHttpKernel::from_sync(|request: &mut Request| {
         assert_eq!(request.path(), "/any");
         Ok(Response::text(200, "served"))
     });
@@ -64,6 +74,28 @@ async fn listen_app_default_service_dispatches_kernel() {
 }
 
 #[actix_web::test]
+async fn async_dispatch_awaits_controller() {
+    use serenade_http::box_future;
+
+    let kernel = AsyncHttpKernel::from_async_fn(|request: &mut Request| {
+        let path = request.path().to_owned();
+        box_future(async move { Ok(Response::text(200, format!("async:{path}"))) })
+    });
+    let app = actix_test::init_service(
+        App::new()
+            .app_data(web::Data::new(kernel))
+            .route("/async", web::get().to(healthz_async)),
+    )
+    .await;
+
+    let request = actix_test::TestRequest::get().uri("/async").to_request();
+    let response = actix_test::call_service(&app, request).await;
+    assert!(response.status().is_success());
+    let body = actix_test::read_body(response).await;
+    assert_eq!(body.as_ref(), b"async:/async");
+}
+
+#[actix_web::test]
 async fn from_actix_copies_headers_and_body() {
     let kernel = HttpKernel::new(|request: &mut Request| {
         assert_eq!(request.headers().get("x-trace"), Some("abc"));
@@ -73,7 +105,7 @@ async fn from_actix_copies_headers_and_body() {
     let app = actix_test::init_service(
         App::new()
             .app_data(web::Data::new(kernel))
-            .route("/echo", web::post().to(healthz)),
+            .route("/echo", web::post().to(healthz_sync)),
     )
     .await;
 
@@ -117,6 +149,17 @@ async fn dispatch_maps_from_actix_errors() {
 }
 
 #[actix_web::test]
+async fn dispatch_async_maps_from_actix_errors() {
+    let kernel = AsyncHttpKernel::from_sync(|_: &mut Request| Ok(Response::text(200, "ok")));
+    let request = actix_test::TestRequest::default()
+        .method(actix_web::http::Method::TRACE)
+        .uri("/")
+        .to_http_request();
+    let response = dispatch_async(&kernel, &request, []).await;
+    assert_eq!(response.status(), 405);
+}
+
+#[actix_web::test]
 async fn listen_binds_serves_then_stops() {
     use std::io::{Read, Write};
     use std::net::{TcpListener, TcpStream};
@@ -126,7 +169,8 @@ async fn listen_binds_serves_then_stops() {
     let addr = probe.local_addr().expect("addr");
     drop(probe);
 
-    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "listen-ok")));
+    let kernel =
+        AsyncHttpKernel::from_sync(|_request: &mut Request| Ok(Response::text(200, "listen-ok")));
     let server = bind_server(addr, kernel).expect("bind");
     let handle = server.handle();
     let server = actix_web::rt::spawn(server);
@@ -172,7 +216,7 @@ async fn listen_awaits_until_server_stops() {
     let addr = probe.local_addr().expect("addr");
     drop(probe);
 
-    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "ok")));
+    let kernel = AsyncHttpKernel::from_sync(|_request: &mut Request| Ok(Response::text(200, "ok")));
     let server = bind_server(addr, kernel).expect("bind");
     let handle = server.handle();
     let task = actix_web::rt::spawn(async move { await_bound(server).await });
@@ -191,7 +235,8 @@ async fn listen_public_entry_binds_and_serves() {
     let addr = probe.local_addr().expect("addr");
     drop(probe);
 
-    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "entry-ok")));
+    let kernel =
+        AsyncHttpKernel::from_sync(|_request: &mut Request| Ok(Response::text(200, "entry-ok")));
     let task = actix_web::rt::spawn(async move { listen(addr, kernel).await });
 
     let mut body = None;
@@ -229,7 +274,8 @@ async fn listen_public_entry_binds_and_serves() {
 
 #[actix_web::test]
 async fn listen_propagates_bind_error() {
-    let kernel = HttpKernel::new(|_request: &mut Request| Ok(Response::text(200, "unused")));
+    let kernel =
+        AsyncHttpKernel::from_sync(|_request: &mut Request| Ok(Response::text(200, "unused")));
     // Privileged port fails for non-root runners (CI and local).
     let err = listen("127.0.0.1:1", kernel).await;
     assert!(err.is_err(), "expected bind failure on privileged port");

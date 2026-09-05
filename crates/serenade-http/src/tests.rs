@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    load_routes, DefaultExceptionHandler, ExceptionHandler, HttpError, HttpKernel, Method,
-    Middleware, Request, RequestHandler, Response, Route, RouteCollection, RouteLoader, UrlMatcher,
-    ROUTE_ATTRIBUTE,
+    box_future, load_routes, AsyncHttpKernel, DefaultExceptionHandler, ExceptionHandler, HttpError,
+    HttpKernel, Method, Middleware, Request, RequestHandler, Response, Route, RouteCollection,
+    RouteLoader, UrlMatcher, ROUTE_ATTRIBUTE,
 };
 
 struct TraceLayer {
@@ -287,4 +287,47 @@ fn matcher_rejects_static_segment_mismatch() {
         .match_request(Method::Get, "/shop/other")
         .expect_err("static mismatch");
     assert_eq!(err.status_code(), 404);
+}
+
+#[tokio::test]
+async fn async_kernel_from_sync_serves() {
+    let kernel = AsyncHttpKernel::from_sync(|request: &mut Request| {
+        assert_eq!(request.path(), "/healthz");
+        Ok(Response::text(200, "ok"))
+    });
+    let response = kernel.handle(Request::new(Method::Get, "/healthz")).await;
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.body_str(), Some("ok"));
+}
+
+#[tokio::test]
+async fn async_kernel_awaits_controller() {
+    let kernel = AsyncHttpKernel::from_async_fn(|request: &mut Request| {
+        let path = request.path().to_owned();
+        box_future(async move { Ok(Response::text(200, path)) })
+    });
+    let response = kernel.handle(Request::new(Method::Get, "/async")).await;
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.body_str(), Some("/async"));
+}
+
+#[tokio::test]
+async fn async_kernel_maps_errors() {
+    let kernel = AsyncHttpKernel::from_async_fn(|_: &mut Request| {
+        box_future(async { Err(HttpError::status(404, "gone")) })
+    });
+    let response = kernel.handle(Request::new(Method::Get, "/x")).await;
+    assert_eq!(response.status(), 404);
+    assert_eq!(response.body_str(), Some("gone"));
+}
+
+#[tokio::test]
+async fn async_kernel_custom_exception_handler() {
+    let kernel = AsyncHttpKernel::from_async_fn(|_: &mut Request| {
+        box_future(async { Err(HttpError::failed("nope")) })
+    })
+    .with_exception_handler(FailMapper);
+    let response = kernel.handle(Request::new(Method::Post, "/")).await;
+    assert_eq!(response.status(), 503);
+    assert_eq!(response.body_str(), Some("mapped:nope"));
 }

@@ -1,18 +1,18 @@
-//! Bind and run Actix Web with a Serenade [`HttpKernel`].
+//! Bind and run Actix Web with a Serenade [`AsyncHttpKernel`].
 
 use std::net::ToSocketAddrs;
 
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
-use serenade_http::HttpKernel;
+use serenade_http::AsyncHttpKernel;
 
 use crate::dispatch;
 
-/// Builds the Actix app that forwards every request to `kernel` via [`dispatch`].
+/// Builds the Actix app that forwards every request to `kernel` via [`dispatch::dispatch_async`].
 #[must_use]
 pub fn app(
-    kernel: web::Data<HttpKernel>,
+    kernel: web::Data<AsyncHttpKernel>,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -37,7 +37,7 @@ pub fn app(
 /// Propagates bind errors.
 pub fn bind_server(
     addr: impl ToSocketAddrs,
-    kernel: HttpKernel,
+    kernel: AsyncHttpKernel,
 ) -> std::io::Result<actix_web::dev::Server> {
     let data = web::Data::new(kernel);
     Ok(HttpServer::new(move || app(data.clone())).bind(addr)?.run())
@@ -56,6 +56,8 @@ pub async fn await_bound(server: actix_web::dev::Server) -> std::io::Result<()> 
 /// Binds `addr` and serves every request through `kernel`.
 ///
 /// Prefer this over hand-rolling `HttpServer::bind` in app skeletons.
+/// Controllers may be async ([`AsyncHttpKernel`]); wrap sync handlers with
+/// [`AsyncHttpKernel::from_sync`](serenade_http::AsyncHttpKernel::from_sync).
 ///
 /// # Errors
 ///
@@ -63,7 +65,7 @@ pub async fn await_bound(server: actix_web::dev::Server) -> std::io::Result<()> 
 ///
 /// Actix's server future is intentionally `!Send` (same as typical Actix handlers).
 #[allow(clippy::future_not_send)]
-pub async fn listen(addr: impl ToSocketAddrs, kernel: HttpKernel) -> std::io::Result<()> {
+pub async fn listen(addr: impl ToSocketAddrs, kernel: AsyncHttpKernel) -> std::io::Result<()> {
     await_bound(bind_server(addr, kernel)?).await
 }
 
@@ -72,7 +74,7 @@ pub async fn listen(addr: impl ToSocketAddrs, kernel: HttpKernel) -> std::io::Re
 async fn serenade_service(
     request: HttpRequest,
     body: web::Bytes,
-    kernel: web::Data<HttpKernel>,
+    kernel: web::Data<AsyncHttpKernel>,
 ) -> HttpResponse {
-    dispatch(kernel.get_ref(), &request, body)
+    dispatch::dispatch_async(kernel.get_ref(), &request, body).await
 }

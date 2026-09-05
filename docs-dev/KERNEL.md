@@ -77,6 +77,8 @@ HTTP adapter (Actix / Axum / …)
 
 `HttpKernel::handle` always returns a `Response`. Handler and middleware errors go through `ExceptionHandler` (`DefaultExceptionHandler` maps `HttpError` status and message to `text/plain`).
 
+`AsyncHttpKernel` is the async counterpart: controllers return a future (database I/O). Wrap sync handlers with `AsyncHttpKernel::from_sync`. Actix `listen` / `app` take `AsyncHttpKernel`; sync `dispatch` remains for `HttpKernel`.
+
 Routing lives in `serenade-http`: `Route` / `RouteCollection`, `UrlMatcher` (404 / 405), and `RouteLoader` for bundles. Path segments `{name}` become request attributes.
 
 ## HTTP adapters
@@ -88,7 +90,7 @@ Server crates stay thin:
 3. Call `HttpKernel::handle`.
 4. Map `serenade_http::Response` back to the server response type.
 
-`serenade-http-actix` implements that bridge for Actix Web (`from_actix`, `to_actix`, `dispatch`). For skeletons that only need to bind and serve a kernel, call `serenade_http_actix::listen(addr, kernel)` (or `app(data)` when composing Actix yourself). An Axum adapter can reuse the same four steps without changing the foundation crate.
+`serenade-http-actix` implements that bridge for Actix Web (`from_actix`, `to_actix`, `dispatch` / `dispatch_async`). For skeletons that only need to bind and serve a kernel, call `serenade_http_actix::listen(addr, async_kernel)` (or `app(data)` when composing Actix yourself). An Axum adapter can reuse the same four steps without changing the foundation crate.
 
 ## Messenger and jobs
 
