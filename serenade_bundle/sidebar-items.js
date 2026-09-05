@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["COMMAND_TAG","CONFIG_SERVICE","CONSOLE_APPLICATION_SERVICE","FRAMEWORK_BUNDLE","ROUTER_SERVICE"],"enum":["BundleError"],"fn":["build_container","version"],"struct":["BundleRegistry","FrameworkBundle","FrameworkExtension"],"trait":["Bundle","BundleInterface","Extension"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["assert_dispatched","version"],"struct":["HttpTestClient","RecordingSubscriber","SerenadeTestKernel"]};

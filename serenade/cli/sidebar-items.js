@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Commands","RecipeCommands","ShellKind"],"fn":["cmd_completion","cmd_man","cmd_new","cmd_recipe_apply","cmd_recipe_list","cmd_tui"],"struct":["ApplyArgs","Cli","CompletionArgs","ManArgs","NewArgs","TuiArgs"]};

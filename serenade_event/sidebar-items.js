@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DISPATCHER_SERVICE","SUBSCRIBER_TAG"],"enum":["EventError"],"fn":["assert_dispatched","version"],"struct":["EventDispatcher","RecordingSubscriber","RegisterEventSubscribersPass","SubscriberService"],"trait":["Event","EventSubscriber"]};

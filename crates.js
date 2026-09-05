@@ -1,0 +1,2 @@
+window.ALL_CRATES = ["console","serenade","serenade_bundle","serenade_cli","serenade_config","serenade_console","serenade_contracts","serenade_demo_app","serenade_di","serenade_event","serenade_http","serenade_http_actix","serenade_kernel","serenade_testing"];
+//{"start":21,"fragment_lengths":[9,11,18,15,18,19,21,20,14,17,16,22,18,19]}

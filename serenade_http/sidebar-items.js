@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ROUTE_ATTRIBUTE"],"enum":["HttpError","Method"],"fn":["load_routes","version"],"struct":["AttributeBag","DefaultExceptionHandler","Headers","HttpKernel","MatchResult","Request","Response","Route","RouteCollection","UrlMatcher"],"trait":["ExceptionHandler","Middleware","RequestHandler","RouteLoader"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Environment","KernelError","KernelPhase"],"fn":["version"],"struct":["App","BundleRegistry","Kernel"],"trait":["Application","Bundle","BundleInterface"]};

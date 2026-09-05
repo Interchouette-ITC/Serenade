@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["apply_recipe","list_recipes","load_recipe","print_hints"],"struct":["ApplyOptions","CargoDependency","CargoSection","Recipe","RecipeFile","RecipeHints"]};

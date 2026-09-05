@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["APPLICATION_SERVICE","COMMAND_TAG","HISTORY_FILE_NAME"],"enum":["ConsoleError"],"fn":["history_path","stdout_is_terminal","version"],"struct":["AboutCommand","Application","CommandService","DebugConfigCommand","DebugContainerCommand","Input","RegisterCommandsPass"],"trait":["Command"]};
