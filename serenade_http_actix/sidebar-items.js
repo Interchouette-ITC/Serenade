@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["app","await_bound","bind_server","conversion_error","dispatch","from_actix","listen","to_actix","version"]};
+window.SIDEBAR_ITEMS = {"fn":["app","await_bound","bind_server","conversion_error","dispatch","dispatch_async","from_actix","listen","to_actix","version"]};
