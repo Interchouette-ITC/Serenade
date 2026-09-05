@@ -28,7 +28,7 @@ help:
 	@echo "  make format       cargo fmt"
 	@echo "  make audit        cargo audit"
 	@echo "  make deny         cargo deny check"
-	@echo "  make ci           lint + test + doc"
+	@echo "  make ci           lint + test + doc + audit + deny"
 	@echo "  make clean        cargo clean"
 	@echo ""
 	@echo "CLI / demo (make/cli.mk) - prefer these over cargo run -p ...:"
