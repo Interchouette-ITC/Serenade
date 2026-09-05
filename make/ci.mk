@@ -78,7 +78,7 @@ audit:
 deny:
 	cd $(ROOT) && $(CARGO) deny check
 
-ci: lint test doc
+ci: lint test doc audit deny
 
 clean:
 	cd $(ROOT) && $(CARGO) clean
