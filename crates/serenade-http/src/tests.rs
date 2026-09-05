@@ -320,3 +320,14 @@ async fn async_kernel_maps_errors() {
     assert_eq!(response.status(), 404);
     assert_eq!(response.body_str(), Some("gone"));
 }
+
+#[tokio::test]
+async fn async_kernel_custom_exception_handler() {
+    let kernel = AsyncHttpKernel::from_async_fn(|_: &mut Request| {
+        box_future(async { Err(HttpError::failed("nope")) })
+    })
+    .with_exception_handler(FailMapper);
+    let response = kernel.handle(Request::new(Method::Post, "/")).await;
+    assert_eq!(response.status(), 503);
+    assert_eq!(response.body_str(), Some("mapped:nope"));
+}

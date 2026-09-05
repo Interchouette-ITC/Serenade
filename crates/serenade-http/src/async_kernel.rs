@@ -61,6 +61,7 @@ impl AsyncHttpKernel {
     }
 
     /// Handles `request` and always returns a [`Response`].
+    #[must_use = "futures do nothing unless you await them"]
     pub fn handle(&self, mut request: Request) -> BoxFuture<'_, Response> {
         Box::pin(async move {
             match self.dispatch(&mut request).await {
