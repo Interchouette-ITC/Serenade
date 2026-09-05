@@ -78,6 +78,8 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
       - name: Markdown-only
@@ -90,6 +92,17 @@ jobs:
       - name: Doc
         if: needs.changes.outputs.code == 'true'
         run: make doc
+      - name: Github pages
+        if: >-
+          needs.changes.outputs.code == 'true'
+          && github.event_name == 'push'
+          && github.ref == 'refs/heads/dev'
+        uses: JamesIves/github-pages-deploy-action@ba1486788b0490a235422264426c45848eac35c6 # v4.4.1
+        with:
+          folder: docs/api-rust
+          branch: gh-pages
+          clean: true
+          commit-message: "Deploy documentation for ${{ github.sha }}"
 
   supply-chain:
     name: supply-chain
