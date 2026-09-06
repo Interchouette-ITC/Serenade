@@ -4,6 +4,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::middleware::{DispatchContext, DispatchKind, Middleware};
 use crate::{Command, CommandHandler, Event, EventHandler, MessengerError};
 
 type ErasedHandler = Arc<dyn Fn(&dyn Any) -> Result<(), MessengerError> + Send + Sync>;
@@ -19,6 +20,26 @@ fn downcast_message<'a, T: 'static>(
             name,
             message: format!("{kind} type mismatch"),
         })
+}
+
+fn run_pipeline(
+    middlewares: &[Arc<dyn Middleware>],
+    ctx: &DispatchContext,
+    terminal: &dyn Fn() -> Result<(), MessengerError>,
+) -> Result<(), MessengerError> {
+    fn invoke(
+        index: usize,
+        middlewares: &[Arc<dyn Middleware>],
+        ctx: &DispatchContext,
+        terminal: &dyn Fn() -> Result<(), MessengerError>,
+    ) -> Result<(), MessengerError> {
+        if index >= middlewares.len() {
+            return terminal();
+        }
+        let next = || invoke(index + 1, middlewares, ctx, terminal);
+        middlewares[index].handle(ctx, &next)
+    }
+    invoke(0, middlewares, ctx, terminal)
 }
 
 /// Dispatches commands (one handler) and events (fan-out) in-process.
@@ -54,6 +75,7 @@ fn downcast_message<'a, T: 'static>(
 pub struct MessageBus {
     commands: HashMap<&'static str, ErasedHandler>,
     events: HashMap<&'static str, Vec<ErasedHandler>>,
+    middlewares: Vec<Arc<dyn Middleware>>,
 }
 
 impl MessageBus {
@@ -61,6 +83,17 @@ impl MessageBus {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Appends a middleware layer (first registered runs outermost).
+    pub fn add_middleware(&mut self, middleware: impl Middleware + 'static) {
+        self.middlewares.push(Arc::new(middleware));
+    }
+
+    /// Number of registered middleware layers.
+    #[must_use]
+    pub fn middleware_count(&self) -> usize {
+        self.middlewares.len()
     }
 
     /// Registers the sole command handler for `C::NAME`.
@@ -101,42 +134,52 @@ impl MessageBus {
         self.events.entry(name).or_default().push(erased);
     }
 
-    /// Dispatches `command` to its registered handler.
+    /// Dispatches `command` through the middleware pipeline to its handler.
     ///
     /// # Errors
     ///
-    /// Returns [`MessengerError::UnknownCommand`] when no handler is registered, or the
-    /// handler's [`MessengerError`].
+    /// Returns [`MessengerError::UnknownCommand`] when no handler is registered, a
+    /// middleware rejection, or the handler's [`MessengerError`].
     pub fn dispatch_command<C: Command>(&self, command: &C) -> Result<(), MessengerError> {
         let name = C::NAME;
         let Some(handler) = self.commands.get(name) else {
             return Err(MessengerError::UnknownCommand { name });
         };
-        handler(command as &dyn Any)
+        let ctx = DispatchContext {
+            message_name: name,
+            kind: DispatchKind::Command,
+        };
+        run_pipeline(&self.middlewares, &ctx, &|| handler(command as &dyn Any))
     }
 
-    /// Dispatches `event` to every registered handler for `E::NAME`.
+    /// Dispatches `event` through middleware, then to every registered handler for `E::NAME`.
     ///
-    /// Missing handlers are a no-op. All matching handlers run even if one fails; the
-    /// first error is returned.
+    /// Missing handlers are a no-op after middleware. All matching handlers run even if one
+    /// fails; the first error is returned.
     ///
     /// # Errors
     ///
-    /// Returns the first [`MessengerError`] from a handler.
+    /// Returns a middleware rejection or the first [`MessengerError`] from a handler.
     pub fn dispatch_event<E: Event>(&self, event: &E) -> Result<(), MessengerError> {
         let name = E::NAME;
-        let Some(handlers) = self.events.get(name) else {
-            return Ok(());
+        let ctx = DispatchContext {
+            message_name: name,
+            kind: DispatchKind::Event,
         };
-        let mut first_error = None;
-        for handler in handlers {
-            if let Err(error) = handler(event as &dyn Any) {
-                if first_error.is_none() {
-                    first_error = Some(error);
+        run_pipeline(&self.middlewares, &ctx, &|| {
+            let Some(handlers) = self.events.get(name) else {
+                return Ok(());
+            };
+            let mut first_error = None;
+            for handler in handlers {
+                if let Err(error) = handler(event as &dyn Any) {
+                    if first_error.is_none() {
+                        first_error = Some(error);
+                    }
                 }
             }
-        }
-        first_error.map_or(Ok(()), Err)
+            first_error.map_or(Ok(()), Err)
+        })
     }
 
     /// Number of registered command handlers.
