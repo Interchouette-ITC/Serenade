@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["TOKEN_ATTRIBUTE"],"enum":["SecurityError","Vote"],"fn":["request_token","version"],"struct":["AccessDecisionManager","FirewallMiddleware","InMemoryUser","RoleVoter","UsernamePasswordToken"],"trait":["Authenticator","TokenInterface","UserInterface","Voter"],"type":["Subject"]};
