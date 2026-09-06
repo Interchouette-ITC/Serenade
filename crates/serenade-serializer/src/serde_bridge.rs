@@ -26,9 +26,7 @@ use crate::{Decoder, Encoder, SerializerError};
 /// assert!(bytes.starts_with(b"{"));
 /// ```
 pub fn serialize_value<T: Serialize>(value: &T, format: &str) -> Result<Vec<u8>, SerializerError> {
-    let data = serde_json::to_value(value).map_err(|err| SerializerError::Codec {
-        message: err.to_string(),
-    })?;
+    let data = serde_json::to_value(value).map_err(crate::error::from_serde_json)?;
     JsonEncoder.encode(&data, format)
 }
 
@@ -43,9 +41,7 @@ pub fn deserialize_value<T: DeserializeOwned>(
     format: &str,
 ) -> Result<T, SerializerError> {
     let value = JsonDecoder.decode(data, format)?;
-    serde_json::from_value(value).map_err(|err| SerializerError::Codec {
-        message: err.to_string(),
-    })
+    serde_json::from_value(value).map_err(crate::error::from_serde_json)
 }
 
 /// Returns whether the serde bridge supports `format` in this crate version.

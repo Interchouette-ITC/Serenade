@@ -316,3 +316,58 @@ fn tag_codec_normalization_error_paths() {
         .expect_err("missing label");
     assert!(matches!(err, SerializerError::Normalization { .. }));
 }
+
+#[test]
+fn from_serde_json_maps_codec_error() {
+    let err = serde_json::from_str::<u32>("not-a-number").expect_err("parse");
+    let mapped = super::from_serde_json(err);
+    assert!(matches!(mapped, SerializerError::Codec { .. }));
+}
+
+struct Boom;
+
+impl Serialize for Boom {
+    fn serialize<S: serde::Serializer>(&self, _serializer: S) -> Result<S::Ok, S::Error> {
+        Err(serde::ser::Error::custom("boom"))
+    }
+}
+
+#[test]
+fn serialize_value_maps_serde_failure() {
+    let err = serialize_value(&Boom, FORMAT_JSON).expect_err("boom");
+    assert!(matches!(err, SerializerError::Codec { .. }));
+}
+
+struct SkipNormalizer;
+
+impl Normalizer for SkipNormalizer {
+    fn supports_normalization(&self, _object: &dyn Any, _format: &str) -> bool {
+        false
+    }
+
+    fn normalize(
+        &self,
+        _object: &dyn Any,
+        _format: &str,
+        _context: &NormalizationContext,
+    ) -> Result<Value, SerializerError> {
+        Err(SerializerError::Normalization {
+            message: "should not run".to_owned(),
+        })
+    }
+}
+
+#[test]
+fn registry_skips_non_supporting_normalizer() {
+    let mut registry = NormalizerRegistry::new();
+    registry.add_normalizer(SkipNormalizer);
+    registry.add_normalizer(TagCodec);
+    let value = registry
+        .normalize(
+            &Tag("skip".to_owned()),
+            FORMAT_JSON,
+            &NormalizationContext::new(),
+        )
+        .expect("second wins");
+    assert_eq!(value, json!({"label": "skip"}));
+}

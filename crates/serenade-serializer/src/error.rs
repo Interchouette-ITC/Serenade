@@ -30,3 +30,11 @@ pub enum SerializerError {
         message: String,
     },
 }
+
+/// Maps a `serde_json` error into [`SerializerError::Codec`].
+#[must_use]
+pub fn from_serde_json(err: serde_json::Error) -> SerializerError {
+    SerializerError::Codec {
+        message: err.to_string(),
+    }
+}
