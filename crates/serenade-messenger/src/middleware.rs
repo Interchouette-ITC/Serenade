@@ -14,14 +14,16 @@ pub enum DispatchKind {
 }
 
 /// Context passed to each middleware for one dispatch.
+///
+/// `'msg` names the borrowed command/event payload lifetime.
 #[derive(Clone, Copy)]
-pub struct DispatchContext<'a> {
+pub struct DispatchContext<'msg> {
     /// [`crate::Message::NAME`] for the payload.
     pub message_name: &'static str,
     /// Command vs event dispatch.
     pub kind: DispatchKind,
     /// Erased message payload (command or event).
-    pub payload: &'a dyn Any,
+    pub payload: &'msg dyn Any,
 }
 
 /// Onion layer around handler execution.

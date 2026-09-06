@@ -117,3 +117,46 @@ fn messenger_hook_ignores_unregistered_names() {
     })
     .expect("no registration means allow");
 }
+
+struct ObjectLevelFail;
+
+impl Message for ObjectLevelFail {
+    const NAME: &'static str = "order.object_fail";
+}
+
+impl Command for ObjectLevelFail {}
+
+impl Validatable for ObjectLevelFail {
+    fn validate(&self, _validator: &dyn Validator) -> ConstraintViolationList {
+        let mut list = ConstraintViolationList::new();
+        list.add(Violation::new("", "object invalid", "ObjectLevel"));
+        list
+    }
+}
+
+struct ObjectLevelFailHandler;
+
+impl CommandHandler<ObjectLevelFail> for ObjectLevelFailHandler {
+    fn handle(&self, _command: &ObjectLevelFail) -> Result<(), MessengerError> {
+        Ok(())
+    }
+}
+
+#[test]
+fn messenger_hook_formats_empty_property_path() {
+    let mut hook = MessengerValidateHook::new(RecursiveValidator);
+    hook.register::<ObjectLevelFail>();
+    let mut bus = MessageBus::new();
+    bus.add_middleware(ValidationMiddleware::new(hook));
+    bus.register_command(ObjectLevelFailHandler)
+        .expect("register");
+    let err = bus
+        .dispatch_command(&ObjectLevelFail)
+        .expect_err("rejected");
+    match err {
+        MessengerError::Rejected { message, .. } => {
+            assert_eq!(message, "object invalid");
+        }
+        other => panic!("unexpected {other:?}"),
+    }
+}
