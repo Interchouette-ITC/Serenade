@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MessengerError"],"fn":["version"],"struct":["MessageBus"],"trait":["Command","CommandHandler","Event","EventHandler","Message"]};
+window.SIDEBAR_ITEMS = {"enum":["DispatchKind","MessengerError"],"fn":["version"],"struct":["DispatchContext","LoggingMiddleware","MessageBus","ValidationMiddleware"],"trait":["Command","CommandHandler","Event","EventHandler","LogSink","Message","Middleware","ValidateHook"]};
