@@ -192,8 +192,6 @@ mod tests {
             .expect("lock");
 
         let config = LoggingConfig::for_environment(&Environment::Dev, "var/log");
-        let prev_serenade = std::env::var("SERENADE_LOG").ok();
-        let prev_rust = std::env::var("RUST_LOG").ok();
         unsafe {
             std::env::remove_var("SERENADE_LOG");
             std::env::remove_var("RUST_LOG");
@@ -214,14 +212,8 @@ mod tests {
         );
 
         unsafe {
-            match prev_serenade {
-                Some(value) => std::env::set_var("SERENADE_LOG", value),
-                None => std::env::remove_var("SERENADE_LOG"),
-            }
-            match prev_rust {
-                Some(value) => std::env::set_var("RUST_LOG", value),
-                None => std::env::remove_var("RUST_LOG"),
-            }
+            std::env::remove_var("SERENADE_LOG");
+            std::env::remove_var("RUST_LOG");
         }
     }
 }
