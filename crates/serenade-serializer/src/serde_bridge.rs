@@ -20,9 +20,9 @@ use crate::{Decoder, Encoder, SerializerError};
 /// use serenade_serializer::serialize_value;
 ///
 /// #[derive(Serialize)]
-/// struct Product { sku: String }
+/// struct Sample { code: String }
 ///
-/// let bytes = serialize_value(&Product { sku: "A".into() }, "json").expect("ok");
+/// let bytes = serialize_value(&Sample { code: "A".into() }, "json").expect("ok");
 /// assert!(bytes.starts_with(b"{"));
 /// ```
 pub fn serialize_value<T: Serialize>(value: &T, format: &str) -> Result<Vec<u8>, SerializerError> {

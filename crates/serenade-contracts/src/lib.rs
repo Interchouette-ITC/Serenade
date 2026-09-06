@@ -1,28 +1,20 @@
 //! Stable contracts for adapters implemented by applications.
 //!
-//! Repository and unit-of-work traits live here with zero database dependencies.
-//! Entity types are defined in product crates; adapters implement these traits
-//! with `SQLx`, `SeaORM`, or other stores.
+//! Generic persistence helpers live here with zero database dependencies:
+//! unit of work, pagination, shared errors, and persist-param checks.
+//! Domain repository traits (catalog, cart, CMS, …) belong in the application.
 
-pub mod cart;
-pub mod category;
 pub mod error;
-pub mod order;
 pub mod pagination;
 pub mod persist_param;
-pub mod product;
 pub mod unit_of_work;
 
-pub use cart::CartRepository;
-pub use category::CategoryRepository;
 pub use error::{PersistenceError, RepositoryError};
-pub use order::OrderRepository;
 pub use pagination::PageRequest;
 pub use persist_param::{
     persist_param_check_enabled, reject_unsafe_sql_param, reject_unsafe_sql_param_owned,
     PersistParamPolicy, PERSIST_PARAM_CHECK_DISABLE_ENV,
 };
-pub use product::ProductRepository;
 pub use unit_of_work::UnitOfWork;
 
 /// Marker for entity identifiers passed into repository traits.

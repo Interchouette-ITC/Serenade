@@ -23,39 +23,39 @@ type PayloadValidateFn = dyn Fn(&dyn Any, &dyn Validator) -> ConstraintViolation
 ///     RecursiveValidator, Validatable, Validator,
 /// };
 ///
-/// struct PlaceOrder {
-///     sku: String,
+/// struct EnqueueJob {
+///     code: String,
 /// }
 ///
-/// impl Message for PlaceOrder {
-///     const NAME: &'static str = "order.place";
+/// impl Message for EnqueueJob {
+///     const NAME: &'static str = "job.enqueue";
 /// }
-/// impl Command for PlaceOrder {}
+/// impl Command for EnqueueJob {}
 ///
-/// impl Validatable for PlaceOrder {
+/// impl Validatable for EnqueueJob {
 ///     fn validate(&self, validator: &dyn Validator) -> ConstraintViolationList {
 ///         validator.validate_value(
-///             &self.sku,
-///             "sku",
+///             &self.code,
+///             "code",
 ///             &[&NotBlank as &dyn Constraint, &Length::new(1, 32)],
 ///         )
 ///     }
 /// }
 ///
 /// struct OkHandler;
-/// impl CommandHandler<PlaceOrder> for OkHandler {
-///     fn handle(&self, _: &PlaceOrder) -> Result<(), serenade_messenger::MessengerError> {
+/// impl CommandHandler<EnqueueJob> for OkHandler {
+///     fn handle(&self, _: &EnqueueJob) -> Result<(), serenade_messenger::MessengerError> {
 ///         Ok(())
 ///     }
 /// }
 ///
 /// let mut hook = MessengerValidateHook::new(RecursiveValidator);
-/// hook.register::<PlaceOrder>();
+/// hook.register::<EnqueueJob>();
 /// let mut bus = MessageBus::new();
 /// bus.add_middleware(ValidationMiddleware::new(hook));
 /// bus.register_command(OkHandler).unwrap();
 /// assert!(bus
-///     .dispatch_command(&PlaceOrder { sku: String::new() })
+///     .dispatch_command(&EnqueueJob { code: String::new() })
 ///     .is_err());
 /// ```
 pub struct MessengerValidateHook<V> {

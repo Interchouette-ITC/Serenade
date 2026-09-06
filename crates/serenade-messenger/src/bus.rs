@@ -51,25 +51,25 @@ fn run_pipeline(
 ///     Command, CommandHandler, Message, MessageBus, MessengerError,
 /// };
 ///
-/// struct PlaceOrder;
+/// struct EnqueueJob;
 ///
-/// impl Message for PlaceOrder {
-///     const NAME: &'static str = "order.place";
+/// impl Message for EnqueueJob {
+///     const NAME: &'static str = "job.enqueue";
 /// }
 ///
-/// impl Command for PlaceOrder {}
+/// impl Command for EnqueueJob {}
 ///
-/// struct PlaceOrderHandler;
+/// struct EnqueueJobHandler;
 ///
-/// impl CommandHandler<PlaceOrder> for PlaceOrderHandler {
-///     fn handle(&self, _command: &PlaceOrder) -> Result<(), MessengerError> {
+/// impl CommandHandler<EnqueueJob> for EnqueueJobHandler {
+///     fn handle(&self, _command: &EnqueueJob) -> Result<(), MessengerError> {
 ///         Ok(())
 ///     }
 /// }
 ///
 /// let mut bus = MessageBus::new();
-/// bus.register_command(PlaceOrderHandler).expect("register");
-/// bus.dispatch_command(&PlaceOrder).expect("dispatch");
+/// bus.register_command(EnqueueJobHandler).expect("register");
+/// bus.dispatch_command(&EnqueueJob).expect("dispatch");
 /// ```
 #[derive(Clone, Default)]
 pub struct MessageBus {

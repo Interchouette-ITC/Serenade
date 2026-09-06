@@ -1,29 +1,32 @@
 # Persistence adapters
 
-Serenade defines **contracts**; applications own schema, migrations, and ORM/SQL choices.
+Serenade defines **generic persistence contracts**; applications own schema, migrations, ORM/SQL choices, and **domain repository traits**.
 
 ## Layering
 
 ```text
 Application domain (product crate)
-    → serenade-contracts traits (ProductRepository, UnitOfWork, …)
+    → application repository traits (product-defined)
+    → serenade-contracts (UnitOfWork, PageRequest, PersistenceError, …)
         → SQLx adapter (hand-written queries)
         → SeaORM adapter (entities + migrations mirror)
 ```
 
 Kernel and HTTP crates never depend on `sqlx`, `sea-orm`, or `diesel`.
 
-## Repository traits (`serenade-contracts`)
+## Framework traits (`serenade-contracts`)
 
-| Trait                | Responsibility                                       |
-| -------------------- | ---------------------------------------------------- |
-| `ProductRepository`  | Read by id, slug, paginated list                     |
-| `CategoryRepository` | Read by id, slug, children of parent                 |
-| `CartRepository`     | Find by session token, save, delete                  |
-| `OrderRepository`    | Find by number, save, idempotent checkout save       |
-| `UnitOfWork`         | `begin` / `commit` / `rollback` transaction boundary |
+| Trait / type | Responsibility |
+| --- | --- |
+| `UnitOfWork` | `begin` / `commit` / `rollback` transaction boundary |
+| `PageRequest` | Limit/offset pagination for list reads |
+| `PersistenceError` / `RepositoryError` | Shared adapter error surface |
+| `EntityId` | Marker for identifiers passed into application ports |
+| persist-param helpers | Reject NUL in string parameters at the persistence boundary |
 
-Associated types (`Id`, `Product`, `Cart`, …) are defined in the **application**. Serenade stays ORM-agnostic.
+**Domain ports** (`ProductRepository`, cart ports, CMS ports, …) live in the **application**. Serenade does not ship catalog, cart, or order repository traits.
+
+Associated entity types are defined in the application. Serenade stays ORM-agnostic.
 
 ## Business rules vs persistence hooks
 
@@ -33,7 +36,7 @@ Put behavior in the right layer:
 
 | Concern | Where it belongs | Examples |
 | --- | --- | --- |
-| **Business / domain rules** | Application domain or use-case service, **before** calling `Repository::save` | Cart not empty, stock check, price snapshot, invariants on an aggregate |
+| **Business / domain rules** | Application domain or use-case service, **before** calling `Repository::save` | Aggregate invariants, stock check, price snapshot |
 | **Technical persistence** | Application adapter (or DB trigger) | `updated_at`, soft-delete flags, ORM `before_save` |
 
 Typical flow:
@@ -54,10 +57,10 @@ Older stacks often attached `preSave` to the ORM model. Same idea: hooks live wi
 
 ## Adapter rules
 
-1. **One logical schema** per product. SQLx migrations are canonical; SeaORM migrations mirror them.
-2. **Money** as integer minor units + ISO currency code in the database. Never floats.
-3. **Snapshots** on cart and order lines (unit price, labels) at mutation time.
-4. **Idempotency** on checkout via `OrderRepository::save_idempotent`.
+1. **One logical schema** per product. SQLx migrations are canonical; SeaORM migrations mirror them when both adapters exist.
+2. **Money** as integer minor units + ISO currency code in the database when the product deals in money. Never floats.
+3. **Snapshots** on mutable line items (unit price, labels) at mutation time when the product needs historical accuracy.
+4. **Idempotency** for checkout or other once-only writes belongs in the application repository / use-case layer.
 5. Integration tests run against Docker Postgres in the application repo.
 6. Run **persist-param hygiene** on request/domain strings before bind/filter (see below).
 
@@ -84,11 +87,12 @@ Any API that runs SQL text (or fragments) supplied by a client must be behind a 
 
 ## Mock implementations
 
-`serenade-contracts` tests include an in-memory mock proving the traits compile without a database. Application repos should add Postgres integration tests behind CI service containers.
+`serenade-contracts` tests include an in-memory `UnitOfWork` mock proving the framework traits compile without a database. Application repos should add Postgres integration tests behind CI service containers, and own mocks for their domain repository traits.
 
 ## Non-goals (Serenade)
 
 - Migration runners
-- Entity definitions for commerce aggregates
+- Entity definitions for application aggregates
+- Domain-specific repository traits (catalog, cart, CMS, …)
 - Choosing SQLx vs SeaORM for applications
 - Global ORM lifecycle callbacks (`preSave` / `preUpdate` across every driver)

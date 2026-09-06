@@ -7,22 +7,22 @@ use super::{
     RecursiveValidator, Validatable, Validator, Violation,
 };
 
-struct PlaceOrder {
-    sku: String,
+struct EnqueueJob {
+    code: String,
     qty: String,
 }
 
-impl Message for PlaceOrder {
-    const NAME: &'static str = "order.place";
+impl Message for EnqueueJob {
+    const NAME: &'static str = "job.enqueue";
 }
 
-impl Command for PlaceOrder {}
+impl Command for EnqueueJob {}
 
-impl Validatable for PlaceOrder {
+impl Validatable for EnqueueJob {
     fn validate(&self, validator: &dyn Validator) -> ConstraintViolationList {
         let mut list = validator.validate_value(
-            &self.sku,
-            "sku",
+            &self.code,
+            "code",
             &[&NotBlank as &dyn Constraint, &Length::new(1, 16)],
         );
         let qty = validator.validate_value(&self.qty, "qty", &[&Range::new(1, 100)]);
@@ -33,10 +33,10 @@ impl Validatable for PlaceOrder {
     }
 }
 
-struct PlaceOrderHandler;
+struct EnqueueJobHandler;
 
-impl CommandHandler<PlaceOrder> for PlaceOrderHandler {
-    fn handle(&self, _command: &PlaceOrder) -> Result<(), MessengerError> {
+impl CommandHandler<EnqueueJob> for EnqueueJobHandler {
+    fn handle(&self, _command: &EnqueueJob) -> Result<(), MessengerError> {
         Ok(())
     }
 }
@@ -77,7 +77,7 @@ fn range_rejects_out_of_bounds_and_non_integer() {
 #[test]
 fn violation_helpers() {
     let mut list = ConstraintViolationList::new();
-    list.add(Violation::new("sku", "bad", "NotBlank"));
+    list.add(Violation::new("code", "bad", "NotBlank"));
     assert!(!list.is_empty());
     assert_eq!(list.len(), 1);
 }
@@ -85,21 +85,21 @@ fn violation_helpers() {
 #[test]
 fn messenger_hook_rejects_invalid_command() {
     let mut hook = MessengerValidateHook::new(RecursiveValidator);
-    hook.register::<PlaceOrder>();
+    hook.register::<EnqueueJob>();
     let mut bus = MessageBus::new();
     bus.add_middleware(ValidationMiddleware::new(hook));
-    bus.register_command(PlaceOrderHandler).expect("register");
+    bus.register_command(EnqueueJobHandler).expect("register");
 
     let err = bus
-        .dispatch_command(&PlaceOrder {
-            sku: String::new(),
+        .dispatch_command(&EnqueueJob {
+            code: String::new(),
             qty: "1".to_owned(),
         })
         .expect_err("rejected");
     assert!(matches!(err, MessengerError::Rejected { .. }));
 
-    bus.dispatch_command(&PlaceOrder {
-        sku: "SKU-1".to_owned(),
+    bus.dispatch_command(&EnqueueJob {
+        code: "SKU-1".to_owned(),
         qty: "2".to_owned(),
     })
     .expect("valid");
@@ -110,9 +110,9 @@ fn messenger_hook_ignores_unregistered_names() {
     let hook = MessengerValidateHook::new(RecursiveValidator);
     let mut bus = MessageBus::new();
     bus.add_middleware(ValidationMiddleware::new(hook));
-    bus.register_command(PlaceOrderHandler).expect("register");
-    bus.dispatch_command(&PlaceOrder {
-        sku: String::new(),
+    bus.register_command(EnqueueJobHandler).expect("register");
+    bus.dispatch_command(&EnqueueJob {
+        code: String::new(),
         qty: "1".to_owned(),
     })
     .expect("no registration means allow");
