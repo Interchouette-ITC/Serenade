@@ -128,7 +128,7 @@ impl Container {
         })
     }
 
-    fn resolve_alias<'a>(&'a self, id: &'a str) -> Result<&'a str, DiError> {
+    fn resolve_alias<'id>(&'id self, id: &'id str) -> Result<&'id str, DiError> {
         let mut current = id;
         let mut seen = Vec::new();
         while let Some(next) = self.aliases.get(current) {

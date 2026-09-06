@@ -39,7 +39,7 @@ impl AsyncHttpKernel {
     #[must_use]
     pub fn from_async_fn<F>(handler: F) -> Self
     where
-        F: for<'a> Fn(&'a mut Request) -> BoxFuture<'a, Result<Response, HttpError>>
+        F: for<'req> Fn(&'req mut Request) -> BoxFuture<'req, Result<Response, HttpError>>
             + Send
             + Sync
             + 'static,
@@ -71,10 +71,10 @@ impl AsyncHttpKernel {
         })
     }
 
-    fn dispatch<'a>(
-        &'a self,
-        request: &'a mut Request,
-    ) -> BoxFuture<'a, Result<Response, HttpError>> {
+    fn dispatch<'req>(
+        &'req self,
+        request: &'req mut Request,
+    ) -> BoxFuture<'req, Result<Response, HttpError>> {
         self.controller.handle(request)
     }
 }

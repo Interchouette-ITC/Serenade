@@ -175,7 +175,7 @@ impl ContainerBuilder {
         Ok(())
     }
 
-    fn resolve_id<'a>(&'a self, id: &'a str) -> Result<&'a str, DiError> {
+    fn resolve_id<'id>(&'id self, id: &'id str) -> Result<&'id str, DiError> {
         if self.services.contains_key(id) {
             return Ok(id);
         }
@@ -186,10 +186,10 @@ impl ContainerBuilder {
     }
 }
 
-fn resolve_alias_chain<'a>(
-    aliases: &'a HashMap<String, String>,
-    start: &'a str,
-) -> Result<&'a str, DiError> {
+fn resolve_alias_chain<'id>(
+    aliases: &'id HashMap<String, String>,
+    start: &'id str,
+) -> Result<&'id str, DiError> {
     let mut current = start;
     let mut seen = Vec::new();
     while let Some(next) = aliases.get(current) {
@@ -216,11 +216,11 @@ fn detect_cycles(services: &HashMap<String, PendingService>) -> Result<(), DiErr
     Ok(())
 }
 
-fn visit<'a>(
-    id: &'a str,
-    services: &'a HashMap<String, PendingService>,
-    marks: &mut HashMap<&'a str, VisitMark>,
-    stack: &mut Vec<&'a str>,
+fn visit<'id>(
+    id: &'id str,
+    services: &'id HashMap<String, PendingService>,
+    marks: &mut HashMap<&'id str, VisitMark>,
+    stack: &mut Vec<&'id str>,
 ) -> Result<(), DiError> {
     match marks.get(id) {
         Some(VisitMark::Done) => return Ok(()),

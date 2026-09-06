@@ -9,11 +9,11 @@ use crate::{Command, CommandHandler, Event, EventHandler, MessengerError};
 
 type ErasedHandler = Arc<dyn Fn(&dyn Any) -> Result<(), MessengerError> + Send + Sync>;
 
-fn downcast_message<'a, T: 'static>(
+fn downcast_message<'msg, T: 'static>(
     name: &'static str,
-    payload: &'a dyn Any,
+    payload: &'msg dyn Any,
     kind: &str,
-) -> Result<&'a T, MessengerError> {
+) -> Result<&'msg T, MessengerError> {
     payload
         .downcast_ref::<T>()
         .ok_or_else(|| MessengerError::Handler {
