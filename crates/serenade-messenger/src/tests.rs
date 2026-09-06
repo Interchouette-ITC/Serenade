@@ -265,6 +265,20 @@ fn validation_middleware_rejects_before_handler() {
 }
 
 #[test]
+fn validation_middleware_calls_next_when_allowed() {
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut bus = MessageBus::new();
+    bus.add_middleware(ValidationMiddleware::new(AllowAll));
+    bus.register_command(PlaceOrderHandler {
+        log: Arc::clone(&log),
+    })
+    .expect("register");
+    bus.dispatch_command(&PlaceOrder { sku: "hoodie" })
+        .expect("allowed");
+    assert_eq!(*log.lock().expect("lock"), ["hoodie"]);
+}
+
+#[test]
 fn middleware_runs_outer_to_inner() {
     let order = Arc::new(Mutex::new(Vec::new()));
     let mut bus = MessageBus::new();
@@ -330,6 +344,14 @@ impl ValidateHook for RejectPlaceOrder {
                 message: "blocked".to_owned(),
             });
         }
+        Ok(())
+    }
+}
+
+struct AllowAll;
+
+impl ValidateHook for AllowAll {
+    fn validate(&self, _ctx: &DispatchContext) -> Result<(), MessengerError> {
         Ok(())
     }
 }
