@@ -138,15 +138,36 @@ mod tests {
     }
 
     #[test]
+    fn daily_rotation_builds_file_sink() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let config = LoggingConfig::for_environment(&Environment::Dev, dir.path())
+            .with_stderr(true)
+            .with_rotation(Rotation::Daily);
+        let (_subscriber, guard) = build_subscriber(&config).expect("daily");
+        drop(guard);
+    }
+
+    #[test]
+    fn create_dir_fails_when_path_is_a_file() {
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        let config = LoggingConfig::for_environment(&Environment::Dev, file.path())
+            .with_stderr(false)
+            .with_file(true);
+        assert!(matches!(
+            build_subscriber(&config),
+            Err(ObservabilityError::CreateDir { .. })
+        ));
+    }
+
+    #[test]
     fn invalid_filter_is_rejected() {
         let dir = tempfile::tempdir().expect("tempdir");
         let config = LoggingConfig::for_environment(&Environment::Dev, dir.path())
             .with_filter_directives("%%%");
-        match build_subscriber(&config) {
-            Err(ObservabilityError::InvalidFilter(_)) => {}
-            Err(other) => panic!("unexpected error: {other}"),
-            Ok(_) => panic!("expected invalid filter"),
-        }
+        assert!(matches!(
+            build_subscriber(&config),
+            Err(ObservabilityError::InvalidFilter(_))
+        ));
     }
 
     #[test]
@@ -155,5 +176,19 @@ mod tests {
             .with_file(false)
             .with_stderr(true);
         let (_subscriber, _guard) = build_subscriber(&config).expect("stderr only");
+    }
+
+    #[test]
+    fn init_sets_global_and_rejects_second_call() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let config = LoggingConfig::for_environment(&Environment::Test, dir.path())
+            .with_stderr(false)
+            .with_rotation(Rotation::Never);
+        let guard = init(&config).expect("first init");
+        assert!(matches!(
+            init(&config),
+            Err(ObservabilityError::AlreadyInitialized)
+        ));
+        drop(guard);
     }
 }
