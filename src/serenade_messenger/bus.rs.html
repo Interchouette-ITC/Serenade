@@ -24,13 +24,13 @@
 <a href=#24 id=24 data-nosnippet>24</a>
 <a href=#25 id=25 data-nosnippet>25</a><span class="kw">fn </span>run_pipeline(
 <a href=#26 id=26 data-nosnippet>26</a>    middlewares: <span class="kw-2">&amp;</span>[Arc&lt;<span class="kw">dyn </span>Middleware&gt;],
-<a href=#27 id=27 data-nosnippet>27</a>    ctx: <span class="kw-2">&amp;</span>DispatchContext,
+<a href=#27 id=27 data-nosnippet>27</a>    ctx: <span class="kw-2">&amp;</span>DispatchContext&lt;<span class="lifetime">'_</span>&gt;,
 <a href=#28 id=28 data-nosnippet>28</a>    terminal: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn() -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt;,
 <a href=#29 id=29 data-nosnippet>29</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt; {
 <a href=#30 id=30 data-nosnippet>30</a>    <span class="kw">fn </span>invoke(
 <a href=#31 id=31 data-nosnippet>31</a>        index: usize,
 <a href=#32 id=32 data-nosnippet>32</a>        middlewares: <span class="kw-2">&amp;</span>[Arc&lt;<span class="kw">dyn </span>Middleware&gt;],
-<a href=#33 id=33 data-nosnippet>33</a>        ctx: <span class="kw-2">&amp;</span>DispatchContext,
+<a href=#33 id=33 data-nosnippet>33</a>        ctx: <span class="kw-2">&amp;</span>DispatchContext&lt;<span class="lifetime">'_</span>&gt;,
 <a href=#34 id=34 data-nosnippet>34</a>        terminal: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn() -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt;,
 <a href=#35 id=35 data-nosnippet>35</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt; {
 <a href=#36 id=36 data-nosnippet>36</a>        <span class="kw">if </span>index &gt;= middlewares.len() {
@@ -148,83 +148,85 @@
 <a href=#148 id=148 data-nosnippet>148</a>        <span class="kw">let </span>ctx = DispatchContext {
 <a href=#149 id=149 data-nosnippet>149</a>            message_name: name,
 <a href=#150 id=150 data-nosnippet>150</a>            kind: DispatchKind::Command,
-<a href=#151 id=151 data-nosnippet>151</a>        };
-<a href=#152 id=152 data-nosnippet>152</a>        run_pipeline(<span class="kw-2">&amp;</span><span class="self">self</span>.middlewares, <span class="kw-2">&amp;</span>ctx, <span class="kw-2">&amp;</span>|| handler(command <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Any))
-<a href=#153 id=153 data-nosnippet>153</a>    }
-<a href=#154 id=154 data-nosnippet>154</a>
-<a href=#155 id=155 data-nosnippet>155</a>    <span class="doccomment">/// Dispatches `event` through middleware, then to every registered handler for `E::NAME`.
-<a href=#156 id=156 data-nosnippet>156</a>    ///
-<a href=#157 id=157 data-nosnippet>157</a>    /// Missing handlers are a no-op after middleware. All matching handlers run even if one
-<a href=#158 id=158 data-nosnippet>158</a>    /// fails; the first error is returned.
-<a href=#159 id=159 data-nosnippet>159</a>    ///
-<a href=#160 id=160 data-nosnippet>160</a>    /// # Errors
-<a href=#161 id=161 data-nosnippet>161</a>    ///
-<a href=#162 id=162 data-nosnippet>162</a>    /// Returns a middleware rejection or the first [`MessengerError`] from a handler.
-<a href=#163 id=163 data-nosnippet>163</a>    </span><span class="kw">pub fn </span>dispatch_event&lt;E: Event&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>E) -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt; {
-<a href=#164 id=164 data-nosnippet>164</a>        <span class="kw">let </span>name = E::NAME;
-<a href=#165 id=165 data-nosnippet>165</a>        <span class="kw">let </span>ctx = DispatchContext {
-<a href=#166 id=166 data-nosnippet>166</a>            message_name: name,
-<a href=#167 id=167 data-nosnippet>167</a>            kind: DispatchKind::Event,
-<a href=#168 id=168 data-nosnippet>168</a>        };
-<a href=#169 id=169 data-nosnippet>169</a>        run_pipeline(<span class="kw-2">&amp;</span><span class="self">self</span>.middlewares, <span class="kw-2">&amp;</span>ctx, <span class="kw-2">&amp;</span>|| {
-<a href=#170 id=170 data-nosnippet>170</a>            <span class="kw">let </span><span class="prelude-val">Some</span>(handlers) = <span class="self">self</span>.events.get(name) <span class="kw">else </span>{
-<a href=#171 id=171 data-nosnippet>171</a>                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#172 id=172 data-nosnippet>172</a>            };
-<a href=#173 id=173 data-nosnippet>173</a>            <span class="kw">let </span><span class="kw-2">mut </span>first_error = <span class="prelude-val">None</span>;
-<a href=#174 id=174 data-nosnippet>174</a>            <span class="kw">for </span>handler <span class="kw">in </span>handlers {
-<a href=#175 id=175 data-nosnippet>175</a>                <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = handler(event <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Any) {
-<a href=#176 id=176 data-nosnippet>176</a>                    <span class="kw">if </span>first_error.is_none() {
-<a href=#177 id=177 data-nosnippet>177</a>                        first_error = <span class="prelude-val">Some</span>(error);
-<a href=#178 id=178 data-nosnippet>178</a>                    }
-<a href=#179 id=179 data-nosnippet>179</a>                }
-<a href=#180 id=180 data-nosnippet>180</a>            }
-<a href=#181 id=181 data-nosnippet>181</a>            first_error.map_or(<span class="prelude-val">Ok</span>(()), <span class="prelude-val">Err</span>)
-<a href=#182 id=182 data-nosnippet>182</a>        })
-<a href=#183 id=183 data-nosnippet>183</a>    }
-<a href=#184 id=184 data-nosnippet>184</a>
-<a href=#185 id=185 data-nosnippet>185</a>    <span class="doccomment">/// Number of registered command handlers.
-<a href=#186 id=186 data-nosnippet>186</a>    </span><span class="attr">#[must_use]
-<a href=#187 id=187 data-nosnippet>187</a>    </span><span class="kw">pub fn </span>command_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-<a href=#188 id=188 data-nosnippet>188</a>        <span class="self">self</span>.commands.len()
-<a href=#189 id=189 data-nosnippet>189</a>    }
-<a href=#190 id=190 data-nosnippet>190</a>
-<a href=#191 id=191 data-nosnippet>191</a>    <span class="doccomment">/// Number of registered event handler callbacks (across all event names).
-<a href=#192 id=192 data-nosnippet>192</a>    </span><span class="attr">#[must_use]
-<a href=#193 id=193 data-nosnippet>193</a>    </span><span class="kw">pub fn </span>event_handler_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-<a href=#194 id=194 data-nosnippet>194</a>        <span class="self">self</span>.events.values().map(Vec::len).sum()
-<a href=#195 id=195 data-nosnippet>195</a>    }
-<a href=#196 id=196 data-nosnippet>196</a>
-<a href=#197 id=197 data-nosnippet>197</a>    <span class="doccomment">/// Returns `true` when no handlers are registered.
-<a href=#198 id=198 data-nosnippet>198</a>    </span><span class="attr">#[must_use]
-<a href=#199 id=199 data-nosnippet>199</a>    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-<a href=#200 id=200 data-nosnippet>200</a>        <span class="self">self</span>.commands.is_empty() &amp;&amp; <span class="self">self</span>.events.is_empty()
-<a href=#201 id=201 data-nosnippet>201</a>    }
-<a href=#202 id=202 data-nosnippet>202</a>}
-<a href=#203 id=203 data-nosnippet>203</a>
-<a href=#204 id=204 data-nosnippet>204</a><span class="attr">#[cfg(test)]
-<a href=#205 id=205 data-nosnippet>205</a></span><span class="kw">mod </span>downcast_tests {
-<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw">use </span><span class="kw">super</span>::downcast_message;
-<a href=#207 id=207 data-nosnippet>207</a>    <span class="kw">use </span><span class="kw">crate</span>::MessengerError;
-<a href=#208 id=208 data-nosnippet>208</a>
-<a href=#209 id=209 data-nosnippet>209</a>    <span class="attr">#[test]
-<a href=#210 id=210 data-nosnippet>210</a>    </span><span class="kw">fn </span>downcast_message_rejects_wrong_type() {
-<a href=#211 id=211 data-nosnippet>211</a>        <span class="kw">let </span>payload = <span class="number">42_u32</span>;
-<a href=#212 id=212 data-nosnippet>212</a>        <span class="kw">let </span>err =
-<a href=#213 id=213 data-nosnippet>213</a>            downcast_message::&lt;String&gt;(<span class="string">"demo.msg"</span>, <span class="kw-2">&amp;</span>payload, <span class="string">"command"</span>).expect_err(<span class="string">"type mismatch"</span>);
-<a href=#214 id=214 data-nosnippet>214</a>        <span class="macro">assert_eq!</span>(
-<a href=#215 id=215 data-nosnippet>215</a>            err,
-<a href=#216 id=216 data-nosnippet>216</a>            MessengerError::Handler {
-<a href=#217 id=217 data-nosnippet>217</a>                name: <span class="string">"demo.msg"</span>,
-<a href=#218 id=218 data-nosnippet>218</a>                message: <span class="string">"command type mismatch"</span>.to_owned(),
-<a href=#219 id=219 data-nosnippet>219</a>            }
-<a href=#220 id=220 data-nosnippet>220</a>        );
-<a href=#221 id=221 data-nosnippet>221</a>    }
-<a href=#222 id=222 data-nosnippet>222</a>
-<a href=#223 id=223 data-nosnippet>223</a>    <span class="attr">#[test]
-<a href=#224 id=224 data-nosnippet>224</a>    </span><span class="kw">fn </span>downcast_message_accepts_matching_type() {
-<a href=#225 id=225 data-nosnippet>225</a>        <span class="kw">let </span>payload = String::from(<span class="string">"ok"</span>);
-<a href=#226 id=226 data-nosnippet>226</a>        <span class="kw">let </span>got = downcast_message::&lt;String&gt;(<span class="string">"demo.msg"</span>, <span class="kw-2">&amp;</span>payload, <span class="string">"event"</span>).expect(<span class="string">"match"</span>);
-<a href=#227 id=227 data-nosnippet>227</a>        <span class="macro">assert_eq!</span>(got, <span class="string">"ok"</span>);
-<a href=#228 id=228 data-nosnippet>228</a>    }
-<a href=#229 id=229 data-nosnippet>229</a>}
+<a href=#151 id=151 data-nosnippet>151</a>            payload: command,
+<a href=#152 id=152 data-nosnippet>152</a>        };
+<a href=#153 id=153 data-nosnippet>153</a>        run_pipeline(<span class="kw-2">&amp;</span><span class="self">self</span>.middlewares, <span class="kw-2">&amp;</span>ctx, <span class="kw-2">&amp;</span>|| handler(command <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Any))
+<a href=#154 id=154 data-nosnippet>154</a>    }
+<a href=#155 id=155 data-nosnippet>155</a>
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="doccomment">/// Dispatches `event` through middleware, then to every registered handler for `E::NAME`.
+<a href=#157 id=157 data-nosnippet>157</a>    ///
+<a href=#158 id=158 data-nosnippet>158</a>    /// Missing handlers are a no-op after middleware. All matching handlers run even if one
+<a href=#159 id=159 data-nosnippet>159</a>    /// fails; the first error is returned.
+<a href=#160 id=160 data-nosnippet>160</a>    ///
+<a href=#161 id=161 data-nosnippet>161</a>    /// # Errors
+<a href=#162 id=162 data-nosnippet>162</a>    ///
+<a href=#163 id=163 data-nosnippet>163</a>    /// Returns a middleware rejection or the first [`MessengerError`] from a handler.
+<a href=#164 id=164 data-nosnippet>164</a>    </span><span class="kw">pub fn </span>dispatch_event&lt;E: Event&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>E) -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt; {
+<a href=#165 id=165 data-nosnippet>165</a>        <span class="kw">let </span>name = E::NAME;
+<a href=#166 id=166 data-nosnippet>166</a>        <span class="kw">let </span>ctx = DispatchContext {
+<a href=#167 id=167 data-nosnippet>167</a>            message_name: name,
+<a href=#168 id=168 data-nosnippet>168</a>            kind: DispatchKind::Event,
+<a href=#169 id=169 data-nosnippet>169</a>            payload: event,
+<a href=#170 id=170 data-nosnippet>170</a>        };
+<a href=#171 id=171 data-nosnippet>171</a>        run_pipeline(<span class="kw-2">&amp;</span><span class="self">self</span>.middlewares, <span class="kw-2">&amp;</span>ctx, <span class="kw-2">&amp;</span>|| {
+<a href=#172 id=172 data-nosnippet>172</a>            <span class="kw">let </span><span class="prelude-val">Some</span>(handlers) = <span class="self">self</span>.events.get(name) <span class="kw">else </span>{
+<a href=#173 id=173 data-nosnippet>173</a>                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#174 id=174 data-nosnippet>174</a>            };
+<a href=#175 id=175 data-nosnippet>175</a>            <span class="kw">let </span><span class="kw-2">mut </span>first_error = <span class="prelude-val">None</span>;
+<a href=#176 id=176 data-nosnippet>176</a>            <span class="kw">for </span>handler <span class="kw">in </span>handlers {
+<a href=#177 id=177 data-nosnippet>177</a>                <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = handler(event <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Any) {
+<a href=#178 id=178 data-nosnippet>178</a>                    <span class="kw">if </span>first_error.is_none() {
+<a href=#179 id=179 data-nosnippet>179</a>                        first_error = <span class="prelude-val">Some</span>(error);
+<a href=#180 id=180 data-nosnippet>180</a>                    }
+<a href=#181 id=181 data-nosnippet>181</a>                }
+<a href=#182 id=182 data-nosnippet>182</a>            }
+<a href=#183 id=183 data-nosnippet>183</a>            first_error.map_or(<span class="prelude-val">Ok</span>(()), <span class="prelude-val">Err</span>)
+<a href=#184 id=184 data-nosnippet>184</a>        })
+<a href=#185 id=185 data-nosnippet>185</a>    }
+<a href=#186 id=186 data-nosnippet>186</a>
+<a href=#187 id=187 data-nosnippet>187</a>    <span class="doccomment">/// Number of registered command handlers.
+<a href=#188 id=188 data-nosnippet>188</a>    </span><span class="attr">#[must_use]
+<a href=#189 id=189 data-nosnippet>189</a>    </span><span class="kw">pub fn </span>command_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+<a href=#190 id=190 data-nosnippet>190</a>        <span class="self">self</span>.commands.len()
+<a href=#191 id=191 data-nosnippet>191</a>    }
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="doccomment">/// Number of registered event handler callbacks (across all event names).
+<a href=#194 id=194 data-nosnippet>194</a>    </span><span class="attr">#[must_use]
+<a href=#195 id=195 data-nosnippet>195</a>    </span><span class="kw">pub fn </span>event_handler_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+<a href=#196 id=196 data-nosnippet>196</a>        <span class="self">self</span>.events.values().map(Vec::len).sum()
+<a href=#197 id=197 data-nosnippet>197</a>    }
+<a href=#198 id=198 data-nosnippet>198</a>
+<a href=#199 id=199 data-nosnippet>199</a>    <span class="doccomment">/// Returns `true` when no handlers are registered.
+<a href=#200 id=200 data-nosnippet>200</a>    </span><span class="attr">#[must_use]
+<a href=#201 id=201 data-nosnippet>201</a>    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+<a href=#202 id=202 data-nosnippet>202</a>        <span class="self">self</span>.commands.is_empty() &amp;&amp; <span class="self">self</span>.events.is_empty()
+<a href=#203 id=203 data-nosnippet>203</a>    }
+<a href=#204 id=204 data-nosnippet>204</a>}
+<a href=#205 id=205 data-nosnippet>205</a>
+<a href=#206 id=206 data-nosnippet>206</a><span class="attr">#[cfg(test)]
+<a href=#207 id=207 data-nosnippet>207</a></span><span class="kw">mod </span>downcast_tests {
+<a href=#208 id=208 data-nosnippet>208</a>    <span class="kw">use </span><span class="kw">super</span>::downcast_message;
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="kw">use </span><span class="kw">crate</span>::MessengerError;
+<a href=#210 id=210 data-nosnippet>210</a>
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="attr">#[test]
+<a href=#212 id=212 data-nosnippet>212</a>    </span><span class="kw">fn </span>downcast_message_rejects_wrong_type() {
+<a href=#213 id=213 data-nosnippet>213</a>        <span class="kw">let </span>payload = <span class="number">42_u32</span>;
+<a href=#214 id=214 data-nosnippet>214</a>        <span class="kw">let </span>err =
+<a href=#215 id=215 data-nosnippet>215</a>            downcast_message::&lt;String&gt;(<span class="string">"demo.msg"</span>, <span class="kw-2">&amp;</span>payload, <span class="string">"command"</span>).expect_err(<span class="string">"type mismatch"</span>);
+<a href=#216 id=216 data-nosnippet>216</a>        <span class="macro">assert_eq!</span>(
+<a href=#217 id=217 data-nosnippet>217</a>            err,
+<a href=#218 id=218 data-nosnippet>218</a>            MessengerError::Handler {
+<a href=#219 id=219 data-nosnippet>219</a>                name: <span class="string">"demo.msg"</span>,
+<a href=#220 id=220 data-nosnippet>220</a>                message: <span class="string">"command type mismatch"</span>.to_owned(),
+<a href=#221 id=221 data-nosnippet>221</a>            }
+<a href=#222 id=222 data-nosnippet>222</a>        );
+<a href=#223 id=223 data-nosnippet>223</a>    }
+<a href=#224 id=224 data-nosnippet>224</a>
+<a href=#225 id=225 data-nosnippet>225</a>    <span class="attr">#[test]
+<a href=#226 id=226 data-nosnippet>226</a>    </span><span class="kw">fn </span>downcast_message_accepts_matching_type() {
+<a href=#227 id=227 data-nosnippet>227</a>        <span class="kw">let </span>payload = String::from(<span class="string">"ok"</span>);
+<a href=#228 id=228 data-nosnippet>228</a>        <span class="kw">let </span>got = downcast_message::&lt;String&gt;(<span class="string">"demo.msg"</span>, <span class="kw-2">&amp;</span>payload, <span class="string">"event"</span>).expect(<span class="string">"match"</span>);
+<a href=#229 id=229 data-nosnippet>229</a>        <span class="macro">assert_eq!</span>(got, <span class="string">"ok"</span>);
+<a href=#230 id=230 data-nosnippet>230</a>    }
+<a href=#231 id=231 data-nosnippet>231</a>}
 </code></pre></div></section></main></body></html>
