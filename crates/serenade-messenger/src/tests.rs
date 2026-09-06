@@ -46,6 +46,17 @@ impl EventHandler<OrderPlaced> for RecordOrderPlaced {
     }
 }
 
+struct FailingCommandHandler;
+
+impl CommandHandler<PlaceOrder> for FailingCommandHandler {
+    fn handle(&self, _command: &PlaceOrder) -> Result<(), MessengerError> {
+        Err(MessengerError::Handler {
+            name: PlaceOrder::NAME,
+            message: "rejected".to_owned(),
+        })
+    }
+}
+
 struct FailingEventHandler;
 
 impl EventHandler<OrderPlaced> for FailingEventHandler {
@@ -175,6 +186,29 @@ fn event_handler_order_snapshot() {
         .expect("dispatch");
     let recorded: Vec<&str> = log.lock().expect("lock").clone();
     insta::assert_yaml_snapshot!(recorded);
+}
+
+#[test]
+fn message_name_defaults_to_associated_const() {
+    assert_eq!(PlaceOrder { sku: "hoodie" }.name(), PlaceOrder::NAME);
+    assert_eq!(OrderPlaced { id: "1" }.name(), OrderPlaced::NAME);
+}
+
+#[test]
+fn dispatch_command_propagates_handler_error() {
+    let mut bus = MessageBus::new();
+    bus.register_command(FailingCommandHandler)
+        .expect("register");
+    let err = bus
+        .dispatch_command(&PlaceOrder { sku: "x" })
+        .expect_err("handler failed");
+    assert_eq!(
+        err,
+        MessengerError::Handler {
+            name: "order.place",
+            message: "rejected".to_owned(),
+        }
+    );
 }
 
 #[test]

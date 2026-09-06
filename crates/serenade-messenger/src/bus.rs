@@ -8,6 +8,19 @@ use crate::{Command, CommandHandler, Event, EventHandler, MessengerError};
 
 type ErasedHandler = Arc<dyn Fn(&dyn Any) -> Result<(), MessengerError> + Send + Sync>;
 
+fn downcast_message<'a, T: 'static>(
+    name: &'static str,
+    payload: &'a dyn Any,
+    kind: &str,
+) -> Result<&'a T, MessengerError> {
+    payload
+        .downcast_ref::<T>()
+        .ok_or_else(|| MessengerError::Handler {
+            name,
+            message: format!("{kind} type mismatch"),
+        })
+}
+
 /// Dispatches commands (one handler) and events (fan-out) in-process.
 ///
 /// # Examples
@@ -66,12 +79,7 @@ impl MessageBus {
         }
         let handler = Arc::new(handler);
         let erased: ErasedHandler = Arc::new(move |payload: &dyn Any| {
-            let command = payload
-                .downcast_ref::<C>()
-                .ok_or_else(|| MessengerError::Handler {
-                    name,
-                    message: "command type mismatch".to_owned(),
-                })?;
+            let command = downcast_message::<C>(name, payload, "command")?;
             handler.handle(command)
         });
         self.commands.insert(name, erased);
@@ -87,12 +95,7 @@ impl MessageBus {
         let name = E::NAME;
         let handler = Arc::new(handler);
         let erased: ErasedHandler = Arc::new(move |payload: &dyn Any| {
-            let event = payload
-                .downcast_ref::<E>()
-                .ok_or_else(|| MessengerError::Handler {
-                    name,
-                    message: "event type mismatch".to_owned(),
-                })?;
+            let event = downcast_message::<E>(name, payload, "event")?;
             handler.handle(event)
         });
         self.events.entry(name).or_default().push(erased);
@@ -152,5 +155,32 @@ impl MessageBus {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.commands.is_empty() && self.events.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod downcast_tests {
+    use super::downcast_message;
+    use crate::MessengerError;
+
+    #[test]
+    fn downcast_message_rejects_wrong_type() {
+        let payload = 42_u32;
+        let err =
+            downcast_message::<String>("demo.msg", &payload, "command").expect_err("type mismatch");
+        assert_eq!(
+            err,
+            MessengerError::Handler {
+                name: "demo.msg",
+                message: "command type mismatch".to_owned(),
+            }
+        );
+    }
+
+    #[test]
+    fn downcast_message_accepts_matching_type() {
+        let payload = String::from("ok");
+        let got = downcast_message::<String>("demo.msg", &payload, "event").expect("match");
+        assert_eq!(got, "ok");
     }
 }
