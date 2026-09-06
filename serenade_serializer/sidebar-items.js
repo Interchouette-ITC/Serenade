@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FORMAT_JSON"],"enum":["SerializerError"],"fn":["deserialize_value","from_serde_json","serde_supports_format","serialize_value","version"],"struct":["JsonDecoder","JsonEncoder","NormalizationContext","NormalizerRegistry","Serializer"],"trait":["Decoder","Denormalizer","Encoder","Normalizer"]};
