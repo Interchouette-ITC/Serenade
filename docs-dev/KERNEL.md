@@ -101,7 +101,7 @@ Server crates stay thin:
 | Event bus | Side effects after commit |
 | Async transport | Queue/worker integration (product chooses backend) |
 
-Sync in-process dispatch lives in **`serenade-messenger`**: implement `Message` with a stable `NAME`, mark as `Command` or `Event`, register handlers on `MessageBus`, then `dispatch_command` / `dispatch_event`. Commands require exactly one handler; events fan out (missing handlers are a no-op). Register `Middleware` layers with `add_middleware` (first registered is outermost); built-ins include `LoggingMiddleware` + `LogSink` and `ValidationMiddleware` + `ValidateHook`. Async backends implement `Transport` (`send` returns a boxed future); `InMemoryTransport` is the in-process adapter for tests and local workers ([#11](https://github.com/Interchouette-ITC/Serenade/issues/11)).
+Sync in-process dispatch lives in **`serenade-messenger`**: implement `Message` with a stable `NAME`, mark as `Command` or `Event`, register handlers on `MessageBus`, then `dispatch_command` / `dispatch_event`. Commands require exactly one handler; events fan out (missing handlers are a no-op). Register `Middleware` layers with `add_middleware` (first registered is outermost); built-ins include `LoggingMiddleware` + `LogSink` and `ValidationMiddleware` + `ValidateHook`. `DispatchContext` exposes `payload` (`&dyn Any`) so validation hooks can inspect the message. Async backends implement `Transport` (`send` returns a boxed future); `InMemoryTransport` is the in-process adapter for tests and local workers ([#11](https://github.com/Interchouette-ITC/Serenade/issues/11)).
 
 RustaShop jobs (webhooks retry, agent runs, sandbox) should plug into messenger, not ad-hoc `spawn` everywhere.
 
@@ -118,6 +118,19 @@ DTO ↔ wire formats live in **`serenade-serializer`** ([#12](https://github.com
 | Serde bridge | `serialize_value` / `deserialize_value` for typed `Serialize` / `DeserializeOwned` JSON |
 
 Custom types register normalizers on the registry. Redis/XML formats are out of scope for v0.
+
+## Validator
+
+Constraint checks live in **`serenade-validator`** ([#13](https://github.com/Interchouette-ITC/Serenade/issues/13)).
+
+| Piece | Role |
+| --- | --- |
+| `Constraint` | Rule that may append a `Violation` (`NotBlank`, `Length`, `Range`) |
+| `Validator` / `RecursiveValidator` | Runs constraints into a `ConstraintViolationList` |
+| `Validatable` | Object validates itself through a `Validator` |
+| `MessengerValidateHook` | Implements messenger `ValidateHook`; rejects with `MessengerError::Rejected` |
+
+Register message types on the hook, then wrap the bus with `ValidationMiddleware`.
 
 ## Configuration layers
 
