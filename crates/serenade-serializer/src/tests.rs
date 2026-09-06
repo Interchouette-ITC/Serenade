@@ -175,3 +175,144 @@ fn deserialize_value_codec_error_on_bad_json() {
     let err = deserialize_value::<ProductDto>(b"not-json", FORMAT_JSON).expect_err("bad");
     assert!(matches!(err, SerializerError::Codec { .. }));
 }
+
+#[test]
+fn deserialize_value_rejects_type_mismatch() {
+    let err = deserialize_value::<ProductDto>(br#"{"sku":1}"#, FORMAT_JSON).expect_err("type");
+    assert!(matches!(err, SerializerError::Codec { .. }));
+}
+
+#[test]
+fn deserialize_value_rejects_unknown_format() {
+    let err = deserialize_value::<u32>(b"1", "xml").expect_err("xml");
+    assert!(matches!(err, SerializerError::UnsupportedFormat { .. }));
+}
+
+struct AnyFormatNormalizer;
+
+impl Normalizer for AnyFormatNormalizer {
+    fn supports_normalization(&self, object: &dyn Any, _format: &str) -> bool {
+        object.is::<Tag>()
+    }
+
+    fn normalize(
+        &self,
+        object: &dyn Any,
+        _format: &str,
+        _context: &NormalizationContext,
+    ) -> Result<Value, SerializerError> {
+        let tag = object
+            .downcast_ref::<Tag>()
+            .ok_or_else(|| SerializerError::Normalization {
+                message: "expected Tag".to_owned(),
+            })?;
+        Ok(json!({ "label": tag.0 }))
+    }
+}
+
+struct NeverEncoder;
+
+impl Encoder for NeverEncoder {
+    fn supports(&self, _format: &str) -> bool {
+        false
+    }
+
+    fn encode(&self, _data: &Value, format: &str) -> Result<Vec<u8>, SerializerError> {
+        Err(SerializerError::UnsupportedFormat {
+            format: format.to_owned(),
+        })
+    }
+}
+
+struct NeverDecoder;
+
+impl Decoder for NeverDecoder {
+    fn supports(&self, _format: &str) -> bool {
+        false
+    }
+
+    fn decode(&self, _data: &[u8], format: &str) -> Result<Value, SerializerError> {
+        Err(SerializerError::UnsupportedFormat {
+            format: format.to_owned(),
+        })
+    }
+}
+
+#[test]
+fn serializer_default_and_registry_accessors() {
+    let mut serializer = Serializer::default();
+    assert_eq!(serializer.registry().normalizer_count(), 0);
+    serializer.registry_mut().add_normalizer(TagCodec);
+    assert_eq!(serializer.registry().normalizer_count(), 1);
+}
+
+#[test]
+fn serializer_with_context_and_custom_codecs() {
+    let mut serializer = Serializer::new();
+    serializer.registry_mut().add_normalizer(TagCodec);
+    serializer.registry_mut().add_denormalizer(TagCodec);
+    serializer.add_encoder(NeverEncoder);
+    serializer.add_decoder(NeverDecoder);
+
+    let mut ctx = NormalizationContext::new();
+    ctx.set("groups", "api");
+    let bytes = serializer
+        .serialize_with_context(&Tag("gamma".to_owned()), FORMAT_JSON, &ctx)
+        .expect("serialize");
+    let boxed = serializer
+        .deserialize_with_context(&bytes, TypeId::of::<Tag>(), FORMAT_JSON, &ctx)
+        .expect("deserialize");
+    assert_eq!(boxed.downcast_ref::<Tag>().expect("tag").0, "gamma");
+}
+
+#[test]
+fn serializer_encode_unsupported_when_no_encoder_matches() {
+    let mut serializer = Serializer::new();
+    serializer
+        .registry_mut()
+        .add_normalizer(AnyFormatNormalizer);
+    // Replace default JSON encoder path by only registering a never-matching encoder after
+    // clearing is impossible; instead normalize for xml then fail encode.
+    let err = serializer
+        .serialize(&Tag("z".to_owned()), "xml")
+        .expect_err("xml");
+    assert!(matches!(err, SerializerError::UnsupportedFormat { .. }));
+}
+
+#[test]
+fn serializer_decode_unsupported_format() {
+    let mut serializer = Serializer::new();
+    serializer.registry_mut().add_denormalizer(TagCodec);
+    let err = serializer
+        .deserialize(b"{}", TypeId::of::<Tag>(), "xml")
+        .expect_err("xml");
+    assert!(matches!(err, SerializerError::UnsupportedFormat { .. }));
+}
+
+#[test]
+fn registry_denormalize_unsupported() {
+    let registry = NormalizerRegistry::new();
+    let err = registry
+        .denormalize(
+            &json!({}),
+            TypeId::of::<Tag>(),
+            FORMAT_JSON,
+            &NormalizationContext::new(),
+        )
+        .expect_err("missing");
+    assert!(matches!(err, SerializerError::UnsupportedType { .. }));
+}
+
+#[test]
+fn tag_codec_normalization_error_paths() {
+    let codec = TagCodec;
+    let ctx = NormalizationContext::new();
+    let err = codec
+        .normalize(&42_u32, FORMAT_JSON, &ctx)
+        .expect_err("wrong type");
+    assert!(matches!(err, SerializerError::Normalization { .. }));
+    let err = codec
+        .denormalize(&json!({}), TypeId::of::<Tag>(), FORMAT_JSON, &ctx)
+        .expect_err("missing label");
+    assert!(matches!(err, SerializerError::Normalization { .. }));
+}
