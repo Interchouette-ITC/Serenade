@@ -10,9 +10,9 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct ProductDto {
-    sku: String,
-    price_cents: u64,
+struct SampleDto {
+    code: String,
+    amount: u64,
 }
 
 struct Tag(String);
@@ -67,12 +67,12 @@ fn version_is_semverish() {
 
 #[test]
 fn serde_bridge_json_roundtrip() {
-    let dto = ProductDto {
-        sku: "SKU-1".to_owned(),
-        price_cents: 1999,
+    let dto = SampleDto {
+        code: "SKU-1".to_owned(),
+        amount: 1999,
     };
     let bytes = serialize_value(&dto, FORMAT_JSON).expect("serialize");
-    let back: ProductDto = deserialize_value(&bytes, FORMAT_JSON).expect("deserialize");
+    let back: SampleDto = deserialize_value(&bytes, FORMAT_JSON).expect("deserialize");
     assert_eq!(back, dto);
     assert!(serde_supports_format("JSON"));
     assert!(!serde_supports_format("xml"));
@@ -172,13 +172,13 @@ fn normalization_context_attributes() {
 
 #[test]
 fn deserialize_value_codec_error_on_bad_json() {
-    let err = deserialize_value::<ProductDto>(b"not-json", FORMAT_JSON).expect_err("bad");
+    let err = deserialize_value::<SampleDto>(b"not-json", FORMAT_JSON).expect_err("bad");
     assert!(matches!(err, SerializerError::Codec { .. }));
 }
 
 #[test]
 fn deserialize_value_rejects_type_mismatch() {
-    let err = deserialize_value::<ProductDto>(br#"{"sku":1}"#, FORMAT_JSON).expect_err("type");
+    let err = deserialize_value::<SampleDto>(br#"{"code":1}"#, FORMAT_JSON).expect_err("type");
     assert!(matches!(err, SerializerError::Codec { .. }));
 }
 

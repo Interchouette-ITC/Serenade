@@ -1,7 +1,7 @@
 # serenade-contracts
 
-Stable traits for persistence and cross-cutting ports (repositories, unit of
-work, clock/id helpers).
+Stable traits for generic persistence and cross-cutting ports: unit of work,
+pagination, shared errors, and persist-param helpers.
 
-Zero database crate dependencies. Applications implement these traits with
-SQLx, SeaORM, or other stores.
+Zero database crate dependencies. Applications define their own domain
+repository traits and implement adapters with SQLx, SeaORM, or other stores.
