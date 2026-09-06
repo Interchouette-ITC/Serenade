@@ -1,6 +1,6 @@
 [package]
 name = "serenade-cache"
-description = "PSR-like cache contracts and in-memory ArrayAdapter"
+description = "PSR-like cache contracts, ArrayAdapter, and optional RedisAdapter"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,9 +8,16 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = []
+## Enable RedisAdapter (redis-rs + r2d2).
+redis = ["dep:redis", "dep:r2d2"]
+
 [dependencies]
 serenade-di = { workspace = true }
 thiserror = { workspace = true }
+redis = { version = "0.27", optional = true, default-features = false, features = ["r2d2"] }
+r2d2 = { version = "0.8", optional = true }
 
 [lints]
 workspace = true

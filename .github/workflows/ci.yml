@@ -54,6 +54,11 @@ jobs:
       - name: Lint
         if: needs.changes.outputs.code == 'true'
         run: make lint
+      - name: Lint serenade-cache redis feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-cache --all-targets --features redis
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -72,6 +77,36 @@ jobs:
       - name: Test
         if: needs.changes.outputs.code == 'true'
         run: make test
+
+  cache-redis:
+    name: cache redis
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Markdown-only
+        if: needs.changes.outputs.code != 'true'
+        run: echo "markdown-only; skipping redis cache tests"
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
+      - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.code == 'true'
+      - name: Test serenade-cache with redis
+        if: needs.changes.outputs.code == 'true'
+        env:
+          REDIS_URL: redis://127.0.0.1:6379/0
+        run: cargo test -p serenade-cache --features redis
 
   doc:
     name: rustdoc
@@ -132,6 +167,16 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - name: Markdown-only
@@ -150,7 +195,14 @@ jobs:
           tool: cargo-llvm-cov
       - name: Coverage
         if: needs.changes.outputs.code == 'true'
-        run: make coverage
+        env:
+          REDIS_URL: redis://127.0.0.1:6379/0
+        run: |
+          mkdir -p coverage
+          RUSTUP_TOOLCHAIN=stable cargo llvm-cov --workspace --lcov \
+            --features serenade-cache/redis \
+            --ignore-filename-regex 'examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs' \
+            --output-path coverage/lcov.info
       - name: Upload to Codecov
         if: needs.changes.outputs.code == 'true'
         uses: codecov/codecov-action@v6

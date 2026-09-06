@@ -146,3 +146,18 @@ fn expires_after_none_clears_ttl() {
     assert!(!item.is_expired());
     assert!(item.is_hit());
 }
+
+#[test]
+fn has_item_and_batch_defaults() {
+    let pool = ArrayAdapter::new();
+    assert!(!pool.has_item("a").expect("has"));
+    let mut item = ArrayCacheItem::miss("a");
+    item.set(Arc::new(1_u8));
+    pool.save(item).expect("save");
+    assert!(pool.has_item("a").expect("has"));
+    let items = pool.get_items(&["a", "missing"]).expect("batch get");
+    assert_eq!(items.len(), 2);
+    assert!(items[0].is_hit());
+    assert!(!items[1].is_hit());
+    assert_eq!(pool.delete_items(&["a", "missing"]).expect("batch del"), 1);
+}
