@@ -46,3 +46,4 @@ help:
 	@echo ""
 	@echo "Docker (make/docker.mk):"
 	@echo "  make docker-help"
+	@echo "  make redis-up / redis-down / redis-test"

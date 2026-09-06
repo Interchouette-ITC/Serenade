@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::{ArrayCacheItem, CacheError};
+use crate::{ArrayCacheItem, CacheError, CacheItem};
 
 /// Pool that loads and persists [`CacheItem`](crate::CacheItem)s (PSR-6 analogue).
 pub trait CacheItemPool: Send + Sync {
@@ -36,6 +36,39 @@ pub trait CacheItemPool: Send + Sync {
     ///
     /// Returns [`CacheError`] when clear fails.
     fn clear(&self) -> Result<(), CacheError>;
+
+    /// Returns whether `key` is a cache hit.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CacheError`] when the lookup fails.
+    fn has_item(&self, key: &str) -> Result<bool, CacheError> {
+        Ok(self.get_item(key)?.is_hit())
+    }
+
+    /// Loads many keys (default: sequential [`Self::get_item`]).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CacheError`] when any lookup fails.
+    fn get_items(&self, keys: &[&str]) -> Result<Vec<ArrayCacheItem>, CacheError> {
+        keys.iter().map(|key| self.get_item(key)).collect()
+    }
+
+    /// Deletes many keys (default: sequential [`Self::delete_item`]).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CacheError`] when any delete fails.
+    fn delete_items(&self, keys: &[&str]) -> Result<usize, CacheError> {
+        let mut removed = 0;
+        for key in keys {
+            if self.delete_item(key)? {
+                removed += 1;
+            }
+        }
+        Ok(removed)
+    }
 }
 
 struct Stored {

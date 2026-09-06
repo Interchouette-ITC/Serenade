@@ -29,7 +29,7 @@ DOC_OUT ?= $(ROOT)/target/doc
 DOC_CRATE ?= serenade_kernel
 
 doc:
-	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps
+	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps --features serenade-cache/redis
 	@test -d "$(DOC_OUT)" || (echo "missing $(DOC_OUT)"; exit 1)
 	@rm -rf $(ROOT)/docs/api-rust
 	@mkdir -p $(ROOT)/docs/api-rust

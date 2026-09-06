@@ -146,15 +146,16 @@ OAuth/OIDC is out of scope. Apps plug bearer or API-key authenticators.
 
 ## Cache
 
-PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouette-ITC/Serenade/issues/9)).
+PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouette-ITC/Serenade/issues/9), Redis follow-up [#99](https://github.com/Interchouette-ITC/Serenade/issues/99)). See [CACHE.md](CACHE.md).
 
 | Piece | Role |
 | --- | --- |
 | `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL |
 | `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear |
+| `RedisAdapter` (feature `redis`) | redis-rs + r2d2; prefix keys; `SET`/`PX`; SCAN clear |
 | `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` |
 
-In-memory only in #9. **Follow-up:** open and land a Redis adapter PR (`RedisAdapter: CacheItemPool`) after this merges.
+Default DI pool is in-memory. Apps register `RedisAdapter` when they need Redis.
 
 ## Configuration layers
 
