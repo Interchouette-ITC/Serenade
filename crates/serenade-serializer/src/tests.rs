@@ -371,3 +371,74 @@ fn registry_skips_non_supporting_normalizer() {
         .expect("second wins");
     assert_eq!(value, json!({"label": "skip"}));
 }
+
+struct SkipDenormalizer;
+
+impl Denormalizer for SkipDenormalizer {
+    fn supports_denormalization(&self, _type_id: TypeId, _format: &str) -> bool {
+        false
+    }
+
+    fn denormalize(
+        &self,
+        _data: &Value,
+        _type_id: TypeId,
+        _format: &str,
+        _context: &NormalizationContext,
+    ) -> Result<Box<dyn Any + Send + Sync>, SerializerError> {
+        Err(SerializerError::Normalization {
+            message: "should not run".to_owned(),
+        })
+    }
+}
+
+struct FailingDenormalizer;
+
+impl Denormalizer for FailingDenormalizer {
+    fn supports_denormalization(&self, type_id: TypeId, format: &str) -> bool {
+        format.eq_ignore_ascii_case(FORMAT_JSON) && type_id == TypeId::of::<Tag>()
+    }
+
+    fn denormalize(
+        &self,
+        _data: &Value,
+        _type_id: TypeId,
+        _format: &str,
+        _context: &NormalizationContext,
+    ) -> Result<Box<dyn Any + Send + Sync>, SerializerError> {
+        Err(SerializerError::Normalization {
+            message: "forced fail".to_owned(),
+        })
+    }
+}
+
+#[test]
+fn registry_skips_non_supporting_denormalizer_then_succeeds() {
+    let mut registry = NormalizerRegistry::new();
+    registry.add_denormalizer(SkipDenormalizer);
+    registry.add_denormalizer(TagCodec);
+    let boxed = registry
+        .denormalize(
+            &json!({"label": "ok"}),
+            TypeId::of::<Tag>(),
+            FORMAT_JSON,
+            &NormalizationContext::new(),
+        )
+        .expect("second wins");
+    assert_eq!(boxed.downcast_ref::<Tag>().expect("tag").0, "ok");
+}
+
+#[test]
+fn registry_denormalizer_error_is_returned() {
+    let mut registry = NormalizerRegistry::new();
+    registry.add_denormalizer(FailingDenormalizer);
+    let err = registry
+        .denormalize(
+            &json!({}),
+            TypeId::of::<Tag>(),
+            FORMAT_JSON,
+            &NormalizationContext::new(),
+        )
+        .expect_err("fail");
+    assert!(matches!(err, SerializerError::Normalization { .. }));
+}
