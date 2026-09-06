@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CACHE_POOL_TAG","DEFAULT_CACHE_POOL_SERVICE"],"enum":["CacheError"],"fn":["version"],"struct":["ArrayAdapter","ArrayCacheItem","CachePoolService","RegisterDefaultCachePoolPass"],"trait":["CacheItem","CacheItemPool"]};
