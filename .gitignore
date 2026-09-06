@@ -6,6 +6,10 @@ coverage/
 assets/
 *.snap.new
 
+# Application log directory (apps own the path; convention is var/log)
+/var/log/
+**/var/log/
+
 # Generated rustdoc copy (rebuild with `make doc`)
 /docs/api-rust/**
 !/docs/api-rust/README.md

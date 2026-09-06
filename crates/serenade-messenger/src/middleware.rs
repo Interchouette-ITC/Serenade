@@ -43,7 +43,8 @@ pub trait Middleware: Send + Sync {
     ) -> Result<(), MessengerError>;
 }
 
-/// Sink used by [`LoggingMiddleware`] (apps plug `tracing` / files later via #57).
+/// Sink used by [`LoggingMiddleware`] (apps typically forward to `tracing`;
+/// see `docs-dev/OBSERVABILITY.md`).
 pub trait LogSink: Send + Sync {
     /// Records that a message is entering the pipeline.
     fn record(&self, ctx: &DispatchContext<'_>);

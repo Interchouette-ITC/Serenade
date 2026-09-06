@@ -1,0 +1,22 @@
+[package]
+name = "serenade-observability"
+description = "Structured logging conventions: tracing init, channels, var/log file sinks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serenade-kernel = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
