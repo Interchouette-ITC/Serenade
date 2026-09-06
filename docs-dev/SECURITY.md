@@ -1,4 +1,4 @@
-# Security (stubs v0)
+# Security
 
 AuthN/Z hooks for HTTP and access checks. This is **not** a full OAuth/OIDC stack.
 
@@ -25,7 +25,7 @@ Apps own authenticators. Example pattern for an admin API key or bearer token:
 
 Package config scaffold remains `config/packages/security.toml` from the `security` recipe (`enabled = false` until the app wires authenticators).
 
-## Non-goals (v0)
+## Non-goals
 
 - OAuth2 / OIDC providers
 - Session cookies / CSRF

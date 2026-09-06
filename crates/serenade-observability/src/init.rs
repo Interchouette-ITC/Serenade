@@ -82,6 +82,16 @@ pub fn build_subscriber(
 ///
 /// See [`build_subscriber`]. Also returns [`ObservabilityError::AlreadyInitialized`]
 /// when a global subscriber is already set.
+///
+/// # Examples
+///
+/// ```no_run
+/// use serenade_kernel::Environment;
+/// use serenade_observability::{init, LoggingConfig};
+///
+/// let config = LoggingConfig::for_environment(&Environment::Dev, "var/log");
+/// let _guard = init(&config).expect("logging");
+/// ```
 pub fn init(config: &LoggingConfig) -> Result<LoggingGuard, ObservabilityError> {
     let (subscriber, guard) = build_subscriber(config)?;
     subscriber

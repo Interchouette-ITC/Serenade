@@ -132,7 +132,7 @@ Constraint checks live in **`serenade-validator`** ([#13](https://github.com/Int
 
 Register message types on the hook, then wrap the bus with `ValidationMiddleware`.
 
-## Security (stubs v0)
+## Security
 
 AuthN/Z hooks live in **`serenade-security`** ([#10](https://github.com/Interchouette-ITC/Serenade/issues/10)). See [SECURITY.md](SECURITY.md).
 
@@ -159,7 +159,7 @@ Default DI pool is in-memory. Apps register `RedisAdapter` when they need Redis.
 
 ## Observability (structured logging)
 
-`serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Apps call `init` from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md). Profiler log capture is a later bridge (#56).
+`serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Apps call `init` from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md). The web profiler is a separate surface ([#56](https://github.com/Interchouette-ITC/Serenade/issues/56)); this crate does not install a profiler collector.
 
 ## Configuration layers
 

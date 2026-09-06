@@ -40,7 +40,7 @@ doc:
 		'<head>' \
 		'<meta charset="utf-8">' \
 		'<meta http-equiv="refresh" content="0; url=$(DOC_CRATE)/index.html">' \
-		'<title>Serenade — Rust API docs</title>' \
+		'<title>Serenade - Rust API docs</title>' \
 		'<link rel="canonical" href="$(DOC_CRATE)/index.html">' \
 		'<script>location.replace("$(DOC_CRATE)/index.html");</script>' \
 		'</head>' \

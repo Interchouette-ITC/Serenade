@@ -1,6 +1,6 @@
 [package]
 name = "serenade-security"
-description = "AuthN/Z stubs: users, tokens, voters, and HTTP firewall middleware"
+description = "AuthN/Z hooks: users, tokens, voters, and HTTP firewall middleware"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

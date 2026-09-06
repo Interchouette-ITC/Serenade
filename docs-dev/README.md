@@ -10,7 +10,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [KERNEL.md](KERNEL.md)       | Kernel components and responsibilities                 |
 | [CONSOLE.md](CONSOLE.md)     | Console Application, commands, `--env` / ratatui       |
 | [RECIPES.md](RECIPES.md)     | Flex-like recipes, `serenade new`, Cargo stays PM      |
-| [SECURITY.md](SECURITY.md)   | AuthN/Z stubs, firewall, voters, bearer/API key plug-in |
+| [SECURITY.md](SECURITY.md)   | AuthN/Z hooks, firewall, voters, bearer/API key plug-in |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
@@ -34,10 +34,10 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | Epic | Focus |
 | --- | --- |
 | [#1](https://github.com/Interchouette-ITC/Serenade/issues/1) | Meta: framework foundations |
-| [#2–#8](https://github.com/Interchouette-ITC/Serenade/issues/2) | Kernel, DI, events, HTTP, routing, config, console |
-| [#9–#16](https://github.com/Interchouette-ITC/Serenade/issues/9) | Cache, security, messenger, serializer, validator, contracts, bundles, testing |
+| [#2-#8](https://github.com/Interchouette-ITC/Serenade/issues/2) | Kernel, DI, events, HTTP, routing, config, console |
+| [#9-#16](https://github.com/Interchouette-ITC/Serenade/issues/9) | Cache, security, messenger, serializer, validator, contracts, bundles, testing |
 | [#17](https://github.com/Interchouette-ITC/Serenade/issues/17) | Cargo workspace and CI |
-| [#18–#20](https://github.com/Interchouette-ITC/Serenade/issues/18) | Starter tasks (workspace, bundles, Actix adapter) |
+| [#18-#20](https://github.com/Interchouette-ITC/Serenade/issues/18) | Starter tasks (workspace, bundles, Actix adapter) |
 | [#30](https://github.com/Interchouette-ITC/Serenade/issues/30) | Flex-like recipes and app scaffolding |
 | [#56](https://github.com/Interchouette-ITC/Serenade/issues/56) | Web Debug Toolbar / Profiler (logs + DB/query panels) |
 | [#57](https://github.com/Interchouette-ITC/Serenade/issues/57) | Observability / structured logging (Monolog-like) |

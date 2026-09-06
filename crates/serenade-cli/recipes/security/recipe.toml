@@ -1,5 +1,5 @@
 id = "security"
-description = "Security package stub (SecurityBundle lands with issue #10)"
+description = "Security package config scaffold (firewall, voters, app-owned authenticators)"
 
 [cargo]
 dependencies = []
@@ -10,4 +10,4 @@ dest = "config/packages/security.toml"
 
 [hints]
 bundles = ["SecurityBundle"]
-note = "Placeholder config only. SecurityBundle is not shipped yet; keep this file for future wiring."
+note = "Writes config/packages/security.toml with enabled = false until the app wires authenticators."

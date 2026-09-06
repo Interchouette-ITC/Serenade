@@ -47,7 +47,7 @@ fn version_is_non_empty() {
 }
 
 #[test]
-fn user_and_token_stubs() {
+fn user_and_token_basics() {
     let user = InMemoryUser::new("u1", vec!["ROLE_USER".to_owned()]);
     assert_eq!(user.user_identifier(), "u1");
     assert_eq!(user.roles(), &["ROLE_USER".to_owned()]);

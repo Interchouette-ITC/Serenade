@@ -1,4 +1,4 @@
-//! AuthN/Z stubs: users, tokens, voters, and HTTP firewall middleware.
+//! AuthN/Z hooks: users, tokens, voters, and HTTP firewall middleware.
 //!
 //! Full OAuth/OIDC is out of scope. Apps plug bearer or API-key authenticators
 //! into [`FirewallMiddleware`]. See `docs-dev/SECURITY.md`.

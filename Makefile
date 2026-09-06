@@ -4,7 +4,7 @@
 #   make/common.mk  - shared variables
 #   make/ci.mk      - lint / test / doc / ci
 #   make/cli.mk     - serenade / tui / console aliases
-#   make/docker.mk  - container targets (placeholder until needed)
+#   make/docker.mk  - Redis compose and container targets
 
 include make/common.mk
 include make/ci.mk
