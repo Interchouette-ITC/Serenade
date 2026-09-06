@@ -9,11 +9,11 @@
 <a href=#9 id=9 data-nosnippet>9</a>
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">type </span>ErasedHandler = Arc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span><span class="kw">dyn </span>Any) -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt; + Send + Sync&gt;;
 <a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">fn </span>downcast_message&lt;<span class="lifetime">'a</span>, T: <span class="lifetime">'static</span>&gt;(
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">fn </span>downcast_message&lt;<span class="lifetime">'msg</span>, T: <span class="lifetime">'static</span>&gt;(
 <a href=#13 id=13 data-nosnippet>13</a>    name: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
-<a href=#14 id=14 data-nosnippet>14</a>    payload: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Any,
+<a href=#14 id=14 data-nosnippet>14</a>    payload: <span class="kw-2">&amp;</span><span class="lifetime">'msg </span><span class="kw">dyn </span>Any,
 <a href=#15 id=15 data-nosnippet>15</a>    kind: <span class="kw-2">&amp;</span>str,
-<a href=#16 id=16 data-nosnippet>16</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T, MessengerError&gt; {
+<a href=#16 id=16 data-nosnippet>16</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'msg </span>T, MessengerError&gt; {
 <a href=#17 id=17 data-nosnippet>17</a>    payload
 <a href=#18 id=18 data-nosnippet>18</a>        .downcast_ref::&lt;T&gt;()
 <a href=#19 id=19 data-nosnippet>19</a>        .ok_or_else(|| MessengerError::Handler {

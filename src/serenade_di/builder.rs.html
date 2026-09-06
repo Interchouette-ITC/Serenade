@@ -175,7 +175,7 @@
 <a href=#175 id=175 data-nosnippet>175</a>        <span class="prelude-val">Ok</span>(())
 <a href=#176 id=176 data-nosnippet>176</a>    }
 <a href=#177 id=177 data-nosnippet>177</a>
-<a href=#178 id=178 data-nosnippet>178</a>    <span class="kw">fn </span>resolve_id&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, id: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, DiError&gt; {
+<a href=#178 id=178 data-nosnippet>178</a>    <span class="kw">fn </span>resolve_id&lt;<span class="lifetime">'id</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'id </span><span class="self">self</span>, id: <span class="kw-2">&amp;</span><span class="lifetime">'id </span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'id </span>str, DiError&gt; {
 <a href=#179 id=179 data-nosnippet>179</a>        <span class="kw">if </span><span class="self">self</span>.services.contains_key(id) {
 <a href=#180 id=180 data-nosnippet>180</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(id);
 <a href=#181 id=181 data-nosnippet>181</a>        }
@@ -186,10 +186,10 @@
 <a href=#186 id=186 data-nosnippet>186</a>    }
 <a href=#187 id=187 data-nosnippet>187</a>}
 <a href=#188 id=188 data-nosnippet>188</a>
-<a href=#189 id=189 data-nosnippet>189</a><span class="kw">fn </span>resolve_alias_chain&lt;<span class="lifetime">'a</span>&gt;(
-<a href=#190 id=190 data-nosnippet>190</a>    aliases: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HashMap&lt;String, String&gt;,
-<a href=#191 id=191 data-nosnippet>191</a>    start: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str,
-<a href=#192 id=192 data-nosnippet>192</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, DiError&gt; {
+<a href=#189 id=189 data-nosnippet>189</a><span class="kw">fn </span>resolve_alias_chain&lt;<span class="lifetime">'id</span>&gt;(
+<a href=#190 id=190 data-nosnippet>190</a>    aliases: <span class="kw-2">&amp;</span><span class="lifetime">'id </span>HashMap&lt;String, String&gt;,
+<a href=#191 id=191 data-nosnippet>191</a>    start: <span class="kw-2">&amp;</span><span class="lifetime">'id </span>str,
+<a href=#192 id=192 data-nosnippet>192</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'id </span>str, DiError&gt; {
 <a href=#193 id=193 data-nosnippet>193</a>    <span class="kw">let </span><span class="kw-2">mut </span>current = start;
 <a href=#194 id=194 data-nosnippet>194</a>    <span class="kw">let </span><span class="kw-2">mut </span>seen = Vec::new();
 <a href=#195 id=195 data-nosnippet>195</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(next) = aliases.get(current) {
@@ -216,11 +216,11 @@
 <a href=#216 id=216 data-nosnippet>216</a>    <span class="prelude-val">Ok</span>(())
 <a href=#217 id=217 data-nosnippet>217</a>}
 <a href=#218 id=218 data-nosnippet>218</a>
-<a href=#219 id=219 data-nosnippet>219</a><span class="kw">fn </span>visit&lt;<span class="lifetime">'a</span>&gt;(
-<a href=#220 id=220 data-nosnippet>220</a>    id: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str,
-<a href=#221 id=221 data-nosnippet>221</a>    services: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HashMap&lt;String, PendingService&gt;,
-<a href=#222 id=222 data-nosnippet>222</a>    marks: <span class="kw-2">&amp;mut </span>HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, VisitMark&gt;,
-<a href=#223 id=223 data-nosnippet>223</a>    stack: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;,
+<a href=#219 id=219 data-nosnippet>219</a><span class="kw">fn </span>visit&lt;<span class="lifetime">'id</span>&gt;(
+<a href=#220 id=220 data-nosnippet>220</a>    id: <span class="kw-2">&amp;</span><span class="lifetime">'id </span>str,
+<a href=#221 id=221 data-nosnippet>221</a>    services: <span class="kw-2">&amp;</span><span class="lifetime">'id </span>HashMap&lt;String, PendingService&gt;,
+<a href=#222 id=222 data-nosnippet>222</a>    marks: <span class="kw-2">&amp;mut </span>HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'id </span>str, VisitMark&gt;,
+<a href=#223 id=223 data-nosnippet>223</a>    stack: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'id </span>str&gt;,
 <a href=#224 id=224 data-nosnippet>224</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(), DiError&gt; {
 <a href=#225 id=225 data-nosnippet>225</a>    <span class="kw">match </span>marks.get(id) {
 <a href=#226 id=226 data-nosnippet>226</a>        <span class="prelude-val">Some</span>(VisitMark::Done) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),

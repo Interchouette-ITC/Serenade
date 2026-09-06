@@ -65,9 +65,9 @@
 <a href=#65 id=65 data-nosnippet>65</a>    }
 <a href=#66 id=66 data-nosnippet>66</a>}
 <a href=#67 id=67 data-nosnippet>67</a>
-<a href=#68 id=68 data-nosnippet>68</a><span class="kw">struct </span>Tail&lt;<span class="lifetime">'a</span>&gt; {
-<a href=#69 id=69 data-nosnippet>69</a>    middleware: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[Box&lt;<span class="kw">dyn </span>Middleware&gt;],
-<a href=#70 id=70 data-nosnippet>70</a>    controller: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>RequestHandler,
+<a href=#68 id=68 data-nosnippet>68</a><span class="kw">struct </span>Tail&lt;<span class="lifetime">'mw</span>&gt; {
+<a href=#69 id=69 data-nosnippet>69</a>    middleware: <span class="kw-2">&amp;</span><span class="lifetime">'mw </span>[Box&lt;<span class="kw">dyn </span>Middleware&gt;],
+<a href=#70 id=70 data-nosnippet>70</a>    controller: <span class="kw-2">&amp;</span><span class="lifetime">'mw </span><span class="kw">dyn </span>RequestHandler,
 <a href=#71 id=71 data-nosnippet>71</a>}
 <a href=#72 id=72 data-nosnippet>72</a>
 <a href=#73 id=73 data-nosnippet>73</a><span class="kw">impl </span>RequestHandler <span class="kw">for </span>Tail&lt;<span class="lifetime">'_</span>&gt; {

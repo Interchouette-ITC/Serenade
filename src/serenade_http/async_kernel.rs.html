@@ -39,7 +39,7 @@
 <a href=#39 id=39 data-nosnippet>39</a>    </span><span class="attr">#[must_use]
 <a href=#40 id=40 data-nosnippet>40</a>    </span><span class="kw">pub fn </span>from_async_fn&lt;F&gt;(handler: F) -&gt; <span class="self">Self
 <a href=#41 id=41 data-nosnippet>41</a>    </span><span class="kw">where
-<a href=#42 id=42 data-nosnippet>42</a>        </span>F: <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; Fn(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>Request) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;Response, HttpError&gt;&gt;
+<a href=#42 id=42 data-nosnippet>42</a>        </span>F: <span class="kw">for</span>&lt;<span class="lifetime">'req</span>&gt; Fn(<span class="kw-2">&amp;</span><span class="lifetime">'req </span><span class="kw-2">mut </span>Request) -&gt; BoxFuture&lt;<span class="lifetime">'req</span>, <span class="prelude-ty">Result</span>&lt;Response, HttpError&gt;&gt;
 <a href=#43 id=43 data-nosnippet>43</a>            + Send
 <a href=#44 id=44 data-nosnippet>44</a>            + Sync
 <a href=#45 id=45 data-nosnippet>45</a>            + <span class="lifetime">'static</span>,
@@ -71,10 +71,10 @@
 <a href=#71 id=71 data-nosnippet>71</a>        })
 <a href=#72 id=72 data-nosnippet>72</a>    }
 <a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">fn </span>dispatch&lt;<span class="lifetime">'a</span>&gt;(
-<a href=#75 id=75 data-nosnippet>75</a>        <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>,
-<a href=#76 id=76 data-nosnippet>76</a>        request: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>Request,
-<a href=#77 id=77 data-nosnippet>77</a>    ) -&gt; BoxFuture&lt;<span class="lifetime">'a</span>, <span class="prelude-ty">Result</span>&lt;Response, HttpError&gt;&gt; {
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">fn </span>dispatch&lt;<span class="lifetime">'req</span>&gt;(
+<a href=#75 id=75 data-nosnippet>75</a>        <span class="kw-2">&amp;</span><span class="lifetime">'req </span><span class="self">self</span>,
+<a href=#76 id=76 data-nosnippet>76</a>        request: <span class="kw-2">&amp;</span><span class="lifetime">'req </span><span class="kw-2">mut </span>Request,
+<a href=#77 id=77 data-nosnippet>77</a>    ) -&gt; BoxFuture&lt;<span class="lifetime">'req</span>, <span class="prelude-ty">Result</span>&lt;Response, HttpError&gt;&gt; {
 <a href=#78 id=78 data-nosnippet>78</a>        <span class="self">self</span>.controller.handle(request)
 <a href=#79 id=79 data-nosnippet>79</a>    }
 <a href=#80 id=80 data-nosnippet>80</a>}
