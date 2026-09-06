@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use serenade_di::{ContainerBuilder, ServiceDefinition};
+use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
 
 use super::{
     version, ArrayAdapter, ArrayCacheItem, CacheError, CacheItem, CacheItemPool, CachePoolService,
@@ -20,6 +20,7 @@ fn miss_hit_overwrite_delete_clear() {
     let miss = pool.get_item("sku").expect("get");
     assert!(!miss.is_hit());
     assert!(miss.get().is_none());
+    assert_eq!(miss.key(), "sku");
 
     let mut item = ArrayCacheItem::miss("sku");
     item.set(Arc::new(String::from("A1")));
@@ -27,6 +28,7 @@ fn miss_hit_overwrite_delete_clear() {
 
     let hit = pool.get_item("sku").expect("get");
     assert!(hit.is_hit());
+    assert_eq!(hit.key(), "sku");
     assert_eq!(
         hit.get()
             .and_then(|value| value.downcast_ref::<String>())
@@ -46,6 +48,7 @@ fn miss_hit_overwrite_delete_clear() {
     );
 
     assert!(pool.delete_item("sku").expect("delete"));
+    assert!(!pool.delete_item("sku").expect("missing"));
     assert!(!pool.get_item("sku").expect("get").is_hit());
 
     let mut item = ArrayCacheItem::miss("x");
@@ -68,16 +71,45 @@ fn expiry_turns_hit_into_miss() {
 }
 
 #[test]
+fn item_get_returns_none_when_expired() {
+    let mut item = ArrayCacheItem::hit("k", Arc::new(1_u8));
+    item.expires_after(Some(Duration::from_millis(10)));
+    thread::sleep(Duration::from_millis(25));
+    assert!(item.is_expired());
+    assert!(!item.is_hit());
+    assert!(item.get().is_none());
+}
+
+#[test]
+fn save_without_value_is_miss_on_get() {
+    let pool = ArrayAdapter::new();
+    pool.save(ArrayCacheItem::miss("empty")).expect("save");
+    let item = pool.get_item("empty").expect("get");
+    assert!(!item.is_hit());
+    assert!(item.get().is_none());
+}
+
+#[test]
 fn empty_key_is_rejected() {
     let pool = ArrayAdapter::new();
     let Err(err) = pool.get_item("") else {
         panic!("empty key must fail");
     };
     assert!(matches!(err, CacheError::InvalidKey { .. }));
+    let Err(err) = pool.save(ArrayCacheItem::miss("")) else {
+        panic!("empty key save must fail");
+    };
+    assert!(matches!(err, CacheError::InvalidKey { .. }));
+    let Err(err) = pool.delete_item("") else {
+        panic!("empty key delete must fail");
+    };
+    assert!(matches!(err, CacheError::InvalidKey { .. }));
 }
 
 #[test]
-fn compile_pass_registers_default_pool() {
+fn compile_pass_name_and_default_pool() {
+    let pass = RegisterDefaultCachePoolPass;
+    assert_eq!(pass.name(), "register_default_cache_pool");
     let mut builder = ContainerBuilder::new();
     builder.add_compile_pass(RegisterDefaultCachePoolPass);
     let container = builder.compile().expect("compile");
@@ -91,6 +123,22 @@ fn compile_pass_registers_default_pool() {
 }
 
 #[test]
+fn compile_pass_skips_when_default_already_registered() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(
+            ServiceDefinition::new(DEFAULT_CACHE_POOL_SERVICE).with_tag(CACHE_POOL_TAG),
+            |_c| Ok(Box::new(CachePoolService(Arc::new(ArrayAdapter::new())))),
+        )
+        .expect("register");
+    builder.add_compile_pass(RegisterDefaultCachePoolPass);
+    let container = builder.compile().expect("compile");
+    let _ = container
+        .get_as::<CachePoolService>(DEFAULT_CACHE_POOL_SERVICE)
+        .expect("existing default");
+}
+
+#[test]
 fn compile_pass_aliases_tagged_pool() {
     let mut builder = ContainerBuilder::new();
     builder
@@ -101,7 +149,20 @@ fn compile_pass_aliases_tagged_pool() {
         .expect("register");
     builder.add_compile_pass(RegisterDefaultCachePoolPass);
     let container = builder.compile().expect("compile");
-    let _ = container
+    let pool = container
         .get_as::<CachePoolService>(DEFAULT_CACHE_POOL_SERVICE)
         .expect("aliased");
+    let mut item = ArrayCacheItem::miss("via-alias");
+    item.set(Arc::new(true));
+    pool.0.save(item).expect("save");
+    assert!(pool.0.get_item("via-alias").expect("get").is_hit());
+}
+
+#[test]
+fn expires_after_none_clears_ttl() {
+    let mut item = ArrayCacheItem::hit("k", Arc::new(9_u8));
+    item.expires_after(Some(Duration::from_secs(60)));
+    item.expires_after(None);
+    assert!(!item.is_expired());
+    assert!(item.is_hit());
 }

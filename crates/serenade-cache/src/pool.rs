@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
 use crate::{ArrayCacheItem, CacheError};
@@ -66,17 +66,17 @@ impl ArrayAdapter {
         Ok(())
     }
 
-    fn lock_map(&self) -> Result<std::sync::MutexGuard<'_, HashMap<String, Stored>>, CacheError> {
-        self.inner.lock().map_err(|_| CacheError::Pool {
-            message: "lock poisoned".to_owned(),
-        })
+    fn lock_map(&self) -> MutexGuard<'_, HashMap<String, Stored>> {
+        self.inner
+            .lock()
+            .expect("serenade-cache ArrayAdapter mutex poisoned")
     }
 }
 
 impl CacheItemPool for ArrayAdapter {
     fn get_item(&self, key: &str) -> Result<ArrayCacheItem, CacheError> {
         Self::validate_key(key)?;
-        let mut map = self.lock_map()?;
+        let mut map = self.lock_map();
         if map
             .get(key)
             .is_some_and(|stored| stored.expires_at.is_some_and(|at| Instant::now() >= at))
@@ -102,17 +102,17 @@ impl CacheItemPool for ArrayAdapter {
     fn save(&self, item: ArrayCacheItem) -> Result<(), CacheError> {
         let (key, value, expires_at) = item.into_stored();
         Self::validate_key(&key)?;
-        self.lock_map()?.insert(key, Stored { value, expires_at });
+        self.lock_map().insert(key, Stored { value, expires_at });
         Ok(())
     }
 
     fn delete_item(&self, key: &str) -> Result<bool, CacheError> {
         Self::validate_key(key)?;
-        Ok(self.lock_map()?.remove(key).is_some())
+        Ok(self.lock_map().remove(key).is_some())
     }
 
     fn clear(&self) -> Result<(), CacheError> {
-        self.lock_map()?.clear();
+        self.lock_map().clear();
         Ok(())
     }
 }

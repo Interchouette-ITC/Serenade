@@ -154,7 +154,7 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 | `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear |
 | `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` |
 
-Redis adapter: open a follow-up issue after #9 lands (not in this crate slice).
+In-memory only in #9. **Follow-up:** open and land a Redis adapter PR (`RedisAdapter: CacheItemPool`) after this merges.
 
 ## Configuration layers
 
