@@ -139,26 +139,6 @@ fn compile_pass_skips_when_default_already_registered() {
 }
 
 #[test]
-fn compile_pass_aliases_tagged_pool() {
-    let mut builder = ContainerBuilder::new();
-    builder
-        .register(
-            ServiceDefinition::new("cache.custom").with_tag(CACHE_POOL_TAG),
-            |_c| Ok(Box::new(CachePoolService(Arc::new(ArrayAdapter::new())))),
-        )
-        .expect("register");
-    builder.add_compile_pass(RegisterDefaultCachePoolPass);
-    let container = builder.compile().expect("compile");
-    let pool = container
-        .get_as::<CachePoolService>(DEFAULT_CACHE_POOL_SERVICE)
-        .expect("aliased");
-    let mut item = ArrayCacheItem::miss("via-alias");
-    item.set(Arc::new(true));
-    pool.0.save(item).expect("save");
-    assert!(pool.0.get_item("via-alias").expect("get").is_hit());
-}
-
-#[test]
 fn expires_after_none_clears_ttl() {
     let mut item = ArrayCacheItem::hit("k", Arc::new(9_u8));
     item.expires_after(Some(Duration::from_secs(60)));

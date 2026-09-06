@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use serenade_di::{CompilePass, ContainerBuilder, DiError, Reference, ServiceDefinition};
+use serenade_di::{CompilePass, ContainerBuilder, DiError, ServiceDefinition};
 
 use crate::{ArrayAdapter, CacheItemPool};
 
@@ -16,10 +16,10 @@ pub const DEFAULT_CACHE_POOL_SERVICE: &str = "cache.app";
 #[derive(Clone)]
 pub struct CachePoolService(pub Arc<dyn CacheItemPool>);
 
-/// Ensures a default [`ArrayAdapter`] exists when no service is tagged [`CACHE_POOL_TAG`].
+/// Seeds [`DEFAULT_CACHE_POOL_SERVICE`] with an [`ArrayAdapter`] when missing.
 ///
-/// When tagged pools exist, registers aliases are left to the application; this pass only
-/// seeds `cache.app` with an in-memory adapter if missing.
+/// Apps that need another pool register it under [`CACHE_POOL_TAG`] themselves
+/// (and may alias `cache.app` via DI).
 #[derive(Debug, Default)]
 pub struct RegisterDefaultCachePoolPass;
 
@@ -34,26 +34,6 @@ impl CompilePass for RegisterDefaultCachePoolPass {
             .iter()
             .any(|definition| definition.id() == DEFAULT_CACHE_POOL_SERVICE);
         if has_default {
-            return Ok(());
-        }
-
-        let tagged: Vec<String> = builder
-            .definitions()
-            .iter()
-            .filter(|definition| definition.tags().iter().any(|tag| tag == CACHE_POOL_TAG))
-            .map(|definition| definition.id().to_owned())
-            .collect();
-
-        if let Some(first) = tagged.first() {
-            let id = first.clone();
-            builder.register(
-                ServiceDefinition::new(DEFAULT_CACHE_POOL_SERVICE)
-                    .with_dependencies(vec![Reference::from(id.clone())]),
-                move |container| {
-                    let pool = container.get_as::<CachePoolService>(&id)?;
-                    Ok(Box::new(CachePoolService(Arc::clone(&pool.0))))
-                },
-            )?;
             return Ok(());
         }
 
