@@ -111,4 +111,13 @@ mod tests {
         assert!(marshaller.unmarshal(&[]).is_err());
         assert!(marshaller.unmarshal(&[9, 1, 2]).is_err());
     }
+
+    #[test]
+    fn rejects_invalid_utf8_string_payload() {
+        let marshaller = BytesMarshaller;
+        let err = marshaller
+            .unmarshal(&[2, 0xff, 0xfe])
+            .expect_err("bad utf8");
+        assert!(err.to_string().contains("UTF-8"));
+    }
 }

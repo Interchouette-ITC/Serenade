@@ -124,3 +124,55 @@ fn pool_reuses_connections() {
     assert!(pool.has_item("k0").expect("has"));
     pool.clear().expect("cleanup");
 }
+
+#[test]
+fn corrupt_payload_and_expired_save() {
+    let pool = adapter("serenade-it:corrupt:");
+    pool.clear().expect("clear");
+
+    let mut conn = redis::Client::open(redis_url())
+        .expect("client")
+        .get_connection()
+        .expect("conn");
+    let _: () = redis::cmd("SET")
+        .arg("serenade-it:corrupt:bad")
+        .arg(vec![9_u8, 1, 2])
+        .query(&mut conn)
+        .expect("seed");
+    assert!(!pool.get_item("bad").expect("get").is_hit());
+
+    let items = pool.get_items(&["bad"]).expect("batch");
+    assert!(!items[0].is_hit());
+
+    let mut item = ArrayCacheItem::miss("gone");
+    item.set(Arc::new(String::from("x")));
+    item.expires_after(Some(Duration::from_millis(1)));
+    thread::sleep(Duration::from_millis(5));
+    pool.save(item).expect("save expired deletes");
+    assert!(!pool.get_item("gone").expect("get").is_hit());
+}
+
+#[test]
+fn empty_batch_and_scan_pages() {
+    let pool = adapter("serenade-it:scan:");
+    pool.clear().expect("clear");
+    assert!(pool.get_items(&[]).expect("empty get").is_empty());
+    assert_eq!(pool.delete_items(&[]).expect("empty del"), 0);
+
+    for i in 0..120 {
+        let mut item = ArrayCacheItem::miss(format!("k{i}"));
+        item.set(Arc::new(format!("v{i}")));
+        pool.save(item).expect("save");
+    }
+    pool.clear().expect("paged clear");
+    assert!(!pool.has_item("k0").expect("has"));
+}
+
+#[test]
+fn warm_pool_against_down_host_fails_connect() {
+    let config = RedisAdapterConfig::new("redis://127.0.0.1:1/0")
+        .with_pool_max_size(1)
+        .with_connection_timeout(Duration::from_millis(200))
+        .with_warm_pool(true);
+    assert!(RedisAdapter::connect(config, Arc::new(BytesMarshaller)).is_err());
+}

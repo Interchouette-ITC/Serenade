@@ -13,6 +13,8 @@ pub struct RedisAdapterConfig {
     pub pool_max_size: u32,
     /// How long to wait for a pooled connection (default 5s).
     pub connection_timeout: Duration,
+    /// When true, create one idle connection at build time (default false).
+    pub warm_pool: bool,
 }
 
 impl Default for RedisAdapterConfig {
@@ -22,6 +24,7 @@ impl Default for RedisAdapterConfig {
             prefix: "serenade:".to_owned(),
             pool_max_size: 16,
             connection_timeout: Duration::from_secs(5),
+            warm_pool: false,
         }
     }
 }
@@ -54,6 +57,13 @@ impl RedisAdapterConfig {
     #[must_use]
     pub const fn with_connection_timeout(mut self, connection_timeout: Duration) -> Self {
         self.connection_timeout = connection_timeout;
+        self
+    }
+
+    /// Warms the pool with one idle connection at build time.
+    #[must_use]
+    pub const fn with_warm_pool(mut self, warm_pool: bool) -> Self {
+        self.warm_pool = warm_pool;
         self
     }
 }

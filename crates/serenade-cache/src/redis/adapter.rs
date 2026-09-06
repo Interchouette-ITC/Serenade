@@ -29,13 +29,16 @@ impl RedisAdapter {
         marshaller: Arc<dyn CacheMarshaller>,
     ) -> Result<Self, CacheError> {
         let client = Client::open(config.url.as_str()).map_err(|error| map_redis(&error))?;
-        let pool = Pool::builder()
+        let mut builder = Pool::builder();
+        builder = builder
             .max_size(config.pool_max_size)
-            .connection_timeout(config.connection_timeout)
-            .build(client)
-            .map_err(|error| CacheError::Pool {
-                message: error.to_string(),
-            })?;
+            .connection_timeout(config.connection_timeout);
+        if config.warm_pool {
+            builder = builder.min_idle(Some(1));
+        }
+        let pool = builder.build(client).map_err(|error| CacheError::Pool {
+            message: error.to_string(),
+        })?;
         Ok(Self {
             pool,
             prefix: config.prefix,
@@ -220,4 +223,35 @@ fn remaining_px_ms(expires_at: Option<Instant>) -> Option<u64> {
             .unwrap_or(u64::MAX)
             .max(1),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::time::{Duration, Instant};
+
+    use super::{item_from_pttl, remaining_px_ms};
+    use crate::CacheItem;
+
+    #[test]
+    fn item_from_pttl_branches() {
+        let value = Arc::new(String::from("v")) as Arc<dyn std::any::Any + Send + Sync>;
+        assert!(!item_from_pttl("k", Arc::clone(&value), -2).is_hit());
+        assert!(item_from_pttl("k", Arc::clone(&value), -1).is_hit());
+        let with_ttl = item_from_pttl("k", Arc::clone(&value), 5_000);
+        assert!(with_ttl.is_hit());
+        assert!(!with_ttl.is_expired());
+        assert!(item_from_pttl("k", value, 0).is_hit());
+    }
+
+    #[test]
+    fn remaining_px_none_when_already_elapsed() {
+        assert!(remaining_px_ms(None).is_none());
+        let past = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("past");
+        assert!(remaining_px_ms(Some(past)).is_none());
+        let future = Instant::now() + Duration::from_secs(2);
+        assert!(remaining_px_ms(Some(future)).unwrap() >= 1);
+    }
 }
