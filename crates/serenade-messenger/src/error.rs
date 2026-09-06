@@ -31,4 +31,10 @@ pub enum MessengerError {
         /// Rejection reason.
         message: String,
     },
+    /// Transport backend failed while sending or receiving.
+    #[error("transport failed: {message}")]
+    Transport {
+        /// Underlying error text.
+        message: String,
+    },
 }

@@ -2,13 +2,14 @@
 //!
 //! Commands have exactly one handler. Events fan out to zero or more handlers.
 //! Optional middleware wraps each dispatch (logging and validation hooks included).
-//! Async queue transports are a later slice of the messenger epic.
+//! Async queue backends implement [`Transport`]; [`InMemoryTransport`] is the local adapter.
 
 mod bus;
 mod error;
 mod handler;
 mod message;
 mod middleware;
+mod transport;
 
 pub use bus::MessageBus;
 pub use error::MessengerError;
@@ -18,6 +19,7 @@ pub use middleware::{
     DispatchContext, DispatchKind, LogSink, LoggingMiddleware, Middleware, ValidateHook,
     ValidationMiddleware,
 };
+pub use transport::{Envelope, InMemoryTransport, Transport};
 
 /// Compile-time crate version for diagnostics.
 #[must_use]

@@ -1,6 +1,6 @@
 [package]
 name = "serenade-messenger"
-description = "Sync in-process command and event message bus"
+description = "Sync message bus, middleware, and async transport adapters"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,6 +13,7 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }
+tokio = { workspace = true }
 
 [lints]
 workspace = true
