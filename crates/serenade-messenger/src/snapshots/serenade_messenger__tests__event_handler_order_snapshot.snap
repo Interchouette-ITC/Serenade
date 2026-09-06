@@ -1,0 +1,7 @@
+---
+source: crates/serenade-messenger/src/tests.rs
+assertion_line: 177
+expression: recorded
+---
+- mailer
+- analytics
