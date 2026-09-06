@@ -1,4 +1,6 @@
-//! Middleware pipeline for the sync message bus.
+//! Dispatch context and middleware for the sync message bus.
+
+use std::any::Any;
 
 use crate::MessengerError;
 
@@ -12,12 +14,14 @@ pub enum DispatchKind {
 }
 
 /// Context passed to each middleware for one dispatch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DispatchContext {
+#[derive(Clone, Copy)]
+pub struct DispatchContext<'a> {
     /// [`crate::Message::NAME`] for the payload.
     pub message_name: &'static str,
     /// Command vs event dispatch.
     pub kind: DispatchKind,
+    /// Erased message payload (command or event).
+    pub payload: &'a dyn Any,
 }
 
 /// Onion layer around handler execution.
@@ -32,7 +36,7 @@ pub trait Middleware: Send + Sync {
     /// Return [`MessengerError`] to abort the dispatch (after or instead of `next`).
     fn handle(
         &self,
-        ctx: &DispatchContext,
+        ctx: &DispatchContext<'_>,
         next: &dyn Fn() -> Result<(), MessengerError>,
     ) -> Result<(), MessengerError>;
 }
@@ -40,7 +44,7 @@ pub trait Middleware: Send + Sync {
 /// Sink used by [`LoggingMiddleware`] (apps plug `tracing` / files later via #57).
 pub trait LogSink: Send + Sync {
     /// Records that a message is entering the pipeline.
-    fn record(&self, ctx: &DispatchContext);
+    fn record(&self, ctx: &DispatchContext<'_>);
 }
 
 /// Middleware that records each dispatch through a [`LogSink`].
@@ -60,7 +64,7 @@ impl<S> LoggingMiddleware<S> {
 impl<S: LogSink> Middleware for LoggingMiddleware<S> {
     fn handle(
         &self,
-        ctx: &DispatchContext,
+        ctx: &DispatchContext<'_>,
         next: &dyn Fn() -> Result<(), MessengerError>,
     ) -> Result<(), MessengerError> {
         self.sink.record(ctx);
@@ -75,7 +79,7 @@ pub trait ValidateHook: Send + Sync {
     /// # Errors
     ///
     /// Reject invalid messages (typically [`MessengerError::Rejected`]).
-    fn validate(&self, ctx: &DispatchContext) -> Result<(), MessengerError>;
+    fn validate(&self, ctx: &DispatchContext<'_>) -> Result<(), MessengerError>;
 }
 
 /// Middleware that runs a [`ValidateHook`] before calling `next`.
@@ -95,7 +99,7 @@ impl<V> ValidationMiddleware<V> {
 impl<V: ValidateHook> Middleware for ValidationMiddleware<V> {
     fn handle(
         &self,
-        ctx: &DispatchContext,
+        ctx: &DispatchContext<'_>,
         next: &dyn Fn() -> Result<(), MessengerError>,
     ) -> Result<(), MessengerError> {
         self.validator.validate(ctx)?;

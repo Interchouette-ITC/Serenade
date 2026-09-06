@@ -24,13 +24,13 @@ fn downcast_message<'a, T: 'static>(
 
 fn run_pipeline(
     middlewares: &[Arc<dyn Middleware>],
-    ctx: &DispatchContext,
+    ctx: &DispatchContext<'_>,
     terminal: &dyn Fn() -> Result<(), MessengerError>,
 ) -> Result<(), MessengerError> {
     fn invoke(
         index: usize,
         middlewares: &[Arc<dyn Middleware>],
-        ctx: &DispatchContext,
+        ctx: &DispatchContext<'_>,
         terminal: &dyn Fn() -> Result<(), MessengerError>,
     ) -> Result<(), MessengerError> {
         if index >= middlewares.len() {
@@ -148,6 +148,7 @@ impl MessageBus {
         let ctx = DispatchContext {
             message_name: name,
             kind: DispatchKind::Command,
+            payload: command,
         };
         run_pipeline(&self.middlewares, &ctx, &|| handler(command as &dyn Any))
     }
@@ -165,6 +166,7 @@ impl MessageBus {
         let ctx = DispatchContext {
             message_name: name,
             kind: DispatchKind::Event,
+            payload: event,
         };
         run_pipeline(&self.middlewares, &ctx, &|| {
             let Some(handlers) = self.events.get(name) else {
