@@ -5,7 +5,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use serenade_bundle::{
-    build_container, FrameworkBundle, FrameworkExtension, CONSOLE_APPLICATION_SERVICE,
+    CONSOLE_APPLICATION_SERVICE, FrameworkBundle, FrameworkExtension, build_container,
 };
 use serenade_console::Application;
 use serenade_kernel::{App, Application as KernelApp, Environment};

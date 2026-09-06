@@ -3,8 +3,8 @@
 use std::io::{self, IsTerminal, Write};
 use std::path::PathBuf;
 
-use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
+use rustyline::error::ReadlineError;
 use serenade_di::Container;
 use serenade_kernel::Environment;
 
@@ -183,14 +183,17 @@ mod tests {
     fn dispatch_quit_and_unknown() {
         let mut app = Application::new();
         app.add(Arc::new(Ping));
-        assert!(app
-            .dispatch_interactive_line("quit", &Environment::Dev, true, None)
-            .expect("quit"));
-        assert!(!app
-            .dispatch_interactive_line("missing:cmd", &Environment::Dev, true, None)
-            .expect("missing"));
-        assert!(!app
-            .dispatch_interactive_line("app:ping", &Environment::Dev, true, None)
-            .expect("ping"));
+        assert!(
+            app.dispatch_interactive_line("quit", &Environment::Dev, true, None)
+                .expect("quit")
+        );
+        assert!(
+            !app.dispatch_interactive_line("missing:cmd", &Environment::Dev, true, None)
+                .expect("missing")
+        );
+        assert!(
+            !app.dispatch_interactive_line("app:ping", &Environment::Dev, true, None)
+                .expect("ping")
+        );
     }
 }

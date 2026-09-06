@@ -9,6 +9,6 @@ pub mod recipe;
 pub mod tui;
 
 pub use error::CliError;
-pub use new::{scaffold_app, NewOptions};
-pub use recipe::{apply_recipe, list_recipes, load_recipe, ApplyOptions, Recipe};
+pub use new::{NewOptions, scaffold_app};
+pub use recipe::{ApplyOptions, Recipe, apply_recipe, list_recipes, load_recipe};
 pub use tui::run_recipe_tui;

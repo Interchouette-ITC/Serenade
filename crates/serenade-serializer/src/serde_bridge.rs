@@ -1,9 +1,9 @@
 //! Serde bridge helpers for typed JSON encode/decode.
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
-use crate::encoder::{JsonDecoder, JsonEncoder, FORMAT_JSON};
+use crate::encoder::{FORMAT_JSON, JsonDecoder, JsonEncoder};
 use crate::{Decoder, Encoder, SerializerError};
 
 /// Serializes `value` to bytes for `format` via serde (JSON only in v0).

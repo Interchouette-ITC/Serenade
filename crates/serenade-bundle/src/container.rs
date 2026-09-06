@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use serenade_config::{load_packages_for_env, Config};
+use serenade_config::{Config, load_packages_for_env};
 use serenade_console::RegisterCommandsPass;
 use serenade_di::{Container, ContainerBuilder, ServiceDefinition};
 use serenade_event::RegisterEventSubscribersPass;

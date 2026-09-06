@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
 
 use super::{
-    assert_dispatched, Event, EventDispatcher, EventSubscriber, RecordingSubscriber,
-    RegisterEventSubscribersPass, SubscriberService, DISPATCHER_SERVICE, SUBSCRIBER_TAG,
+    DISPATCHER_SERVICE, Event, EventDispatcher, EventSubscriber, RecordingSubscriber,
+    RegisterEventSubscribersPass, SUBSCRIBER_TAG, SubscriberService, assert_dispatched,
 };
 
 struct NamedEvent(&'static str);

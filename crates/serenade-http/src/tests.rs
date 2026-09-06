@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    box_future, load_routes, AsyncHttpKernel, DefaultExceptionHandler, ExceptionHandler, HttpError,
-    HttpKernel, Method, Middleware, Request, RequestHandler, Response, Route, RouteCollection,
-    RouteLoader, UrlMatcher, ROUTE_ATTRIBUTE,
+    AsyncHttpKernel, DefaultExceptionHandler, ExceptionHandler, HttpError, HttpKernel, Method,
+    Middleware, ROUTE_ATTRIBUTE, Request, RequestHandler, Response, Route, RouteCollection,
+    RouteLoader, UrlMatcher, box_future, load_routes,
 };
 
 struct TraceLayer {

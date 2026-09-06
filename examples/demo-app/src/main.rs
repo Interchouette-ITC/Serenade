@@ -3,15 +3,15 @@
 use std::path::PathBuf;
 
 use serenade_bundle::{
-    build_container, BundleError, Extension, FrameworkBundle, FrameworkExtension, FRAMEWORK_BUNDLE,
-    ROUTER_SERVICE,
+    BundleError, Extension, FRAMEWORK_BUNDLE, FrameworkBundle, FrameworkExtension, ROUTER_SERVICE,
+    build_container,
 };
 use serenade_config::Config;
 use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_event::DISPATCHER_SERVICE;
 use serenade_http::{Method, Route, RouteCollection, RouteLoader};
 use serenade_kernel::{App, Application, BundleInterface, Environment};
-use serenade_observability::{init, LoggingConfig, APP, KERNEL};
+use serenade_observability::{APP, KERNEL, LoggingConfig, init};
 
 struct DemoBundle;
 

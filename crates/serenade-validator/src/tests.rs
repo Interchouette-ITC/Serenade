@@ -3,8 +3,8 @@ use serenade_messenger::{
 };
 
 use super::{
-    version, Constraint, ConstraintViolationList, Length, MessengerValidateHook, NotBlank, Range,
-    RecursiveValidator, Validatable, Validator, Violation,
+    Constraint, ConstraintViolationList, Length, MessengerValidateHook, NotBlank, Range,
+    RecursiveValidator, Validatable, Validator, Violation, version,
 };
 
 struct EnqueueJob {

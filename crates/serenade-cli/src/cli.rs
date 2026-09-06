@@ -3,13 +3,13 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use clap::{CommandFactory, ValueEnum};
-use clap_complete::{generate, Shell};
+use clap_complete::{Shell, generate};
 use cling::prelude::*;
 use serenade_cli::recipe::print_hints;
 use serenade_cli::{
-    apply_recipe, list_recipes, run_recipe_tui, scaffold_app, ApplyOptions, NewOptions,
+    ApplyOptions, NewOptions, apply_recipe, list_recipes, run_recipe_tui, scaffold_app,
 };
 
 /// Top-level Serenade scaffolding CLI.

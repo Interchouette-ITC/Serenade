@@ -60,7 +60,7 @@ impl Request {
     }
 
     /// Mutable headers (adapters and middleware).
-    pub fn headers_mut(&mut self) -> &mut Headers {
+    pub const fn headers_mut(&mut self) -> &mut Headers {
         &mut self.headers
     }
 
@@ -77,7 +77,7 @@ impl Request {
     }
 
     /// Mutable attributes (middleware, router, controller).
-    pub fn attributes_mut(&mut self) -> &mut AttributeBag {
+    pub const fn attributes_mut(&mut self) -> &mut AttributeBag {
         &mut self.attributes
     }
 }

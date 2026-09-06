@@ -2,11 +2,11 @@
 
 use std::io::stdout;
 
+use crossterm::ExecutableCommand;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
-use crossterm::ExecutableCommand;
 use ratatui::prelude::{Constraint, CrosstermBackend, Layout, Rect, Style, Terminal};
 use ratatui::widgets::{Block, Borders, Paragraph, Row, Table};
 
@@ -56,7 +56,7 @@ fn collect_rows(input: &Input, prefix: Option<&str>, reveal: bool) -> Vec<(Strin
     let mut rows: Vec<(String, String)> = container
         .parameters()
         .iter()
-        .filter(|(key, _)| prefix.map_or(true, |prefix| key.starts_with(prefix)))
+        .filter(|(key, _)| prefix.is_none_or(|prefix| key.starts_with(prefix)))
         .map(|(key, value)| {
             let display = if reveal || !is_sensitive(key) {
                 value.to_owned()

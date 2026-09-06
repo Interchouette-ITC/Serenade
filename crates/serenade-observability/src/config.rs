@@ -192,17 +192,20 @@ mod tests {
             .expect("lock");
 
         let config = LoggingConfig::for_environment(&Environment::Dev, "var/log");
+        // SAFETY: test isolates log filter env vars.
         unsafe {
             std::env::remove_var("SERENADE_LOG");
             std::env::remove_var("RUST_LOG");
         }
         assert!(config.resolve_filter_directives().is_none());
 
+        // SAFETY: test isolates log filter env vars.
         unsafe {
             std::env::set_var("RUST_LOG", "info");
         }
         assert_eq!(config.resolve_filter_directives().as_deref(), Some("info"));
 
+        // SAFETY: test isolates log filter env vars.
         unsafe {
             std::env::set_var("SERENADE_LOG", "serenade::app=debug");
         }
@@ -211,6 +214,7 @@ mod tests {
             Some("serenade::app=debug")
         );
 
+        // SAFETY: test isolates log filter env vars.
         unsafe {
             std::env::remove_var("SERENADE_LOG");
             std::env::remove_var("RUST_LOG");

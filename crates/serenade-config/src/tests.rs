@@ -1,6 +1,6 @@
 use serenade_di::{ContainerBuilder, ParameterBag};
 
-use super::{load_dotenv, load_packages, load_packages_for_env, version, Config};
+use super::{Config, load_dotenv, load_packages, load_packages_for_env, version};
 
 #[test]
 fn version_matches_workspace() {
@@ -9,7 +9,10 @@ fn version_matches_workspace() {
 
 #[test]
 fn yaml_and_toml_merge_with_env_and_parameters() {
-    std::env::set_var("SERENADE_CONFIG_TEST_HOST", "db.example");
+    // SAFETY: test mutates process environment for isolated assertions.
+    unsafe {
+        std::env::set_var("SERENADE_CONFIG_TEST_HOST", "db.example");
+    }
     let defaults = Config::from_yaml(
         "
 database:
@@ -123,8 +126,11 @@ fn load_packages_for_env_applies_overlay_directory() {
 fn load_dotenv_sets_missing_vars_in_order() {
     let dir = unique_temp_dir("dotenv");
     std::fs::create_dir_all(&dir).unwrap();
-    std::env::remove_var("SERENADE_DOTENV_A");
-    std::env::remove_var("SERENADE_DOTENV_B");
+    // SAFETY: test mutates process environment for isolated assertions.
+    unsafe {
+        std::env::remove_var("SERENADE_DOTENV_A");
+        std::env::remove_var("SERENADE_DOTENV_B");
+    }
     std::fs::write(
         dir.join(".env"),
         "SERENADE_DOTENV_A=from-env\nSERENADE_DOTENV_B=base\n",
@@ -136,8 +142,11 @@ fn load_dotenv_sets_missing_vars_in_order() {
     assert_eq!(std::env::var("SERENADE_DOTENV_A").unwrap(), "from-env");
     // Later dotenv files override earlier ones; process env still wins.
     assert_eq!(std::env::var("SERENADE_DOTENV_B").unwrap(), "dev");
-    std::env::remove_var("SERENADE_DOTENV_A");
-    std::env::remove_var("SERENADE_DOTENV_B");
+    // SAFETY: test mutates process environment for isolated assertions.
+    unsafe {
+        std::env::remove_var("SERENADE_DOTENV_A");
+        std::env::remove_var("SERENADE_DOTENV_B");
+    }
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -145,12 +154,18 @@ fn load_dotenv_sets_missing_vars_in_order() {
 fn load_dotenv_skips_local_in_prod() {
     let dir = unique_temp_dir("dotenv-prod");
     std::fs::create_dir_all(&dir).unwrap();
-    std::env::remove_var("SERENADE_DOTENV_PROD");
+    // SAFETY: test mutates process environment for isolated assertions.
+    unsafe {
+        std::env::remove_var("SERENADE_DOTENV_PROD");
+    }
     std::fs::write(dir.join(".env"), "SERENADE_DOTENV_PROD=base\n").unwrap();
     std::fs::write(dir.join(".env.local"), "SERENADE_DOTENV_PROD=local\n").unwrap();
     load_dotenv(&dir, "prod").unwrap();
     assert_eq!(std::env::var("SERENADE_DOTENV_PROD").unwrap(), "base");
-    std::env::remove_var("SERENADE_DOTENV_PROD");
+    // SAFETY: test mutates process environment for isolated assertions.
+    unsafe {
+        std::env::remove_var("SERENADE_DOTENV_PROD");
+    }
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -290,7 +305,10 @@ keep: yes
 fn load_dotenv_keeps_preexisting_and_errors_on_unreadable() {
     let dir = unique_temp_dir("dotenv-unreadable");
     std::fs::create_dir_all(&dir).unwrap();
-    std::env::set_var("SERENADE_DOTENV_KEEP", "process");
+    // SAFETY: test mutates process environment for isolated assertions.
+    unsafe {
+        std::env::set_var("SERENADE_DOTENV_KEEP", "process");
+    }
     std::fs::write(dir.join(".env"), "SERENADE_DOTENV_KEEP=file\n").unwrap();
     load_dotenv(&dir, "dev").unwrap();
     assert_eq!(std::env::var("SERENADE_DOTENV_KEEP").unwrap(), "process");
@@ -305,7 +323,10 @@ fn load_dotenv_keeps_preexisting_and_errors_on_unreadable() {
         std::fs::set_permissions(&bad, std::fs::Permissions::from_mode(0o644)).unwrap();
         assert!(matches!(result, Err(super::ConfigError::Dotenv { .. })));
     }
-    std::env::remove_var("SERENADE_DOTENV_KEEP");
+    // SAFETY: test mutates process environment for isolated assertions.
+    unsafe {
+        std::env::remove_var("SERENADE_DOTENV_KEEP");
+    }
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

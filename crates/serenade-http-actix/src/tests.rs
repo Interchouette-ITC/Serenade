@@ -1,5 +1,5 @@
 use actix_web::test as actix_test;
-use actix_web::{web, App, HttpRequest, HttpResponse};
+use actix_web::{App, HttpRequest, HttpResponse, web};
 use serenade_http::{AsyncHttpKernel, HttpKernel, Method, Request, Response};
 
 use super::{

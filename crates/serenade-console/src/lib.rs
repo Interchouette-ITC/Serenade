@@ -12,13 +12,13 @@ mod error;
 mod input;
 mod interactive;
 
-pub use application::{stdout_is_terminal, Application};
+pub use application::{Application, stdout_is_terminal};
 pub use command::Command;
 pub use commands::{AboutCommand, DebugConfigCommand, DebugContainerCommand};
-pub use compile_pass::{CommandService, RegisterCommandsPass, APPLICATION_SERVICE, COMMAND_TAG};
+pub use compile_pass::{APPLICATION_SERVICE, COMMAND_TAG, CommandService, RegisterCommandsPass};
 pub use error::ConsoleError;
 pub use input::Input;
-pub use interactive::{history_path, HISTORY_FILE_NAME};
+pub use interactive::{HISTORY_FILE_NAME, history_path};
 
 /// Compile-time crate version for diagnostics.
 #[must_use]

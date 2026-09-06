@@ -7,8 +7,8 @@ use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
 use serenade_kernel::Environment;
 
 use crate::{
-    AboutCommand, Application, Command, CommandService, ConsoleError, DebugConfigCommand,
-    DebugContainerCommand, Input, RegisterCommandsPass, APPLICATION_SERVICE, COMMAND_TAG,
+    APPLICATION_SERVICE, AboutCommand, Application, COMMAND_TAG, Command, CommandService,
+    ConsoleError, DebugConfigCommand, DebugContainerCommand, Input, RegisterCommandsPass,
 };
 
 struct PingCommand;

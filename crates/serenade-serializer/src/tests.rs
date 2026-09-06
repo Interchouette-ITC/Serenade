@@ -1,12 +1,12 @@
 use std::any::{Any, TypeId};
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::{
-    deserialize_value, serde_supports_format, serialize_value, version, Decoder, Denormalizer,
-    Encoder, JsonDecoder, JsonEncoder, NormalizationContext, Normalizer, NormalizerRegistry,
-    Serializer, SerializerError, FORMAT_JSON,
+    Decoder, Denormalizer, Encoder, FORMAT_JSON, JsonDecoder, JsonEncoder, NormalizationContext,
+    Normalizer, NormalizerRegistry, Serializer, SerializerError, deserialize_value,
+    serde_supports_format, serialize_value, version,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
