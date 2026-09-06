@@ -320,7 +320,7 @@ fn tag_codec_normalization_error_paths() {
 #[test]
 fn from_serde_json_maps_codec_error() {
     let err = serde_json::from_str::<u32>("not-a-number").expect_err("parse");
-    let mapped = super::from_serde_json(err);
+    let mapped = super::from_serde_json(&err);
     assert!(matches!(mapped, SerializerError::Codec { .. }));
 }
 

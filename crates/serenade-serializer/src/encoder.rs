@@ -50,7 +50,7 @@ impl Encoder for JsonEncoder {
                 format: format.to_owned(),
             });
         }
-        serde_json::to_vec(data).map_err(crate::error::from_serde_json)
+        serde_json::to_vec(data).map_err(|err| crate::error::from_serde_json(&err))
     }
 }
 
@@ -69,6 +69,6 @@ impl Decoder for JsonDecoder {
                 format: format.to_owned(),
             });
         }
-        serde_json::from_slice(data).map_err(crate::error::from_serde_json)
+        serde_json::from_slice(data).map_err(|err| crate::error::from_serde_json(&err))
     }
 }
