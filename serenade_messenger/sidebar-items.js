@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MessengerError"],"fn":["version"],"struct":["MessageBus"],"trait":["Command","CommandHandler","Event","EventHandler","Message"]};
