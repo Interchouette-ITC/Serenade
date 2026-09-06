@@ -23,4 +23,12 @@ pub enum MessengerError {
         /// Underlying error text.
         message: String,
     },
+    /// Middleware rejected the message before the handler ran.
+    #[error("message `{name}` rejected: {message}")]
+    Rejected {
+        /// Message name being rejected.
+        name: &'static str,
+        /// Rejection reason.
+        message: String,
+    },
 }
