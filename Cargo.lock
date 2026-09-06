@@ -2495,6 +2495,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "serenade-security"
+version = "0.1.0"
+dependencies = [
+ "serenade-http",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "serenade-serializer"
 version = "0.1.0"
 dependencies = [
