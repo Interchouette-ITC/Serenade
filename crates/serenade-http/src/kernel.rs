@@ -65,9 +65,9 @@ impl HttpKernel {
     }
 }
 
-struct Tail<'a> {
-    middleware: &'a [Box<dyn Middleware>],
-    controller: &'a dyn RequestHandler,
+struct Tail<'mw> {
+    middleware: &'mw [Box<dyn Middleware>],
+    controller: &'mw dyn RequestHandler,
 }
 
 impl RequestHandler for Tail<'_> {

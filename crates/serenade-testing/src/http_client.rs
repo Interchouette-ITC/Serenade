@@ -16,14 +16,14 @@ use serenade_http::{HttpKernel, Method, Request, Response};
 /// assert_eq!(response.status(), 200);
 /// assert_eq!(response.body_str(), Some("ok"));
 /// ```
-pub struct HttpTestClient<'a> {
-    kernel: &'a HttpKernel,
+pub struct HttpTestClient<'kernel> {
+    kernel: &'kernel HttpKernel,
 }
 
-impl<'a> HttpTestClient<'a> {
+impl<'kernel> HttpTestClient<'kernel> {
     /// Client bound to `kernel`.
     #[must_use]
-    pub const fn new(kernel: &'a HttpKernel) -> Self {
+    pub const fn new(kernel: &'kernel HttpKernel) -> Self {
         Self { kernel }
     }
 
