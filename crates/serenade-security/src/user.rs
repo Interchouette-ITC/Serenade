@@ -9,7 +9,7 @@ pub trait UserInterface: Send + Sync {
     fn roles(&self) -> &[String];
 }
 
-/// Simple in-memory user for stubs and tests.
+/// Simple in-memory user for apps and tests.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InMemoryUser {
     id: String,
@@ -49,7 +49,7 @@ pub trait TokenInterface: Send + Sync {
     fn credentials(&self) -> Option<&str>;
 }
 
-/// Username/password-style token stub (also used for bearer/API key strings).
+/// Username/password-style token (also used for bearer/API key strings).
 #[derive(Debug, Clone)]
 pub struct UsernamePasswordToken {
     user: Option<InMemoryUser>,

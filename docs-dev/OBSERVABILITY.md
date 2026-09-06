@@ -66,9 +66,9 @@ Filter example: `SERENADE_LOG=serenade::app=debug,serenade::security=info`.
 
 Messenger apps can implement `serenade_messenger::LogSink` with `tracing::info!(target: serenade_observability::MESSENGER, …)`.
 
-## Profiler bridge
+## Profiler
 
-Request-scoped log capture for the Web Debug Toolbar / Profiler (**#56**) will subscribe to these channels later. This crate does not install a profiler collector.
+The Web Debug Toolbar / Profiler ([#56](https://github.com/Interchouette-ITC/Serenade/issues/56)) is a separate surface. Request-scoped log capture would subscribe to these channels; this crate does not install a profiler collector.
 
 ## Non-goals
 

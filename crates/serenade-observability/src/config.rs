@@ -41,6 +41,16 @@ impl LoggingConfig {
     ///
     /// File name is `{env}.log` under `log_dir`. Debug environments default to
     /// [`LevelFilter::DEBUG`]; others to [`LevelFilter::INFO`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use serenade_kernel::Environment;
+    /// use serenade_observability::LoggingConfig;
+    ///
+    /// let config = LoggingConfig::for_environment(&Environment::Dev, "var/log");
+    /// assert_eq!(config.log_file_name(), "dev.log");
+    /// ```
     #[must_use]
     pub fn for_environment(environment: &Environment, log_dir: impl Into<PathBuf>) -> Self {
         let name = environment.as_str().to_owned();
@@ -165,5 +175,53 @@ mod tests {
             Some("serenade::app=trace")
         );
         assert_eq!(config.rotation, Rotation::Never);
+        assert_eq!(
+            config.resolve_filter_directives().as_deref(),
+            Some("serenade::app=trace")
+        );
+    }
+
+    #[test]
+    fn resolve_filter_reads_serenade_log_then_rust_log() {
+        use std::sync::{Mutex, OnceLock};
+
+        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        let _guard = ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("lock");
+
+        let config = LoggingConfig::for_environment(&Environment::Dev, "var/log");
+        let prev_serenade = std::env::var("SERENADE_LOG").ok();
+        let prev_rust = std::env::var("RUST_LOG").ok();
+        unsafe {
+            std::env::remove_var("SERENADE_LOG");
+            std::env::remove_var("RUST_LOG");
+        }
+        assert!(config.resolve_filter_directives().is_none());
+
+        unsafe {
+            std::env::set_var("RUST_LOG", "info");
+        }
+        assert_eq!(config.resolve_filter_directives().as_deref(), Some("info"));
+
+        unsafe {
+            std::env::set_var("SERENADE_LOG", "serenade::app=debug");
+        }
+        assert_eq!(
+            config.resolve_filter_directives().as_deref(),
+            Some("serenade::app=debug")
+        );
+
+        unsafe {
+            match prev_serenade {
+                Some(value) => std::env::set_var("SERENADE_LOG", value),
+                None => std::env::remove_var("SERENADE_LOG"),
+            }
+            match prev_rust {
+                Some(value) => std::env::set_var("RUST_LOG", value),
+                None => std::env::remove_var("RUST_LOG"),
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-//! HTTP firewall middleware stub.
+//! HTTP firewall middleware (header → authenticator → request token attribute).
 
 use std::sync::Arc;
 
