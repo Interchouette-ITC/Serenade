@@ -105,6 +105,20 @@ Sync in-process dispatch lives in **`serenade-messenger`**: implement `Message` 
 
 RustaShop jobs (webhooks retry, agent runs, sandbox) should plug into messenger, not ad-hoc `spawn` everywhere.
 
+## Serializer
+
+DTO ↔ wire formats live in **`serenade-serializer`** ([#12](https://github.com/Interchouette-ITC/Serenade/issues/12)).
+
+| Piece | Role |
+| --- | --- |
+| `Encoder` / `Decoder` | Intermediate `serde_json::Value` ↔ bytes; `JsonEncoder` / `JsonDecoder` ship for `json` |
+| `Normalizer` / `Denormalizer` | Object ↔ `Value` for types that need a custom graph walk |
+| `NormalizerRegistry` | First matching normalizer/denormalizer wins |
+| `Serializer` | Normalize then encode; decode then denormalize (`SerializerInterface` analogue) |
+| Serde bridge | `serialize_value` / `deserialize_value` for typed `Serialize` / `DeserializeOwned` JSON |
+
+Custom types register normalizers on the registry. Redis/XML formats are out of scope for v0.
+
 ## Configuration layers
 
 `serenade-config` loads **TOML** and YAML mappings, deep-merges them, interpolates `${VAR}` / `${VAR:-default}`, and flattens dotted keys into the DI `ParameterBag`.
