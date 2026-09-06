@@ -133,3 +133,18 @@ fn firewall_anonymous_when_allowed() {
     let response = kernel.handle(Request::new(Method::Get, "/"));
     assert_eq!(response.status(), 200);
 }
+
+#[test]
+fn role_voter_denies_anonymous_and_wrong_role() {
+    let voter = RoleVoter::new("ROLE_ADMIN", "admin.area");
+    assert_eq!(
+        voter.vote(&UsernamePasswordToken::anonymous(), "admin.area"),
+        Vote::Deny
+    );
+    let user_token = UsernamePasswordToken::authenticated(
+        InMemoryUser::new("u", vec!["ROLE_USER".to_owned()]),
+        "k",
+    );
+    assert_eq!(voter.vote(&user_token, "admin.area"), Vote::Deny);
+    assert_eq!(voter.vote(&user_token, "other"), Vote::Abstain);
+}
