@@ -10,6 +10,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [KERNEL.md](KERNEL.md)       | Kernel components and responsibilities                 |
 | [CONSOLE.md](CONSOLE.md)     | Console Application, commands, `--env` / ratatui       |
 | [RECIPES.md](RECIPES.md)     | Flex-like recipes, `serenade new`, Cargo stays PM      |
+| [SECURITY.md](SECURITY.md)   | AuthN/Z stubs, firewall, voters, bearer/API key plug-in |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model, extension points, composition            |
 | [PERSISTENCE.md](PERSISTENCE.md) | Adapter pattern, repository traits, `UnitOfWork` |

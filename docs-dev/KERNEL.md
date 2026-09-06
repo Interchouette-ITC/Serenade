@@ -132,6 +132,18 @@ Constraint checks live in **`serenade-validator`** ([#13](https://github.com/Int
 
 Register message types on the hook, then wrap the bus with `ValidationMiddleware`.
 
+## Security (stubs v0)
+
+AuthN/Z hooks live in **`serenade-security`** ([#10](https://github.com/Interchouette-ITC/Serenade/issues/10)). See [SECURITY.md](SECURITY.md).
+
+| Piece | Role |
+| --- | --- |
+| `UserInterface` / `TokenInterface` | Principal and credentials carrier |
+| `Voter` / `AccessDecisionManager` | Affirmative access checks |
+| `FirewallMiddleware` | HTTP middleware: header → `Authenticator` → `_security_token` attribute |
+
+OAuth/OIDC is out of scope. Apps plug bearer or API-key authenticators.
+
 ## Configuration layers
 
 `serenade-config` loads **TOML** and YAML mappings, deep-merges them, interpolates `${VAR}` / `${VAR:-default}`, and flattens dotted keys into the DI `ParameterBag`.
