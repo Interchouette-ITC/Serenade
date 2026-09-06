@@ -15,6 +15,7 @@ members = [
     "crates/serenade-serializer",
     "crates/serenade-validator",
     "crates/serenade-security",
+    "crates/serenade-cache",
     "examples/demo-app",
 ]
 resolver = "2"
@@ -43,6 +44,7 @@ serenade-messenger = { path = "crates/serenade-messenger", version = "0.1.0" }
 serenade-serializer = { path = "crates/serenade-serializer", version = "0.1.0" }
 serenade-validator = { path = "crates/serenade-validator", version = "0.1.0" }
 serenade-security = { path = "crates/serenade-security", version = "0.1.0" }
+serenade-cache = { path = "crates/serenade-cache", version = "0.1.0" }
 actix-web = "4"
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }

@@ -1,0 +1,16 @@
+[package]
+name = "serenade-cache"
+description = "PSR-like cache contracts and in-memory ArrayAdapter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serenade-di = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

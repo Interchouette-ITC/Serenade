@@ -144,6 +144,18 @@ AuthN/Z hooks live in **`serenade-security`** ([#10](https://github.com/Intercho
 
 OAuth/OIDC is out of scope. Apps plug bearer or API-key authenticators.
 
+## Cache
+
+PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouette-ITC/Serenade/issues/9)).
+
+| Piece | Role |
+| --- | --- |
+| `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL |
+| `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear |
+| `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` |
+
+In-memory only in #9. **Follow-up:** open and land a Redis adapter PR (`RedisAdapter: CacheItemPool`) after this merges.
+
 ## Configuration layers
 
 `serenade-config` loads **TOML** and YAML mappings, deep-merges them, interpolates `${VAR}` / `${VAR:-default}`, and flattens dotted keys into the DI `ParameterBag`.
