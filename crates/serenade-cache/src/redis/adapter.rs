@@ -255,3 +255,41 @@ mod tests {
         assert!(remaining_px_ms(Some(future)).unwrap() >= 1);
     }
 }
+
+#[cfg(all(test, feature = "redis"))]
+mod pool_checkout_tests {
+    use std::sync::Arc;
+    use std::thread;
+    use std::time::Duration;
+
+    use super::RedisAdapter;
+    use crate::{BytesMarshaller, CacheItemPool, RedisAdapterConfig};
+
+    #[test]
+    fn connection_checkout_times_out_when_pool_exhausted() {
+        let url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| String::from("redis://127.0.0.1:6379/0"));
+        let config = RedisAdapterConfig::new(url)
+            .with_prefix("serenade-ut:exh:")
+            .with_pool_max_size(1)
+            .with_connection_timeout(Duration::from_millis(150));
+        let pool =
+            Arc::new(RedisAdapter::connect(config, Arc::new(BytesMarshaller)).expect("connect"));
+        let blocker = Arc::clone(&pool);
+        let handle = thread::spawn(move || {
+            let mut conn = blocker.connection().expect("hold connection");
+            let _: Option<(String, String)> = redis::cmd("BLPOP")
+                .arg("serenade-ut:exh:blocklist")
+                .arg(2.0)
+                .query(&mut *conn)
+                .expect("blpop");
+        });
+        thread::sleep(Duration::from_millis(80));
+        assert!(
+            pool.connection().is_err(),
+            "checkout must time out while BLPOP holds the only connection"
+        );
+        assert!(pool.get_item("x").is_err());
+        handle.join().expect("join");
+    }
+}
