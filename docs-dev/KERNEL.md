@@ -157,6 +157,10 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 
 Default DI pool is in-memory. Apps register `RedisAdapter` when they need Redis.
 
+## Observability (structured logging)
+
+`serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Apps call `init` from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md). Profiler log capture is a later bridge (#56).
+
 ## Configuration layers
 
 `serenade-config` loads **TOML** and YAML mappings, deep-merges them, interpolates `${VAR}` / `${VAR:-default}`, and flattens dotted keys into the DI `ParameterBag`.

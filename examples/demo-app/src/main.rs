@@ -11,6 +11,7 @@ use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_event::DISPATCHER_SERVICE;
 use serenade_http::{Method, Route, RouteCollection, RouteLoader};
 use serenade_kernel::{App, Application, BundleInterface, Environment};
+use serenade_observability::{init, LoggingConfig, APP, KERNEL};
 
 struct DemoBundle;
 
@@ -65,6 +66,16 @@ fn main() -> Result<(), BundleError> {
         }
     })?;
 
+    let log_dir = root.join("var/log");
+    let _logging =
+        init(&LoggingConfig::for_environment(&environment, &log_dir)).map_err(|error| {
+            BundleError::Extension {
+                alias: "demo",
+                message: error.to_string(),
+            }
+        })?;
+    tracing::info!(target: KERNEL, environment = environment.as_str(), "demo boot");
+
     let mut app = App::new(environment.clone());
     app.register_bundle(DemoBundle)?;
     app.register_bundle(FrameworkBundle)?;
@@ -96,6 +107,12 @@ fn main() -> Result<(), BundleError> {
     for route in collection.routes() {
         println!("  {} {} {:?}", route.name(), route.path(), route.methods());
     }
+    tracing::info!(
+        target: APP,
+        bundles = app.kernel().bundle_names().len(),
+        routes = collection.len(),
+        "demo ready"
+    );
 
     app.shutdown()?;
     Ok(())
