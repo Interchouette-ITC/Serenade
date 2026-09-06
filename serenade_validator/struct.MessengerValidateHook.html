@@ -8,39 +8,39 @@
     RecursiveValidator, Validatable, Validator,
 };
 
-<span class="kw">struct </span>PlaceOrder {
-    sku: String,
+<span class="kw">struct </span>EnqueueJob {
+    code: String,
 }
 
-<span class="kw">impl </span>Message <span class="kw">for </span>PlaceOrder {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"order.place"</span>;
+<span class="kw">impl </span>Message <span class="kw">for </span>EnqueueJob {
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"job.enqueue"</span>;
 }
-<span class="kw">impl </span>Command <span class="kw">for </span>PlaceOrder {}
+<span class="kw">impl </span>Command <span class="kw">for </span>EnqueueJob {}
 
-<span class="kw">impl </span>Validatable <span class="kw">for </span>PlaceOrder {
+<span class="kw">impl </span>Validatable <span class="kw">for </span>EnqueueJob {
     <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>, validator: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Validator) -&gt; ConstraintViolationList {
         validator.validate_value(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.sku,
-            <span class="string">"sku"</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.code,
+            <span class="string">"code"</span>,
             <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>NotBlank <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Constraint, <span class="kw-2">&amp;</span>Length::new(<span class="number">1</span>, <span class="number">32</span>)],
         )
     }
 }
 
 <span class="kw">struct </span>OkHandler;
-<span class="kw">impl </span>CommandHandler&lt;PlaceOrder&gt; <span class="kw">for </span>OkHandler {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>PlaceOrder) -&gt; <span class="prelude-ty">Result</span>&lt;(), serenade_messenger::MessengerError&gt; {
+<span class="kw">impl </span>CommandHandler&lt;EnqueueJob&gt; <span class="kw">for </span>OkHandler {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>EnqueueJob) -&gt; <span class="prelude-ty">Result</span>&lt;(), serenade_messenger::MessengerError&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="kw">let </span><span class="kw-2">mut </span>hook = MessengerValidateHook::new(RecursiveValidator);
-hook.register::&lt;PlaceOrder&gt;();
+hook.register::&lt;EnqueueJob&gt;();
 <span class="kw">let </span><span class="kw-2">mut </span>bus = MessageBus::new();
 bus.add_middleware(ValidationMiddleware::new(hook));
 bus.register_command(OkHandler).unwrap();
 <span class="macro">assert!</span>(bus
-    .dispatch_command(<span class="kw-2">&amp;</span>PlaceOrder { sku: String::new() })
+    .dispatch_command(<span class="kw-2">&amp;</span>EnqueueJob { code: String::new() })
     .is_err());</code></pre></div></div></details><h2 id="implementations" class="section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-MessengerValidateHook%3CV%3E" class="impl"><a class="src rightside" href="../src/serenade_validator/messenger.rs.html#66-92">Source</a><a href="#impl-MessengerValidateHook%3CV%3E" class="anchor">§</a><h3 class="code-header">impl&lt;V&gt; <a class="struct" href="struct.MessengerValidateHook.html" title="struct serenade_validator::MessengerValidateHook">MessengerValidateHook</a>&lt;V&gt;</h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.new" class="method"><a class="src rightside" href="../src/serenade_validator/messenger.rs.html#69-74">Source</a><h4 class="code-header">pub fn <a href="#method.new" class="fn">new</a>(validator: V) -&gt; Self</h4></section></summary><div class="docblock"><p>Creates a hook around <code>validator</code>.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.register" class="method"><a class="src rightside" href="../src/serenade_validator/messenger.rs.html#77-91">Source</a><h4 class="code-header">pub fn <a href="#method.register" class="fn">register</a>&lt;T&gt;(&amp;mut self)<div class="where">where
     T: <a class="trait" href="../serenade_messenger/message/trait.Message.html" title="trait serenade_messenger::message::Message">Message</a> + <a class="trait" href="trait.Validatable.html" title="trait serenade_validator::Validatable">Validatable</a> + 'static,</div></h4></section></summary><div class="docblock"><p>Registers <code>T</code> under <code>T::NAME</code> when <code>T: Message + Validatable</code>.</p>

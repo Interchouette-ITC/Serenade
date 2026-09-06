@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["version"],"mod":["cart","category","error","order","pagination","persist_param","product","unit_of_work"],"trait":["EntityId"]};
+window.SIDEBAR_ITEMS = {"fn":["version"],"mod":["error","pagination","persist_param","unit_of_work"],"trait":["EntityId"]};

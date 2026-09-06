@@ -10,7 +10,7 @@
 <span class="kw">use </span>serenade_serializer::serialize_value;
 
 <span class="attr">#[derive(Serialize)]
-</span><span class="kw">struct </span>Product { sku: String }
+</span><span class="kw">struct </span>Sample { code: String }
 
-<span class="kw">let </span>bytes = serialize_value(<span class="kw-2">&amp;</span>Product { sku: <span class="string">"A"</span>.into() }, <span class="string">"json"</span>).expect(<span class="string">"ok"</span>);
+<span class="kw">let </span>bytes = serialize_value(<span class="kw-2">&amp;</span>Sample { code: <span class="string">"A"</span>.into() }, <span class="string">"json"</span>).expect(<span class="string">"ok"</span>);
 <span class="macro">assert!</span>(bytes.starts_with(<span class="string">b"{"</span>));</code></pre></div></div></details></section></div></main></body></html>

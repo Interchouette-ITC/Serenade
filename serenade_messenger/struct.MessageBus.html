@@ -4,25 +4,25 @@
     Command, CommandHandler, Message, MessageBus, MessengerError,
 };
 
-<span class="kw">struct </span>PlaceOrder;
+<span class="kw">struct </span>EnqueueJob;
 
-<span class="kw">impl </span>Message <span class="kw">for </span>PlaceOrder {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"order.place"</span>;
+<span class="kw">impl </span>Message <span class="kw">for </span>EnqueueJob {
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"job.enqueue"</span>;
 }
 
-<span class="kw">impl </span>Command <span class="kw">for </span>PlaceOrder {}
+<span class="kw">impl </span>Command <span class="kw">for </span>EnqueueJob {}
 
-<span class="kw">struct </span>PlaceOrderHandler;
+<span class="kw">struct </span>EnqueueJobHandler;
 
-<span class="kw">impl </span>CommandHandler&lt;PlaceOrder&gt; <span class="kw">for </span>PlaceOrderHandler {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _command: <span class="kw-2">&amp;</span>PlaceOrder) -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt; {
+<span class="kw">impl </span>CommandHandler&lt;EnqueueJob&gt; <span class="kw">for </span>EnqueueJobHandler {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _command: <span class="kw-2">&amp;</span>EnqueueJob) -&gt; <span class="prelude-ty">Result</span>&lt;(), MessengerError&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="kw">let </span><span class="kw-2">mut </span>bus = MessageBus::new();
-bus.register_command(PlaceOrderHandler).expect(<span class="string">"register"</span>);
-bus.dispatch_command(<span class="kw-2">&amp;</span>PlaceOrder).expect(<span class="string">"dispatch"</span>);</code></pre></div></div></details><h2 id="implementations" class="section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-MessageBus" class="impl"><a class="src rightside" href="../src/serenade_messenger/bus.rs.html#81-204">Source</a><a href="#impl-MessageBus" class="anchor">§</a><h3 class="code-header">impl <a class="struct" href="struct.MessageBus.html" title="struct serenade_messenger::MessageBus">MessageBus</a></h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.new" class="method"><a class="src rightside" href="../src/serenade_messenger/bus.rs.html#84-86">Source</a><h4 class="code-header">pub fn <a href="#method.new" class="fn">new</a>() -&gt; Self</h4></section></summary><div class="docblock"><p>Creates an empty bus.</p>
+bus.register_command(EnqueueJobHandler).expect(<span class="string">"register"</span>);
+bus.dispatch_command(<span class="kw-2">&amp;</span>EnqueueJob).expect(<span class="string">"dispatch"</span>);</code></pre></div></div></details><h2 id="implementations" class="section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-MessageBus" class="impl"><a class="src rightside" href="../src/serenade_messenger/bus.rs.html#81-204">Source</a><a href="#impl-MessageBus" class="anchor">§</a><h3 class="code-header">impl <a class="struct" href="struct.MessageBus.html" title="struct serenade_messenger::MessageBus">MessageBus</a></h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.new" class="method"><a class="src rightside" href="../src/serenade_messenger/bus.rs.html#84-86">Source</a><h4 class="code-header">pub fn <a href="#method.new" class="fn">new</a>() -&gt; Self</h4></section></summary><div class="docblock"><p>Creates an empty bus.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.add_middleware" class="method"><a class="src rightside" href="../src/serenade_messenger/bus.rs.html#89-91">Source</a><h4 class="code-header">pub fn <a href="#method.add_middleware" class="fn">add_middleware</a>(&amp;mut self, middleware: impl <a class="trait" href="trait.Middleware.html" title="trait serenade_messenger::Middleware">Middleware</a> + 'static)</h4></section></summary><div class="docblock"><p>Appends a middleware layer (first registered runs outermost).</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.middleware_count" class="method"><a class="src rightside" href="../src/serenade_messenger/bus.rs.html#95-97">Source</a><h4 class="code-header">pub fn <a href="#method.middleware_count" class="fn">middleware_count</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.98.1/std/primitive.usize.html">usize</a></h4></section></summary><div class="docblock"><p>Number of registered middleware layers.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.register_command" class="method"><a class="src rightside" href="../src/serenade_messenger/bus.rs.html#104-120">Source</a><h4 class="code-header">pub fn <a href="#method.register_command" class="fn">register_command</a>&lt;C, H&gt;(
