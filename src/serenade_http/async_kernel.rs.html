@@ -7,9 +7,9 @@
 <a href=#7 id=7 data-nosnippet>7</a>
 <a href=#8 id=8 data-nosnippet>8</a><span class="doccomment">/// Runs an async controller and maps errors to responses.
 <a href=#9 id=9 data-nosnippet>9</a>///
-<a href=#10 id=10 data-nosnippet>10</a>/// Middleware is not wired on this type yet; use for Actix/`listen` apps that
-<a href=#11 id=11 data-nosnippet>11</a>/// need `await` in controllers (database I/O). Sync stacks keep using
-<a href=#12 id=12 data-nosnippet>12</a>/// [`crate::HttpKernel`].
+<a href=#10 id=10 data-nosnippet>10</a>/// Unlike [`crate::HttpKernel`], this type has no middleware pipeline: use it
+<a href=#11 id=11 data-nosnippet>11</a>/// for Actix/`listen` apps that need `await` in controllers (database I/O).
+<a href=#12 id=12 data-nosnippet>12</a>/// Sync stacks keep using [`crate::HttpKernel`].
 <a href=#13 id=13 data-nosnippet>13</a>///
 <a href=#14 id=14 data-nosnippet>14</a>/// # Examples
 <a href=#15 id=15 data-nosnippet>15</a>///

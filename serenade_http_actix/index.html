@@ -2,8 +2,8 @@
 <p>Convert Actix requests into Serenade <a href="../serenade_http/request/struct.Request.html" title="struct serenade_http::request::Request"><code>Request</code></a> values,
 run a kernel (<a href="../serenade_http/kernel/struct.HttpKernel.html" title="struct serenade_http::kernel::HttpKernel"><code>HttpKernel</code></a> sync or
 <a href="../serenade_http/async_kernel/struct.AsyncHttpKernel.html" title="struct serenade_http::async_kernel::AsyncHttpKernel"><code>AsyncHttpKernel</code></a>), then map the Serenade
-response back to Actix. An Axum adapter can follow the same shape without
-changing the foundation crate.</p>
+response back to Actix. Other listen adapters can reuse the same
+request/response mapping without changing the foundation crate.</p>
 <p>Typical sync handler:</p>
 
 <div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">async fn </span>healthz(
