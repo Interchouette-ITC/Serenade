@@ -98,6 +98,7 @@ See [`../docs-dev/KERNEL.md`](../docs-dev/KERNEL.md).
 | [`../docs-dev/CONSOLE.md`](../docs-dev/CONSOLE.md) | Console Application |
 | [`../docs-dev/RECIPES.md`](../docs-dev/RECIPES.md) | Flex-like recipes + `serenade` CLI |
 | [`../docs-dev/BUNDLES.md`](../docs-dev/BUNDLES.md) | Bundles and extensions |
+| [`../docs-dev/WASM.md`](../docs-dev/WASM.md) | Wasm host plumbing (wasmtime CM + Wasmer WASIX) |
 | [`../docs-dev/PERSISTENCE.md`](../docs-dev/PERSISTENCE.md) | Contracts, adapters, domain vs hooks |
 | [`../docs-dev/RUSTASHOP.md`](../docs-dev/RUSTASHOP.md) | Illustrative application layout |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Lint bar, Make layout, PR habits |

@@ -45,13 +45,13 @@ Bundles may also implement `RouteLoader` (`serenade-http`) to contribute routes.
 
 ## Bundle vs Wasm plugin
 
-| | Bundle | Wasm / WIT plugin |
+| | Bundle | Wasm / WIT guest |
 | --- | --- | --- |
 | Trust | Same process, signed release | Sandboxed guest |
 | Use | First-party features, trusted extensions | Merchant code, polyglot scripts |
-| Serenade role | DI + lifecycle | Host capability bus (product) |
+| Serenade role | DI + lifecycle | Host **plumbing** (`serenade-component-host`, `serenade-sandbox`); product owns WIT ABI and fixtures |
 
-Both can coexist in product apps; Serenade bundles are the **in-process** story.
+Both can coexist in product apps; Serenade bundles are the **in-process** story. See [WASM.md](WASM.md).
 
 ## Layout today
 

@@ -17,6 +17,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model, extension points, composition            |
+| [WASM.md](WASM.md)           | Wasm host plumbing (wasmtime CM + Wasmer WASIX)        |
 | [PERSISTENCE.md](PERSISTENCE.md) | Adapter pattern, repository traits, `UnitOfWork` |
 | [RUSTASHOP.md](RUSTASHOP.md) | Illustrative RustaShop crate map (example, not locked) |
 
@@ -25,7 +26,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 1. **Choice, not prescription** - persistence, ORM, HTTP server for the _application_ are application decisions. Serenade exposes contracts and adapters.
 2. **Kernel vs product** - Serenade owns cross-cutting infrastructure; products own domain (commerce, CMS, etc.).
 3. **Bundles compose components** - like Symfony bundles, not monolithic framework magic.
-4. **Explicit extension points** - events, tagged services, middleware, WIT/sandbox hooks at the product layer when needed.
+4. **Explicit extension points** - events, tagged services, middleware; Wasm host **plumbing** in Serenade ([WASM.md](WASM.md)), WIT/sandbox **ABI and fixtures** at the product layer.
 
 ## Related product
 
