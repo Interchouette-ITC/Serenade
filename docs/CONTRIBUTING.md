@@ -11,7 +11,7 @@ Thank you for improving the Serenade framework. This repo ships **kernel contrac
 make ci
 ```
 
-3. One concern per PR. Draft until the slice is complete.
+3. One concern per PR. Finish the concern locally, then open a **ready** PR (use draft only when the branch must be visible before that concern is done).
 4. Every public item needs rustdoc. Add or extend unit tests for behavior you introduce.
 
 ## Toolchain
@@ -53,7 +53,7 @@ The root `Makefile` includes fragments under `make/`:
 | `make/common.mk` | Shared variables (`ROOT`, `CARGO`, `ARGS`) |
 | `make/ci.mk` | Quality gates (`lint`, `test`, `doc`, `ci`) |
 | `make/cli.mk` | Day-to-day aliases (`serenade`, `tui`, `console`, `demo`) |
-| `make/docker.mk` | Container help stub (`docker-help`); compose targets land here when added |
+| `make/docker.mk` | Docker helpers (`redis-up`, `redis-test`, `docker-help`) |
 
 Examples:
 

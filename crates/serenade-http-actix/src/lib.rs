@@ -3,8 +3,8 @@
 //! Convert Actix requests into Serenade [`Request`](serenade_http::Request) values,
 //! run a kernel ([`HttpKernel`](serenade_http::HttpKernel) sync or
 //! [`AsyncHttpKernel`](serenade_http::AsyncHttpKernel)), then map the Serenade
-//! response back to Actix. An Axum adapter can follow the same shape without
-//! changing the foundation crate.
+//! response back to Actix. Other listen adapters can reuse the same
+//! request/response mapping without changing the foundation crate.
 //!
 //! Typical sync handler:
 //!

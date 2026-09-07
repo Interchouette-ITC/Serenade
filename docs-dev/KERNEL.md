@@ -20,7 +20,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Serializer** | DTO ↔ JSON (and other formats); normalizers |
 | **Validator** | Constraint validation on DTOs and commands |
 | **Contracts** | Stable traits for persistence, clock, id generation, etc. |
-| **Observability** | Structured logging conventions (Monolog-like channels / `var/log` layout); tracing/metrics hooks; profiler bridge later |
+| **Observability** | Structured logging conventions (Monolog-like channels / `var/log` layout); tracing/metrics hooks |
 | **Testing** | Kernel test harness, fake container, event assertion helpers |
 
 ## Lifecycle
@@ -101,9 +101,7 @@ Server crates stay thin:
 | Event bus | Side effects after commit |
 | Async transport | Queue/worker integration (product chooses backend) |
 
-Sync in-process dispatch lives in **`serenade-messenger`**: implement `Message` with a stable `NAME`, mark as `Command` or `Event`, register handlers on `MessageBus`, then `dispatch_command` / `dispatch_event`. Commands require exactly one handler; events fan out (missing handlers are a no-op). Register `Middleware` layers with `add_middleware` (first registered is outermost); built-ins include `LoggingMiddleware` + `LogSink` and `ValidationMiddleware` + `ValidateHook`. `DispatchContext` exposes `payload` (`&dyn Any`) so validation hooks can inspect the message. Async backends implement `Transport` (`send` returns a boxed future); `InMemoryTransport` is the in-process adapter for tests and local workers ([#11](https://github.com/Interchouette-ITC/Serenade/issues/11)).
-
-RustaShop jobs (webhooks retry, agent runs, sandbox) should plug into messenger, not ad-hoc `spawn` everywhere.
+Sync in-process dispatch lives in **`serenade-messenger`**: implement `Message` with a stable `NAME`, mark as `Command` or `Event`, register handlers on `MessageBus`, then `dispatch_command` / `dispatch_event`. Commands require exactly one handler; events fan out (missing handlers are a no-op). Register `Middleware` layers with `add_middleware` (first registered is outermost); built-ins include `LoggingMiddleware` + `LogSink` and `ValidationMiddleware` + `ValidateHook`. `DispatchContext` exposes `payload` (`&dyn Any`) so validation hooks can inspect the message. Async backends implement `Transport` (`send` returns a boxed future); `InMemoryTransport` is the in-process adapter for tests and local workers ([#11](https://github.com/Interchouette-ITC/Serenade/issues/11)). Products wire long-running work through messenger transports rather than ad-hoc task spawning.
 
 ## Serializer
 
