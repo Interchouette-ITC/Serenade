@@ -19,6 +19,7 @@ members = [
     "crates/serenade-cache",
     "crates/serenade-observability",
     "examples/demo-app",
+    "examples/MyFeed",
 ]
 resolver = "3"
 

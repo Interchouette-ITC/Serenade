@@ -5,6 +5,9 @@ coverage/
 !.env.example
 assets/
 *.snap.new
+.myfeed-state.json
+.myfeed.sqlite
+.myfeed.sqlite-*
 
 # Application log directory (apps own the path; convention is var/log)
 /var/log/
