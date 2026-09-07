@@ -190,10 +190,10 @@ impl Form {
             let _ = write!(
                 fields_html,
                 r#"<label for="{id}">{label}</label><input type="text" id="{id}" name="{name}" value="{value}" />"#,
-                id = escape_attr(&field.name),
-                label = escape_html(&field.name),
-                name = escape_attr(&field.name),
-                value = escape_attr(&field.value),
+                id = escape_attr(field.name()),
+                label = escape_html(field.name()),
+                name = escape_attr(field.name()),
+                value = escape_attr(field.value()),
             );
         }
         let html = format!(

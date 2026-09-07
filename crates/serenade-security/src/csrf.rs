@@ -72,13 +72,14 @@ impl HmacCsrfTokenManager {
         }
     }
 
-    fn sign(&self, token_id: &str, nonce_hex: &str) -> Result<String, SecurityError> {
-        let mut mac =
-            HmacSha256::new_from_slice(&self.secret).map_err(|_| SecurityError::CsrfGeneration)?;
+    fn sign(&self, token_id: &str, nonce_hex: &str) -> String {
+        // HMAC-SHA256 accepts any key length (including empty).
+        let mut mac = HmacSha256::new_from_slice(&self.secret)
+            .unwrap_or_else(|_| HmacSha256::new_from_slice(&[0_u8; 32]).expect("fallback key"));
         mac.update(token_id.as_bytes());
         mac.update(b":");
         mac.update(nonce_hex.as_bytes());
-        Ok(hex_encode(&mac.finalize().into_bytes()))
+        hex_encode(&mac.finalize().into_bytes())
     }
 }
 
@@ -87,7 +88,7 @@ impl CsrfTokenManager for HmacCsrfTokenManager {
         let mut nonce = [0_u8; 16];
         getrandom::fill(&mut nonce).map_err(|_| SecurityError::CsrfGeneration)?;
         let nonce_hex = hex_encode(&nonce);
-        let mac_hex = self.sign(token_id, &nonce_hex)?;
+        let mac_hex = self.sign(token_id, &nonce_hex);
         Ok(CsrfToken::new(token_id, format!("{nonce_hex}.{mac_hex}")))
     }
 
@@ -98,9 +99,7 @@ impl CsrfTokenManager for HmacCsrfTokenManager {
         if nonce_hex.is_empty() || mac_hex.is_empty() {
             return false;
         }
-        let Ok(expected) = self.sign(token.id(), nonce_hex) else {
-            return false;
-        };
+        let expected = self.sign(token.id(), nonce_hex);
         expected.as_bytes().ct_eq(mac_hex.as_bytes()).into()
     }
 }
@@ -124,10 +123,20 @@ mod tests {
         let mgr = HmacCsrfTokenManager::new(b"test-secret-key-32bytes-minimum!!");
         let token = mgr.get_token("comment").expect("token");
         assert_eq!(token.id(), "comment");
+        assert!(token.value().contains('.'));
         assert!(mgr.is_token_valid(&token));
         let forged = CsrfToken::new("comment", "deadbeef.badmac");
         assert!(!mgr.is_token_valid(&forged));
         let wrong_id = CsrfToken::new("other", token.value());
         assert!(!mgr.is_token_valid(&wrong_id));
+    }
+
+    #[test]
+    fn rejects_malformed_token_values() {
+        let mgr = HmacCsrfTokenManager::new(b"test-secret-key-32bytes-minimum!!");
+        assert!(!mgr.is_token_valid(&CsrfToken::new("id", "nodot")));
+        assert!(!mgr.is_token_valid(&CsrfToken::new("id", ".mac")));
+        assert!(!mgr.is_token_valid(&CsrfToken::new("id", "nonce.")));
+        assert!(!mgr.is_token_valid(&CsrfToken::new("id", ".")));
     }
 }
