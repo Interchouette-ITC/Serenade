@@ -1,6 +1,6 @@
 # User-facing aliases (scaffolding CLI + demo console). Prefer these over raw cargo run.
 
-.PHONY: serenade serenade-tui tui recipe-list console demo
+.PHONY: serenade serenade-tui tui recipe-list console demo myfeed
 
 # Scaffolding CLI: `make serenade` or `make serenade ARGS='new demo --path /tmp'`
 serenade:
@@ -20,3 +20,7 @@ console:
 # Demo HTTP binary
 demo:
 	cd $(ROOT) && $(CARGO) run -p serenade-demo-app -- $(ARGS)
+
+# MyFeed beginner demo (HTML + Form/CSRF)
+myfeed:
+	cd $(ROOT) && $(CARGO) run -p my_feed -- $(ARGS)

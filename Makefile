@@ -43,6 +43,7 @@ help:
 	@echo "  make console ARGS='serenade:about'"
 	@echo "  make console ARGS='--interactive'"
 	@echo "  make demo"
+	@echo "  make myfeed               MyFeed beginner demo (:8090)"
 	@echo ""
 	@echo "Docker (make/docker.mk):"
 	@echo "  make docker-help"

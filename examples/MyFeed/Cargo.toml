@@ -1,0 +1,31 @@
+[package]
+name = "my_feed"
+description = "MyFeed: open public feed beginner demo for Serenade"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "myfeed"
+path = "src/main.rs"
+
+[dependencies]
+emojis = "0.9"
+ammonia = "4"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serenade-form = { workspace = true }
+serenade-http = { workspace = true }
+serenade-http-actix = { workspace = true }
+serenade-security = { workspace = true }
+serenade-validator = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+serenade-http = { workspace = true }
+
+[lints]
+workspace = true

@@ -12,6 +12,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [RECIPES.md](RECIPES.md)     | Flex-like recipes, `serenade new`, Cargo stays PM      |
 | [SECURITY.md](SECURITY.md)   | AuthN/Z, firewall, voters, CSRF, bearer/API key |
 | [FORMS.md](FORMS.md)         | HTML forms, CSRF default-on, XSS-safe render   |
+| [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/MyFeed`) |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
