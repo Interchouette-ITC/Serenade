@@ -188,16 +188,18 @@
 <a href=#188 id=188 data-nosnippet>188</a>    </span><span class="kw">fn </span>reject_param_owned_and_free_fns() {
 <a href=#189 id=189 data-nosnippet>189</a>        <span class="kw">let </span>policy = PersistParamPolicy::enabled();
 <a href=#190 id=190 data-nosnippet>190</a>        <span class="macro">assert_eq!</span>(policy.reject_param_owned(<span class="string">"ok"</span>.to_owned()).unwrap(), <span class="string">"ok"</span>);
-<a href=#191 id=191 data-nosnippet>191</a>        <span class="macro">assert!</span>(policy
-<a href=#192 id=192 data-nosnippet>192</a>            .reject_param_owned(<span class="string">"a\0b"</span>.to_owned())
-<a href=#193 id=193 data-nosnippet>193</a>            .unwrap_err()
-<a href=#194 id=194 data-nosnippet>194</a>            .to_string()
-<a href=#195 id=195 data-nosnippet>195</a>            .contains(<span class="string">"NUL"</span>));
-<a href=#196 id=196 data-nosnippet>196</a>        <span class="macro">assert_eq!</span>(reject_unsafe_sql_param(<span class="string">"clean"</span>).unwrap(), <span class="string">"clean"</span>);
-<a href=#197 id=197 data-nosnippet>197</a>        <span class="macro">assert!</span>(reject_unsafe_sql_param(<span class="string">"x\0y"</span>).is_err());
-<a href=#198 id=198 data-nosnippet>198</a>        <span class="macro">assert_eq!</span>(reject_unsafe_sql_param_owned(<span class="string">"z"</span>.to_owned()).unwrap(), <span class="string">"z"</span>);
-<a href=#199 id=199 data-nosnippet>199</a>        <span class="macro">assert!</span>(PersistParamPolicy::enabled().is_enabled());
-<a href=#200 id=200 data-nosnippet>200</a>        <span class="macro">assert!</span>(!PersistParamPolicy::disabled().is_enabled());
-<a href=#201 id=201 data-nosnippet>201</a>    }
-<a href=#202 id=202 data-nosnippet>202</a>}
+<a href=#191 id=191 data-nosnippet>191</a>        <span class="macro">assert!</span>(
+<a href=#192 id=192 data-nosnippet>192</a>            policy
+<a href=#193 id=193 data-nosnippet>193</a>                .reject_param_owned(<span class="string">"a\0b"</span>.to_owned())
+<a href=#194 id=194 data-nosnippet>194</a>                .unwrap_err()
+<a href=#195 id=195 data-nosnippet>195</a>                .to_string()
+<a href=#196 id=196 data-nosnippet>196</a>                .contains(<span class="string">"NUL"</span>)
+<a href=#197 id=197 data-nosnippet>197</a>        );
+<a href=#198 id=198 data-nosnippet>198</a>        <span class="macro">assert_eq!</span>(reject_unsafe_sql_param(<span class="string">"clean"</span>).unwrap(), <span class="string">"clean"</span>);
+<a href=#199 id=199 data-nosnippet>199</a>        <span class="macro">assert!</span>(reject_unsafe_sql_param(<span class="string">"x\0y"</span>).is_err());
+<a href=#200 id=200 data-nosnippet>200</a>        <span class="macro">assert_eq!</span>(reject_unsafe_sql_param_owned(<span class="string">"z"</span>.to_owned()).unwrap(), <span class="string">"z"</span>);
+<a href=#201 id=201 data-nosnippet>201</a>        <span class="macro">assert!</span>(PersistParamPolicy::enabled().is_enabled());
+<a href=#202 id=202 data-nosnippet>202</a>        <span class="macro">assert!</span>(!PersistParamPolicy::disabled().is_enabled());
+<a href=#203 id=203 data-nosnippet>203</a>    }
+<a href=#204 id=204 data-nosnippet>204</a>}
 </code></pre></div></section></main></body></html>

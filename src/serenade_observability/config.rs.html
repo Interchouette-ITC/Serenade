@@ -192,29 +192,33 @@
 <a href=#192 id=192 data-nosnippet>192</a>            .expect(<span class="string">"lock"</span>);
 <a href=#193 id=193 data-nosnippet>193</a>
 <a href=#194 id=194 data-nosnippet>194</a>        <span class="kw">let </span>config = LoggingConfig::for_environment(<span class="kw-2">&amp;</span>Environment::Dev, <span class="string">"var/log"</span>);
-<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">unsafe </span>{
-<a href=#196 id=196 data-nosnippet>196</a>            std::env::remove_var(<span class="string">"SERENADE_LOG"</span>);
-<a href=#197 id=197 data-nosnippet>197</a>            std::env::remove_var(<span class="string">"RUST_LOG"</span>);
-<a href=#198 id=198 data-nosnippet>198</a>        }
-<a href=#199 id=199 data-nosnippet>199</a>        <span class="macro">assert!</span>(config.resolve_filter_directives().is_none());
-<a href=#200 id=200 data-nosnippet>200</a>
-<a href=#201 id=201 data-nosnippet>201</a>        <span class="kw">unsafe </span>{
-<a href=#202 id=202 data-nosnippet>202</a>            std::env::set_var(<span class="string">"RUST_LOG"</span>, <span class="string">"info"</span>);
-<a href=#203 id=203 data-nosnippet>203</a>        }
-<a href=#204 id=204 data-nosnippet>204</a>        <span class="macro">assert_eq!</span>(config.resolve_filter_directives().as_deref(), <span class="prelude-val">Some</span>(<span class="string">"info"</span>));
-<a href=#205 id=205 data-nosnippet>205</a>
-<a href=#206 id=206 data-nosnippet>206</a>        <span class="kw">unsafe </span>{
-<a href=#207 id=207 data-nosnippet>207</a>            std::env::set_var(<span class="string">"SERENADE_LOG"</span>, <span class="string">"serenade::app=debug"</span>);
-<a href=#208 id=208 data-nosnippet>208</a>        }
-<a href=#209 id=209 data-nosnippet>209</a>        <span class="macro">assert_eq!</span>(
-<a href=#210 id=210 data-nosnippet>210</a>            config.resolve_filter_directives().as_deref(),
-<a href=#211 id=211 data-nosnippet>211</a>            <span class="prelude-val">Some</span>(<span class="string">"serenade::app=debug"</span>)
-<a href=#212 id=212 data-nosnippet>212</a>        );
-<a href=#213 id=213 data-nosnippet>213</a>
-<a href=#214 id=214 data-nosnippet>214</a>        <span class="kw">unsafe </span>{
-<a href=#215 id=215 data-nosnippet>215</a>            std::env::remove_var(<span class="string">"SERENADE_LOG"</span>);
-<a href=#216 id=216 data-nosnippet>216</a>            std::env::remove_var(<span class="string">"RUST_LOG"</span>);
-<a href=#217 id=217 data-nosnippet>217</a>        }
-<a href=#218 id=218 data-nosnippet>218</a>    }
-<a href=#219 id=219 data-nosnippet>219</a>}
+<a href=#195 id=195 data-nosnippet>195</a>        <span class="comment">// SAFETY: test isolates log filter env vars.
+<a href=#196 id=196 data-nosnippet>196</a>        </span><span class="kw">unsafe </span>{
+<a href=#197 id=197 data-nosnippet>197</a>            std::env::remove_var(<span class="string">"SERENADE_LOG"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>            std::env::remove_var(<span class="string">"RUST_LOG"</span>);
+<a href=#199 id=199 data-nosnippet>199</a>        }
+<a href=#200 id=200 data-nosnippet>200</a>        <span class="macro">assert!</span>(config.resolve_filter_directives().is_none());
+<a href=#201 id=201 data-nosnippet>201</a>
+<a href=#202 id=202 data-nosnippet>202</a>        <span class="comment">// SAFETY: test isolates log filter env vars.
+<a href=#203 id=203 data-nosnippet>203</a>        </span><span class="kw">unsafe </span>{
+<a href=#204 id=204 data-nosnippet>204</a>            std::env::set_var(<span class="string">"RUST_LOG"</span>, <span class="string">"info"</span>);
+<a href=#205 id=205 data-nosnippet>205</a>        }
+<a href=#206 id=206 data-nosnippet>206</a>        <span class="macro">assert_eq!</span>(config.resolve_filter_directives().as_deref(), <span class="prelude-val">Some</span>(<span class="string">"info"</span>));
+<a href=#207 id=207 data-nosnippet>207</a>
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="comment">// SAFETY: test isolates log filter env vars.
+<a href=#209 id=209 data-nosnippet>209</a>        </span><span class="kw">unsafe </span>{
+<a href=#210 id=210 data-nosnippet>210</a>            std::env::set_var(<span class="string">"SERENADE_LOG"</span>, <span class="string">"serenade::app=debug"</span>);
+<a href=#211 id=211 data-nosnippet>211</a>        }
+<a href=#212 id=212 data-nosnippet>212</a>        <span class="macro">assert_eq!</span>(
+<a href=#213 id=213 data-nosnippet>213</a>            config.resolve_filter_directives().as_deref(),
+<a href=#214 id=214 data-nosnippet>214</a>            <span class="prelude-val">Some</span>(<span class="string">"serenade::app=debug"</span>)
+<a href=#215 id=215 data-nosnippet>215</a>        );
+<a href=#216 id=216 data-nosnippet>216</a>
+<a href=#217 id=217 data-nosnippet>217</a>        <span class="comment">// SAFETY: test isolates log filter env vars.
+<a href=#218 id=218 data-nosnippet>218</a>        </span><span class="kw">unsafe </span>{
+<a href=#219 id=219 data-nosnippet>219</a>            std::env::remove_var(<span class="string">"SERENADE_LOG"</span>);
+<a href=#220 id=220 data-nosnippet>220</a>            std::env::remove_var(<span class="string">"RUST_LOG"</span>);
+<a href=#221 id=221 data-nosnippet>221</a>        }
+<a href=#222 id=222 data-nosnippet>222</a>    }
+<a href=#223 id=223 data-nosnippet>223</a>}
 </code></pre></div></section></main></body></html>

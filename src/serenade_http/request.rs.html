@@ -60,7 +60,7 @@
 <a href=#60 id=60 data-nosnippet>60</a>    }
 <a href=#61 id=61 data-nosnippet>61</a>
 <a href=#62 id=62 data-nosnippet>62</a>    <span class="doccomment">/// Mutable headers (adapters and middleware).
-<a href=#63 id=63 data-nosnippet>63</a>    </span><span class="kw">pub fn </span>headers_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Headers {
+<a href=#63 id=63 data-nosnippet>63</a>    </span><span class="kw">pub const fn </span>headers_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Headers {
 <a href=#64 id=64 data-nosnippet>64</a>        <span class="kw-2">&amp;mut </span><span class="self">self</span>.headers
 <a href=#65 id=65 data-nosnippet>65</a>    }
 <a href=#66 id=66 data-nosnippet>66</a>
@@ -77,7 +77,7 @@
 <a href=#77 id=77 data-nosnippet>77</a>    }
 <a href=#78 id=78 data-nosnippet>78</a>
 <a href=#79 id=79 data-nosnippet>79</a>    <span class="doccomment">/// Mutable attributes (middleware, router, controller).
-<a href=#80 id=80 data-nosnippet>80</a>    </span><span class="kw">pub fn </span>attributes_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>AttributeBag {
+<a href=#80 id=80 data-nosnippet>80</a>    </span><span class="kw">pub const fn </span>attributes_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>AttributeBag {
 <a href=#81 id=81 data-nosnippet>81</a>        <span class="kw-2">&amp;mut </span><span class="self">self</span>.attributes
 <a href=#82 id=82 data-nosnippet>82</a>    }
 <a href=#83 id=83 data-nosnippet>83</a>}
