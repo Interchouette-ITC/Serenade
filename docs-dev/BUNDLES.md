@@ -18,10 +18,10 @@ Bundles are Serenade’s unit of **reusable composition**, analogous to Symfony 
 | Class | Examples |
 | --- | --- |
 | **Serenade core bundles** | `FrameworkBundle`, `SecurityBundle`, `ConsoleBundle`, `MessengerBundle` |
-| **RustaShop bundles** (product) | `CatalogBundle`, `CartBundle`, `CheckoutBundle`, `PaymentBundle` |
+| **Product bundles** (illustrative names only; not Serenade APIs) | e.g. `CatalogBundle`, `CartBundle`, `CheckoutBundle`, `PaymentBundle` in an application |
 | **Third-party / merchant** | Extension bundles or WIT plugins (product policy) |
 
-Symfony’s own features ship as bundles; RustaShop commerce features should too, not as loose modules in one crate.
+Symfony’s own features ship as bundles; product commerce features should too, not as loose modules in one crate.
 
 ## Registration
 

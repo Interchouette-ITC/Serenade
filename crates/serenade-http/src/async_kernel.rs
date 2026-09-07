@@ -7,9 +7,9 @@ use crate::{
 
 /// Runs an async controller and maps errors to responses.
 ///
-/// Middleware is not wired on this type yet; use for Actix/`listen` apps that
-/// need `await` in controllers (database I/O). Sync stacks keep using
-/// [`crate::HttpKernel`].
+/// Unlike [`crate::HttpKernel`], this type has no middleware pipeline: use it
+/// for Actix/`listen` apps that need `await` in controllers (database I/O).
+/// Sync stacks keep using [`crate::HttpKernel`].
 ///
 /// # Examples
 ///

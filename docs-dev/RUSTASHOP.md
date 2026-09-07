@@ -1,6 +1,6 @@
 # RustaShop on Serenade (illustrative)
 
-**Example only - not a locked RustaShop repo decision.** Shows how a Symfony-shaped product might sit on Serenade.
+**Example only - not a locked RustaShop repo decision.** Shows how a Symfony-shaped product might sit on Serenade. Names match the live [rustashop](https://github.com/Interchouette-ITC/rustashop) tree where helpful.
 
 ## Layering
 
@@ -8,8 +8,8 @@
 RustaShop application
 ├── Serenade kernel (lifecycle, DI, events, HTTP foundation, …)
 ├── Serenade + RustaShop bundles
-├── Chosen persistence (SQLx | SeaORM | Diesel)
-├── Chosen HTTP adapters (Actix kernel API, Axum MCP - current RustaShop doc)
+├── Chosen persistence (SQLx | SeaORM | Diesel spike)
+├── Chosen HTTP adapters (Actix commerce API; Axum reserved for MCP)
 └── UIs (Angular, rangular/Leptos) on OpenAPI + realtime
 ```
 
@@ -17,14 +17,16 @@ RustaShop application
 
 ```text
 crates/
-├── rustashop/              # Application kernel (registers bundles)
-├── rustashop-api/          # HTTP adapter: Actix (product choice today)
-├── rustashop-mcp/          # HTTP adapter: Axum MCP sidecar
-├── rustashop-domain/       # Pure domain (no Serenade imports in entities)
-├── rustashop-persistence/  # SQLx OR SeaORM OR Diesel - app choice
-├── rustashop-events/       # Domain events + Serenade dispatcher wiring
-├── rustashop-jobs/         # Messenger transports / workers
-└── rustashop-extension/    # Extension host glue (WIT, sandbox bridges)
+├── rustashop/                 # Application kernel (registers bundles)
+├── rustashop-api/             # Commerce HTTP (Actix / Serenade listen)
+├── rustashop-mcp/             # Axum MCP workspace member (no routes yet)
+├── rustashop-domain/          # Pure domain (no ORM types in entities)
+├── rustashop-persist/         # Feature-selected facade
+├── rustashop-persist-sqlx/    # SQLx adapter
+├── rustashop-persist-seaorm/  # SeaORM adapter
+├── rustashop-persist-diesel/  # Diesel spike (not facade-wired)
+├── rustashop-extensions/      # WIT Component Model host
+└── rustashop-sandbox/         # Wasmer polyglot sandbox host
 ```
 
 ## Example domain modules (inside domain or bundles)
@@ -60,8 +62,8 @@ Bundles then **compose** these modules: routes, services, subscribers, config.
 
 - Money as integer minor units
 - OpenAPI contract for both UIs
-- WebSocket-first realtime ([RustaShop REALTIME.md](https://github.com/Interchouette-ITC/RustaShop/blob/dev/docs-dev/REALTIME.md))
+- WebSocket-first realtime ([RustaShop REALTIME.md](https://github.com/Interchouette-ITC/rustashop/blob/dev/docs-dev/REALTIME.md))
 - WIT / Wasmer extension lanes
-- AI-native tools and MCP ([RustaShop AI-NATIVE.md](https://github.com/Interchouette-ITC/RustaShop/blob/dev/docs-dev/AI-NATIVE.md))
+- AI-native tools and MCP ([RustaShop AI-NATIVE.md](https://github.com/Interchouette-ITC/rustashop/blob/dev/docs-dev/AI-NATIVE.md))
 
 Framework work tracks in **this** repo; commerce epics track in the application repo.

@@ -17,7 +17,7 @@ Symfony-oriented application framework for Rust. **Not** Rails-style, **not** Dj
 
 Serenade does **not** impose SQLx, SeaORM, Diesel, or Actix vs Axum for your product HTTP surface. It provides architecture, contracts, and reusable components; the application chooses persistence and UI stacks. Cargo stays the package manager; Serenade owns composition (bundles, recipes, console).
 
-**Primary consumer (in progress):** [rustashop](https://github.com/Interchouette-ITC/rustashop) - commerce kernel on Serenade, the way [PrestaShop](https://www.prestashop.com/) builds on [Symfony](https://symfony.com/).
+**Primary consumer:** [rustashop](https://github.com/Interchouette-ITC/rustashop) - commerce product on Serenade, the way [PrestaShop](https://www.prestashop.com/) builds on [Symfony](https://symfony.com/).
 
 ## What you get today
 
