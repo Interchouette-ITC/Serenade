@@ -191,71 +191,81 @@
   }
 
   function bindAjaxForms() {
-    document.querySelectorAll("form[data-clitorine-ajax]").forEach(function (form) {
-      form.addEventListener("submit", function (event) {
-        event.preventDefault();
-        const kind = form.getAttribute("data-clitorine-ajax") || "";
-        const params = new URLSearchParams(new FormData(form));
-        fetch(form.action, {
-          method: "POST",
-          body: params.toString(),
-          credentials: "same-origin",
-          headers: {
-            "X-MyFeed-Ajax": "1",
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        })
-          .then(function (response) {
-            if (!response.ok) {
-              throw new Error("request failed");
-            }
-            return response.text();
+    document
+      .querySelectorAll("form[data-clitorine-ajax]")
+      .forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+          event.preventDefault();
+          const kind = form.getAttribute("data-clitorine-ajax") || "";
+          const params = new URLSearchParams(new FormData(form));
+          fetch(form.action, {
+            method: "POST",
+            body: params.toString(),
+            credentials: "same-origin",
+            headers: {
+              "X-MyFeed-Ajax": "1",
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
           })
-          .then(function (text) {
-            if (kind === "like") {
-              const article = form.closest("article");
-              const badge = article && article.querySelector("[data-like-count]");
-              const count = Number.parseInt(text.trim(), 10);
-              if (badge && Number.isFinite(count) && count > 0) {
-                badge.textContent = String(count) + " likes";
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("request failed");
               }
-              return;
-            }
-            if (kind === "comment") {
-              const wrap = form.parentElement;
-              form.reset();
-              showInlineNotice(
-                wrap,
-                text.trim() || "Comment sent. It will appear after approval."
-              );
-            }
-          })
-          .catch(function () {
-            form.submit();
-          });
+              return response.text();
+            })
+            .then(function (text) {
+              if (kind === "like") {
+                const article = form.closest("article");
+                const badge =
+                  article && article.querySelector("[data-like-count]");
+                const count = Number.parseInt(text.trim(), 10);
+                if (badge && Number.isFinite(count) && count > 0) {
+                  badge.textContent = String(count) + " likes";
+                }
+                return;
+              }
+              if (kind === "comment") {
+                const wrap = form.parentElement;
+                form.reset();
+                showInlineNotice(
+                  wrap,
+                  text.trim() || "Comment sent. It will appear after approval.",
+                );
+              }
+            })
+            .catch(function () {
+              form.submit();
+            });
+        });
       });
-    });
   }
 
   function bindDeleteModal() {
     const modalEl = byId("delete-post-modal");
     const confirmForm = byId("delete-post-confirm-form");
     const csrfSlot = byId("delete-post-csrf");
-    if (!modalEl || !confirmForm || !csrfSlot || typeof bootstrap === "undefined") {
+    if (
+      !modalEl ||
+      !confirmForm ||
+      !csrfSlot ||
+      typeof bootstrap === "undefined"
+    ) {
       return;
     }
-    document.querySelectorAll("[data-clitorine-delete]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        const action = btn.getAttribute("data-delete-action") || "";
-        const token = btn.getAttribute("data-delete-token") || "";
-        confirmForm.setAttribute("action", action);
-        csrfSlot.innerHTML =
-          '<input type="hidden" name="_token" value="' +
-          token.replace(/"/g, "&quot;") +
-          '" />';
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    document
+      .querySelectorAll("[data-clitorine-delete]")
+      .forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const action = btn.getAttribute("data-delete-action") || "";
+          const token = btn.getAttribute("data-delete-token") || "";
+          confirmForm.setAttribute("action", action);
+          csrfSlot.innerHTML =
+            '<input type="hidden" name="_token" value="' +
+            token.replace(/"/g, "&quot;") +
+            '" />';
+          bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
       });
-    });
   }
 
   function bind() {

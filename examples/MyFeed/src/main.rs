@@ -919,8 +919,7 @@ fn seed_if_empty(store: &FeedStore) {
         return;
     }
     let _ = store.add_post(NewPost {
-        body: "<p>Hello World from MyFeed - Bootstrap JS + Quill + Serenade forms/CSRF.</p>"
-            .into(),
+        body: "<p>Hello World from MyFeed - Bootstrap JS + Quill + Serenade forms/CSRF.</p>".into(),
         embed_url: Some("https://www.youtube.com/watch?v=MrQ41qf0Rqs".into()),
         image_data: None,
         category: "Ideas".into(),
