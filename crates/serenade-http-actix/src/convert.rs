@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use actix_web::http::{header::HeaderValue, StatusCode};
+use actix_web::http::{StatusCode, header::HeaderValue};
 use actix_web::{HttpRequest, HttpResponse};
 use serenade_http::{
     DefaultExceptionHandler, ExceptionHandler, HttpError, Method, Request, Response,

@@ -9,11 +9,11 @@ mod harness;
 mod subscriber;
 
 pub use compile_pass::{
-    RegisterEventSubscribersPass, SubscriberService, DISPATCHER_SERVICE, SUBSCRIBER_TAG,
+    DISPATCHER_SERVICE, RegisterEventSubscribersPass, SUBSCRIBER_TAG, SubscriberService,
 };
 pub use dispatcher::EventDispatcher;
 pub use error::EventError;
-pub use harness::{assert_dispatched, RecordingSubscriber};
+pub use harness::{RecordingSubscriber, assert_dispatched};
 pub use subscriber::{Event, EventSubscriber};
 
 /// Compile-time crate version for diagnostics.

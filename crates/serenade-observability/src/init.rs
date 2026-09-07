@@ -120,7 +120,7 @@ mod tests {
     use tracing::subscriber::with_default;
 
     use super::*;
-    use crate::{channels, LoggingConfig, Rotation};
+    use crate::{LoggingConfig, Rotation, channels};
 
     #[test]
     fn file_sink_writes_channel_line() {

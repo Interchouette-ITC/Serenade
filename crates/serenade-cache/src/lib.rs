@@ -11,7 +11,7 @@ mod pool;
 mod redis;
 
 pub use compile_pass::{
-    CachePoolService, RegisterDefaultCachePoolPass, CACHE_POOL_TAG, DEFAULT_CACHE_POOL_SERVICE,
+    CACHE_POOL_TAG, CachePoolService, DEFAULT_CACHE_POOL_SERVICE, RegisterDefaultCachePoolPass,
 };
 pub use error::CacheError;
 pub use item::{ArrayCacheItem, CacheItem};
@@ -19,8 +19,8 @@ pub use pool::{ArrayAdapter, CacheItemPool};
 
 #[cfg(feature = "redis")]
 pub use redis::{
-    redis_key, validate_logical_key, BytesMarshaller, CacheMarshaller, RedisAdapter,
-    RedisAdapterConfig,
+    BytesMarshaller, CacheMarshaller, RedisAdapter, RedisAdapterConfig, redis_key,
+    validate_logical_key,
 };
 
 /// Compile-time crate version for diagnostics.

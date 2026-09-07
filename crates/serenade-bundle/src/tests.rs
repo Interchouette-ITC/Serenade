@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use serenade_config::Config;
 use serenade_di::{ContainerBuilder, ServiceDefinition};
-use serenade_event::{EventDispatcher, DISPATCHER_SERVICE};
+use serenade_event::{DISPATCHER_SERVICE, EventDispatcher};
 use serenade_http::RouteCollection;
 use serenade_kernel::{App, Application, BundleInterface, BundleRegistry, Environment};
 
 use super::{
-    build_container, version, BundleError, Extension, FrameworkBundle, FrameworkExtension,
-    CONFIG_SERVICE, FRAMEWORK_BUNDLE, ROUTER_SERVICE,
+    BundleError, CONFIG_SERVICE, Extension, FRAMEWORK_BUNDLE, FrameworkBundle, FrameworkExtension,
+    ROUTER_SERVICE, build_container, version,
 };
 
 struct DemoExtension;

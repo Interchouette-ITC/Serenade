@@ -92,9 +92,11 @@ fn environment_debug_defaults() {
     assert!(!Environment::Custom("staging".into()).is_debug());
     assert!(!Kernel::new(Environment::Prod).debug());
     assert!(Kernel::new(Environment::Prod).with_debug(true).debug());
-    assert!(Kernel::new(Environment::Custom("staging".into()))
-        .with_debug(true)
-        .debug());
+    assert!(
+        Kernel::new(Environment::Custom("staging".into()))
+            .with_debug(true)
+            .debug()
+    );
 }
 
 #[rstest::rstest]

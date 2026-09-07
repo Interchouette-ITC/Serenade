@@ -13,8 +13,8 @@ mod serde_bridge;
 mod serializer;
 
 pub use context::NormalizationContext;
-pub use encoder::{Decoder, Encoder, JsonDecoder, JsonEncoder, FORMAT_JSON};
-pub use error::{from_serde_json, SerializerError};
+pub use encoder::{Decoder, Encoder, FORMAT_JSON, JsonDecoder, JsonEncoder};
+pub use error::{SerializerError, from_serde_json};
 pub use normalizer::{Denormalizer, Normalizer};
 pub use registry::NormalizerRegistry;
 pub use serde_bridge::{deserialize_value, serde_supports_format, serialize_value};

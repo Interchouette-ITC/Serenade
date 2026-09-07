@@ -12,8 +12,8 @@ pub mod unit_of_work;
 pub use error::{PersistenceError, RepositoryError};
 pub use pagination::PageRequest;
 pub use persist_param::{
-    persist_param_check_enabled, reject_unsafe_sql_param, reject_unsafe_sql_param_owned,
-    PersistParamPolicy, PERSIST_PARAM_CHECK_DISABLE_ENV,
+    PERSIST_PARAM_CHECK_DISABLE_ENV, PersistParamPolicy, persist_param_check_enabled,
+    reject_unsafe_sql_param, reject_unsafe_sql_param_owned,
 };
 pub use unit_of_work::UnitOfWork;
 

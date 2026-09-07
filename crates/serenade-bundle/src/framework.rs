@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use serenade_config::Config;
 use serenade_console::{
-    AboutCommand, CommandService, DebugConfigCommand, DebugContainerCommand, COMMAND_TAG,
+    AboutCommand, COMMAND_TAG, CommandService, DebugConfigCommand, DebugContainerCommand,
 };
 use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_http::RouteCollection;

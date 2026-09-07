@@ -56,7 +56,7 @@ impl ContainerBuilder {
     }
 
     /// Mutable parameter bag.
-    pub fn parameters_mut(&mut self) -> &mut ParameterBag {
+    pub const fn parameters_mut(&mut self) -> &mut ParameterBag {
         &mut self.parameters
     }
 
@@ -69,9 +69,9 @@ impl ContainerBuilder {
         &mut self,
         definition: ServiceDefinition,
         factory: impl Fn(&Container) -> Result<Box<dyn Any + Send + Sync>, DiError>
-            + Send
-            + Sync
-            + 'static,
+        + Send
+        + Sync
+        + 'static,
     ) -> Result<(), DiError> {
         let id = definition.id().to_owned();
         if self.services.contains_key(&id) || self.aliases.contains_key(&id) {

@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
 use crate::error::CliError;
 

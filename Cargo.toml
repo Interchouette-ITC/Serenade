@@ -19,15 +19,15 @@ members = [
     "crates/serenade-observability",
     "examples/demo-app",
 ]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0"
 version = "0.1.0"
 authors = ["Interchouette"]
 repository = "https://github.com/Interchouette-ITC/Serenade"
-rust-version = "1.77"
+rust-version = "1.85"
 
 [workspace.dependencies]
 serenade-kernel = { path = "crates/serenade-kernel", version = "0.1.0" }

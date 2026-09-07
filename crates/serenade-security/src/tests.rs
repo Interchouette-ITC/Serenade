@@ -1,9 +1,9 @@
 use serenade_http::{HttpKernel, Method, Request, Response};
 
 use super::{
-    request_token, version, AccessDecisionManager, Authenticator, FirewallMiddleware, InMemoryUser,
-    RoleVoter, SecurityError, TokenInterface, UserInterface, UsernamePasswordToken, Vote, Voter,
-    TOKEN_ATTRIBUTE,
+    AccessDecisionManager, Authenticator, FirewallMiddleware, InMemoryUser, RoleVoter,
+    SecurityError, TOKEN_ATTRIBUTE, TokenInterface, UserInterface, UsernamePasswordToken, Vote,
+    Voter, request_token, version,
 };
 
 struct ApiKeyAuthenticator {

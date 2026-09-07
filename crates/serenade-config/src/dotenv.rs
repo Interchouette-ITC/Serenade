@@ -50,7 +50,10 @@ pub fn load_dotenv(project_dir: impl AsRef<Path>, environment: &str) -> Result<(
             if preexisting.contains(&key) {
                 continue;
             }
-            std::env::set_var(key, value);
+            // SAFETY: dotenv load mutates process env before the app serves traffic.
+            unsafe {
+                std::env::set_var(key, value);
+            }
         }
     }
     Ok(())

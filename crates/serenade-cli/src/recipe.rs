@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use include_dir::{include_dir, Dir, File};
+use include_dir::{Dir, File, include_dir};
 use serde::Deserialize;
 
 use crate::error::CliError;

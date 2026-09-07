@@ -4,7 +4,7 @@ use serenade_event::{Event, EventDispatcher};
 use serenade_http::{HttpKernel, Method, Request, Response};
 use serenade_kernel::{BundleInterface, KernelPhase};
 
-use super::{assert_dispatched, version, HttpTestClient, RecordingSubscriber, SerenadeTestKernel};
+use super::{HttpTestClient, RecordingSubscriber, SerenadeTestKernel, assert_dispatched, version};
 
 struct EmptyBundle;
 

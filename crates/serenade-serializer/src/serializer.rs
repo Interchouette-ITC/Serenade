@@ -95,7 +95,7 @@ impl Serializer {
     }
 
     /// Mutable access to the normalizer registry.
-    pub fn registry_mut(&mut self) -> &mut NormalizerRegistry {
+    pub const fn registry_mut(&mut self) -> &mut NormalizerRegistry {
         &mut self.registry
     }
 

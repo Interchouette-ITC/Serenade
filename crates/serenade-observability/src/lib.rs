@@ -11,7 +11,7 @@ mod init;
 pub use channels::{APP, KERNEL, MESSENGER, REQUEST, SECURITY};
 pub use config::{LoggingConfig, Rotation};
 pub use error::ObservabilityError;
-pub use init::{build_subscriber, init, LoggingGuard};
+pub use init::{LoggingGuard, build_subscriber, init};
 
 /// Compile-time crate version for diagnostics.
 #[must_use]

@@ -10,7 +10,7 @@ mod user;
 
 pub use access::{AccessDecisionManager, RoleVoter, Subject, Vote, Voter};
 pub use error::SecurityError;
-pub use firewall::{request_token, Authenticator, FirewallMiddleware, TOKEN_ATTRIBUTE};
+pub use firewall::{Authenticator, FirewallMiddleware, TOKEN_ATTRIBUTE, request_token};
 pub use user::{InMemoryUser, TokenInterface, UserInterface, UsernamePasswordToken};
 
 /// Compile-time crate version for diagnostics.

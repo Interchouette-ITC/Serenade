@@ -10,7 +10,7 @@ mod kernel;
 
 pub use http_client::HttpTestClient;
 pub use kernel::SerenadeTestKernel;
-pub use serenade_event::{assert_dispatched, RecordingSubscriber};
+pub use serenade_event::{RecordingSubscriber, assert_dispatched};
 
 /// Compile-time crate version for diagnostics.
 #[must_use]

@@ -4,7 +4,7 @@ use std::net::ToSocketAddrs;
 
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
-use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{App, Error, HttpRequest, HttpResponse, HttpServer, web};
 use serenade_http::AsyncHttpKernel;
 
 use crate::dispatch;

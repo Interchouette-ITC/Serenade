@@ -5,8 +5,8 @@ use std::time::Duration;
 use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
 
 use super::{
-    version, ArrayAdapter, ArrayCacheItem, CacheError, CacheItem, CacheItemPool, CachePoolService,
-    RegisterDefaultCachePoolPass, CACHE_POOL_TAG, DEFAULT_CACHE_POOL_SERVICE,
+    ArrayAdapter, ArrayCacheItem, CACHE_POOL_TAG, CacheError, CacheItem, CacheItemPool,
+    CachePoolService, DEFAULT_CACHE_POOL_SERVICE, RegisterDefaultCachePoolPass, version,
 };
 
 #[test]

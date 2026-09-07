@@ -1,17 +1,17 @@
 //! Guided ratatui UI for picking and applying a recipe (`serenade tui`).
 
-use std::io::{self, stdout, IsTerminal};
+use std::io::{self, IsTerminal, stdout};
 
+use crossterm::ExecutableCommand;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
-use crossterm::ExecutableCommand;
 use ratatui::prelude::{Constraint, CrosstermBackend, Layout, Style, Terminal};
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 
 use crate::error::CliError;
-use crate::recipe::{apply_recipe, list_recipes, print_hints, ApplyOptions, Recipe};
+use crate::recipe::{ApplyOptions, Recipe, apply_recipe, list_recipes, print_hints};
 
 /// Runs an interactive recipe picker and applies the selection.
 ///
