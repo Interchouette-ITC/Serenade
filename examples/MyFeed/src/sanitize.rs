@@ -15,8 +15,20 @@ pub fn sanitize_post_html(raw: &str) -> String {
     ammonia::Builder::default()
         .tags(
             [
-                "p", "br", "strong", "b", "em", "i", "u", "s", "blockquote", "ul", "ol", "li",
-                "a", "span",
+                "p",
+                "br",
+                "strong",
+                "b",
+                "em",
+                "i",
+                "u",
+                "s",
+                "blockquote",
+                "ul",
+                "ol",
+                "li",
+                "a",
+                "span",
             ]
             .into_iter()
             .collect(),
