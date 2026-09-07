@@ -1,0 +1,27 @@
+[package]
+name = "serenade-component-host"
+description = "Wasmtime Component Model host helpers (Engine, load path, empty linker)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["wasmtime"]
+## Enable wasmtime Component Model helpers.
+wasmtime = ["dep:wasmtime"]
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+wasmtime = { version = "36", optional = true, default-features = false, features = [
+    "component-model",
+    "cranelift",
+    "runtime",
+    "wat",
+] }
+
+[lints]
+workspace = true
