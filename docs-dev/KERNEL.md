@@ -15,7 +15,8 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
 | **Console** | CLI application (`bin/console` analogue), commands, optional rich TUI |
 | **Cache** | PSR-like cache contracts; in-memory / Redis adapters |
-| **Security** | AuthN/Z hooks, firewall abstraction, voter pattern |
+| **Security** | AuthN/Z hooks, firewall, voters, CSRF token manager |
+| **Form** | HTML forms: bind, CSRF by default, XSS-safe render ([FORMS.md](FORMS.md)) |
 | **Messenger** | Command/query/event bus; async transport adapters |
 | **Serializer** | DTO ↔ JSON (and other formats); normalizers |
 | **Validator** | Constraint validation on DTOs and commands |
@@ -132,15 +133,28 @@ Register message types on the hook, then wrap the bus with `ValidationMiddleware
 
 ## Security
 
-AuthN/Z hooks live in **`serenade-security`** ([#10](https://github.com/Interchouette-ITC/Serenade/issues/10)). See [SECURITY.md](SECURITY.md).
+AuthN/Z and CSRF live in **`serenade-security`** ([#10](https://github.com/Interchouette-ITC/Serenade/issues/10), CSRF in [#110](https://github.com/Interchouette-ITC/Serenade/issues/110)). See [SECURITY.md](SECURITY.md).
 
 | Piece | Role |
 | --- | --- |
 | `UserInterface` / `TokenInterface` | Principal and credentials carrier |
 | `Voter` / `AccessDecisionManager` | Affirmative access checks |
 | `FirewallMiddleware` | HTTP middleware: header → `Authenticator` → `_security_token` attribute |
+| `CsrfTokenManager` / `HmacCsrfTokenManager` | Stateless HMAC CSRF tokens (`_token`) |
 
-OAuth/OIDC is out of scope. Apps plug bearer or API-key authenticators.
+OAuth/OIDC is out of scope. Apps plug bearer or API-key authenticators. HTML forms use CSRF via **`serenade-form`**.
+
+## Forms
+
+HTML form helpers live in **`serenade-form`** ([#110](https://github.com/Interchouette-ITC/Serenade/issues/110)). See [FORMS.md](FORMS.md).
+
+| Piece | Role |
+| --- | --- |
+| `Form` / `FormBuilder` | Fields, bind POST, validate, render |
+| CSRF default on | `_token` + `CsrfTokenManager` |
+| `escape_html` / `escape_attr` | XSS-safe output |
+
+Apps stay thin: declare fields and constraints; framework owns CSRF and escape.
 
 ## Cache
 

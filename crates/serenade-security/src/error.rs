@@ -1,6 +1,6 @@
 //! Security component errors.
 
-/// AuthN/Z failure.
+/// AuthN/Z and CSRF failure.
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
 pub enum SecurityError {
     /// Authenticator rejected the credentials.
@@ -15,4 +15,10 @@ pub enum SecurityError {
         /// Reason text.
         message: String,
     },
+    /// CSRF token missing, malformed, or invalid.
+    #[error("invalid CSRF token")]
+    InvalidCsrfToken,
+    /// CSRF token generation failed (RNG).
+    #[error("CSRF token generation failed")]
+    CsrfGeneration,
 }
