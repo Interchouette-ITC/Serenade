@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CSRF_FIELD_NAME"],"enum":["FormError","FormStatus"],"fn":["escape_attr","escape_html","parse_urlencoded","version"],"struct":["Field","Form","FormBuilder","RenderedForm"]};
