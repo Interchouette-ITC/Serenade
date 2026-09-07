@@ -3,7 +3,7 @@ coverage/
 .env
 .env.*
 !.env.example
-assets/
+/assets/
 *.snap.new
 .myfeed-state.json
 .myfeed.sqlite
