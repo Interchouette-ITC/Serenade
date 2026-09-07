@@ -10,7 +10,8 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [KERNEL.md](KERNEL.md)       | Kernel components and responsibilities                 |
 | [CONSOLE.md](CONSOLE.md)     | Console Application, commands, `--env` / ratatui       |
 | [RECIPES.md](RECIPES.md)     | Flex-like recipes, `serenade new`, Cargo stays PM      |
-| [SECURITY.md](SECURITY.md)   | AuthN/Z hooks, firewall, voters, bearer/API key plug-in |
+| [SECURITY.md](SECURITY.md)   | AuthN/Z, firewall, voters, CSRF, bearer/API key |
+| [FORMS.md](FORMS.md)         | HTML forms, CSRF default-on, XSS-safe render   |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
@@ -41,6 +42,8 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [#30](https://github.com/Interchouette-ITC/Serenade/issues/30) | Flex-like recipes and app scaffolding |
 | [#56](https://github.com/Interchouette-ITC/Serenade/issues/56) | Web Debug Toolbar / Profiler (logs + DB/query panels) |
 | [#57](https://github.com/Interchouette-ITC/Serenade/issues/57) | Observability / structured logging (Monolog-like) |
+| [#110](https://github.com/Interchouette-ITC/Serenade/issues/110) | Forms, CSRF, HTML escape |
+| [#112](https://github.com/Interchouette-ITC/Serenade/issues/112) | MyFeed beginner demo (`examples/MyFeed`) |
 
 Config packages prefer **TOML**; console is the `bin/console` analogue (optional ratatui for rich TUI). Composer maps to **Cargo**, not a second package manager.
 
