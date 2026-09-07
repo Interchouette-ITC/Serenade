@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_CATEGORIES"],"enum":["CommentStatus"],"fn":["ensure_created_at_column","map_comment","map_post","rust_id","sql_id"],"struct":["Comment","FeedStore","NewPost","Post"]};

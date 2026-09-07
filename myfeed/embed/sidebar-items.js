@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["embed_html","host_of","is_allowed_embed","is_allowed_image_or_video","is_soundcloud","looks_like_image","looks_like_mp4","urlencoding_lite","valid_yt_id","youtube_id"]};

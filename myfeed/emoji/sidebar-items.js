@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["PICKER_SHORTCODES"],"fn":["picker_html"]};

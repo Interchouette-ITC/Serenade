@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ABOUT_MODAL","BOOTSTRAP_CSS","BOOTSTRAP_JS","DELETE_POST_MODAL","QUILL_CSS","QUILL_JS"],"fn":["admin_login_page","admin_page_with_logout","asset_response","document","edit_post_page","emoji_picker","feed_page","html_response","post_card","redirect","redirect_with_cookie","render_wall"],"struct":["FeedView"]};
