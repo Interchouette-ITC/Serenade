@@ -71,7 +71,8 @@ impl CatalogueLoader for JsonCatalogueLoader {
     }
 }
 
-fn flatten_toml(
+/// Flattens a TOML value into string messages.
+pub fn flatten_toml(
     value: &toml::Value,
     path: &Path,
 ) -> Result<HashMap<String, String>, TranslationError> {
@@ -206,11 +207,7 @@ pub fn load_directory(
 
     let mut by_locale: HashMap<Locale, MessageCatalogue> = HashMap::new();
 
-    for entry in entries {
-        let entry = entry.map_err(|err| TranslationError::Directory {
-            path: dir.to_path_buf(),
-            detail: err.to_string(),
-        })?;
+    for entry in entries.flatten() {
         let path = entry.path();
         if !path.is_file() {
             continue;

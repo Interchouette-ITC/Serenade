@@ -97,14 +97,13 @@ fn expand_plural(body: &str, number: i64, parameters: &[(&str, &str)], locale: &
     format_message(&with_hash, parameters, locale, Some(number))
 }
 
-fn parse_plural_arms(body: &str) -> Vec<(String, String)> {
+/// Parses ICU plural arms (`one {…} other {…}`).
+#[must_use]
+pub fn parse_plural_arms(body: &str) -> Vec<(String, String)> {
     let mut arms = Vec::new();
     let mut rest = body.trim();
     while !rest.is_empty() {
         let rest_trim = rest.trim_start();
-        if rest_trim.is_empty() {
-            break;
-        }
         let (key, after_key) = match rest_trim.find('{') {
             Some(idx) => (rest_trim[..idx].trim().to_owned(), &rest_trim[idx + 1..]),
             None => break,
@@ -137,7 +136,7 @@ fn plural_category(locale: &Locale, number: i64) -> String {
         )
         .expect("en plural rules")
     });
-    let category = rules.category_for(u64::try_from(number.abs()).unwrap_or(0));
+    let category = rules.category_for(number.unsigned_abs());
     match category {
         PluralCategory::Zero => "zero",
         PluralCategory::One => "one",

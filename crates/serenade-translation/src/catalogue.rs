@@ -112,10 +112,8 @@ impl MessageCatalogue {
             out.extend(plain.clone());
         }
         let intl = format!("{domain}{INTL_DOMAIN_SUFFIX}");
-        if let Some(icu) = self.messages.get(&intl) {
-            for (id, text) in icu {
-                out.entry(id.clone()).or_insert_with(|| text.clone());
-            }
+        for (id, text) in self.messages.get(&intl).into_iter().flatten() {
+            out.entry(id.clone()).or_insert_with(|| text.clone());
         }
         out
     }

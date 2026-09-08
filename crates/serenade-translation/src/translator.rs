@@ -162,9 +162,10 @@ impl Translator {
 
 impl TranslatorInterface for Translator {
     fn locale(&self) -> Locale {
-        self.locale
-            .read()
-            .map_or_else(|_| Locale::new("en").expect("en"), |guard| guard.clone())
+        match self.locale.read() {
+            Ok(guard) => guard.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        }
     }
 
     fn trans(
