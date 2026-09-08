@@ -442,3 +442,115 @@ fn registry_denormalizer_error_is_returned() {
         .expect_err("fail");
     assert!(matches!(err, SerializerError::Normalization { .. }));
 }
+
+#[cfg(feature = "toon")]
+mod toon_tests {
+    use super::*;
+    use crate::{FORMAT_TOON, ToonDecoder, ToonEncoder, encode_toon_string};
+
+    #[test]
+    fn toon_codec_roundtrip_object() {
+        let data = json!({
+            "sku": "HOODIE-M",
+            "qty": 2,
+            "tags": ["sale", "winter"]
+        });
+        let bytes = ToonEncoder.encode(&data, FORMAT_TOON).expect("encode");
+        let text = String::from_utf8(bytes.clone()).expect("utf8");
+        assert!(text.contains("sku"));
+        assert!(!text.trim_start().starts_with('{'));
+        let back = ToonDecoder.decode(&bytes, FORMAT_TOON).expect("decode");
+        assert_eq!(back["sku"], "HOODIE-M");
+        assert_eq!(back["qty"], 2);
+        assert_eq!(back["tags"], json!(["sale", "winter"]));
+    }
+
+    #[test]
+    fn encode_toon_string_for_llm_prompt() {
+        let data = json!({ "cart_id": "c1", "lines": [{ "sku": "A", "qty": 1 }] });
+        let text = encode_toon_string(&data).expect("toon");
+        assert!(text.contains("cart_id"));
+        assert!(text.contains("lines"));
+    }
+
+    #[test]
+    fn serializer_default_includes_toon_codecs() {
+        let mut serializer = Serializer::new();
+        serializer.registry_mut().add_normalizer(TagCodecToon);
+        serializer.registry_mut().add_denormalizer(TagCodecToon);
+        let bytes = serializer
+            .serialize(&Tag("agent".into()), FORMAT_TOON)
+            .expect("serialize toon");
+        let text = String::from_utf8(bytes.clone()).expect("utf8");
+        assert!(text.contains("label"));
+        let boxed = serializer
+            .deserialize(&bytes, TypeId::of::<Tag>(), FORMAT_TOON)
+            .expect("deserialize toon");
+        assert_eq!(boxed.downcast_ref::<Tag>().expect("tag").0, "agent");
+    }
+
+    struct TagCodecToon;
+
+    impl Normalizer for TagCodecToon {
+        fn supports_normalization(&self, object: &dyn Any, format: &str) -> bool {
+            format.eq_ignore_ascii_case(FORMAT_TOON) && object.is::<Tag>()
+        }
+
+        fn normalize(
+            &self,
+            object: &dyn Any,
+            _format: &str,
+            _context: &NormalizationContext,
+        ) -> Result<Value, SerializerError> {
+            let tag =
+                object
+                    .downcast_ref::<Tag>()
+                    .ok_or_else(|| SerializerError::Normalization {
+                        message: "expected Tag".to_owned(),
+                    })?;
+            Ok(json!({ "label": tag.0 }))
+        }
+    }
+
+    impl Denormalizer for TagCodecToon {
+        fn supports_denormalization(&self, type_id: TypeId, format: &str) -> bool {
+            format.eq_ignore_ascii_case(FORMAT_TOON) && type_id == TypeId::of::<Tag>()
+        }
+
+        fn denormalize(
+            &self,
+            data: &Value,
+            _type_id: TypeId,
+            _format: &str,
+            _context: &NormalizationContext,
+        ) -> Result<Box<dyn Any + Send + Sync>, SerializerError> {
+            let label = data.get("label").and_then(Value::as_str).ok_or_else(|| {
+                SerializerError::Normalization {
+                    message: "missing label".to_owned(),
+                }
+            })?;
+            Ok(Box::new(Tag(label.to_owned())))
+        }
+    }
+
+    #[test]
+    fn toon_wrong_format_is_unsupported() {
+        let err = ToonEncoder
+            .encode(&json!({}), FORMAT_JSON)
+            .expect_err("wrong format");
+        assert!(matches!(err, SerializerError::UnsupportedFormat { .. }));
+    }
+}
+
+#[cfg(not(feature = "toon"))]
+#[test]
+fn toon_format_unsupported_without_feature() {
+    let serializer = Serializer::new();
+    let err = serializer
+        .serialize(&Tag("x".into()), "toon")
+        .expect_err("no toon");
+    assert!(matches!(
+        err,
+        SerializerError::UnsupportedType { .. } | SerializerError::UnsupportedFormat { .. }
+    ));
+}

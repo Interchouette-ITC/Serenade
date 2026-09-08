@@ -59,6 +59,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-cache --all-targets --features redis
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-serializer toon feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-serializer --all-targets --features toon
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -107,6 +112,24 @@ jobs:
         env:
           REDIS_URL: redis://127.0.0.1:6379/0
         run: cargo test -p serenade-cache --features redis
+
+  serializer-toon:
+    name: serializer toon
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Markdown-only
+        if: needs.changes.outputs.code != 'true'
+        run: echo "markdown-only; skipping toon serializer tests"
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
+      - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.code == 'true'
+      - name: Test serenade-serializer with toon
+        if: needs.changes.outputs.code == 'true'
+        run: cargo test -p serenade-serializer --features toon
 
   doc:
     name: rustdoc
@@ -200,7 +223,7 @@ jobs:
         run: |
           mkdir -p coverage
           RUSTUP_TOOLCHAIN=stable cargo llvm-cov --workspace --lcov \
-            --features serenade-cache/redis \
+            --features serenade-cache/redis,serenade-serializer/toon \
             --ignore-filename-regex 'examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs' \
             --output-path coverage/lcov.info
       - name: Upload to Codecov
