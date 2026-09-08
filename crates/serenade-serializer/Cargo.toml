@@ -1,6 +1,6 @@
 [package]
 name = "serenade-serializer"
-description = "DTO serialization with JSON codecs and a normalizer registry"
+description = "DTO serialization with JSON codecs, optional TOON, and a normalizer registry"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,10 +8,16 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = []
+## Enable TOON v4.1 codecs for LLM / agent context export.
+toon = ["dep:reddb-io-toon"]
+
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+reddb-io-toon = { workspace = true, optional = true }
 
 [lints]
 workspace = true

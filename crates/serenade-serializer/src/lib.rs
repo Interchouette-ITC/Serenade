@@ -1,8 +1,8 @@
-//! DTO serialization: JSON codecs, normalizer registry, and a serde bridge.
+//! DTO serialization: JSON codecs, optional TOON, normalizer registry, serde bridge.
 //!
 //! Typed serde helpers cover the common JSON path. Custom types register
 //! [`Normalizer`] / [`Denormalizer`] implementations on a [`NormalizerRegistry`]
-//! (or via [`Serializer`]).
+//! (or via [`Serializer`]). Enable Cargo feature `toon` for TOON v4.1 LLM export.
 
 mod context;
 mod encoder;
@@ -14,6 +14,8 @@ mod serializer;
 
 pub use context::NormalizationContext;
 pub use encoder::{Decoder, Encoder, FORMAT_JSON, JsonDecoder, JsonEncoder};
+#[cfg(feature = "toon")]
+pub use encoder::{FORMAT_TOON, ToonDecoder, ToonEncoder, encode_toon_string};
 pub use error::{SerializerError, from_serde_json};
 pub use normalizer::{Denormalizer, Normalizer};
 pub use registry::NormalizerRegistry;

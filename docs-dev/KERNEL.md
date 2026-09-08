@@ -106,17 +106,18 @@ Sync in-process dispatch lives in **`serenade-messenger`**: implement `Message` 
 
 ## Serializer
 
-DTO ↔ wire formats live in **`serenade-serializer`** ([#12](https://github.com/Interchouette-ITC/Serenade/issues/12)).
+DTO ↔ wire formats live in **`serenade-serializer`** ([#12](https://github.com/Interchouette-ITC/Serenade/issues/12), TOON [#125](https://github.com/Interchouette-ITC/Serenade/issues/125)). See [SERIALIZER.md](SERIALIZER.md).
 
 | Piece | Role |
 | --- | --- |
-| `Encoder` / `Decoder` | Intermediate `serde_json::Value` ↔ bytes; `JsonEncoder` / `JsonDecoder` ship for `json` |
+| `Encoder` / `Decoder` | Intermediate `serde_json::Value` ↔ bytes; `JsonEncoder` / `JsonDecoder` for `json` |
+| `ToonEncoder` / `ToonDecoder` / `encode_toon_string` | TOON v4.1 for LLM / agent context (Cargo feature `toon`) |
 | `Normalizer` / `Denormalizer` | Object ↔ `Value` for types that need a custom graph walk |
 | `NormalizerRegistry` | First matching normalizer/denormalizer wins |
 | `Serializer` | Normalize then encode; decode then denormalize (`SerializerInterface` analogue) |
 | Serde bridge | `serialize_value` / `deserialize_value` for typed `Serialize` / `DeserializeOwned` JSON |
 
-Custom types register normalizers on the registry. Redis/XML formats are out of scope for v0.
+Custom types register normalizers on the registry. Redis/XML formats remain out of scope. HTTP and MCP stay JSON; TOON is opt-in export for prompts.
 
 ## Validator
 

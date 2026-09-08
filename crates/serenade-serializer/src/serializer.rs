@@ -4,6 +4,8 @@ use std::any::{Any, TypeId};
 use std::sync::Arc;
 
 use crate::encoder::{JsonDecoder, JsonEncoder};
+#[cfg(feature = "toon")]
+use crate::encoder::{ToonDecoder, ToonEncoder};
 use crate::{Decoder, Encoder, NormalizationContext, NormalizerRegistry, SerializerError};
 
 /// Composes a [`NormalizerRegistry`] with format codecs (`SerializerInterface` analogue).
@@ -84,13 +86,24 @@ impl Default for Serializer {
 }
 
 impl Serializer {
-    /// Creates a serializer with JSON codecs and an empty normalizer registry.
+    /// Creates a serializer with JSON codecs (and TOON when feature `toon` is on).
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            registry: NormalizerRegistry::new(),
-            encoders: vec![Arc::new(JsonEncoder)],
-            decoders: vec![Arc::new(JsonDecoder)],
+        #[cfg(feature = "toon")]
+        {
+            Self {
+                registry: NormalizerRegistry::new(),
+                encoders: vec![Arc::new(JsonEncoder), Arc::new(ToonEncoder)],
+                decoders: vec![Arc::new(JsonDecoder), Arc::new(ToonDecoder)],
+            }
+        }
+        #[cfg(not(feature = "toon"))]
+        {
+            Self {
+                registry: NormalizerRegistry::new(),
+                encoders: vec![Arc::new(JsonEncoder)],
+                decoders: vec![Arc::new(JsonDecoder)],
+            }
         }
     }
 
