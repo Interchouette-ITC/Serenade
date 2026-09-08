@@ -94,11 +94,7 @@ impl Encoder for ToonEncoder {
                 format: format.to_owned(),
             });
         }
-        let toon_value = reddb_io_toon::Value::from_json_value(data.clone());
-        let text = reddb_io_toon::encode(&toon_value).map_err(|err| SerializerError::Codec {
-            message: err.to_string(),
-        })?;
-        Ok(text.into_bytes())
+        encode_toon_bytes(data)
     }
 }
 
@@ -146,8 +142,47 @@ impl Decoder for ToonDecoder {
 /// ```
 #[cfg(feature = "toon")]
 pub fn encode_toon_string(data: &Value) -> Result<String, SerializerError> {
-    let bytes = ToonEncoder.encode(data, FORMAT_TOON)?;
-    String::from_utf8(bytes).map_err(|err| SerializerError::Codec {
+    encode_toon_string_with_options(data, reddb_io_toon::EncodeOptions::default())
+}
+
+#[cfg(feature = "toon")]
+fn encode_toon_string_with_options(
+    data: &Value,
+    options: reddb_io_toon::EncodeOptions,
+) -> Result<String, SerializerError> {
+    let toon_value = reddb_io_toon::Value::from_json_value(data.clone());
+    reddb_io_toon::encode_with_options(&toon_value, options).map_err(|err| SerializerError::Codec {
         message: err.to_string(),
     })
+}
+
+#[cfg(feature = "toon")]
+fn encode_toon_bytes(data: &Value) -> Result<Vec<u8>, SerializerError> {
+    Ok(encode_toon_string(data)?.into_bytes())
+}
+
+#[cfg(all(test, feature = "toon"))]
+mod encode_error_tests {
+    use super::{Encoder, FORMAT_TOON, ToonEncoder, encode_toon_string_with_options};
+    use crate::SerializerError;
+    use serde_json::json;
+
+    #[test]
+    fn encode_rejects_shallow_max_depth() {
+        let options = reddb_io_toon::EncodeOptions {
+            max_depth: 1,
+            ..Default::default()
+        };
+        let err = encode_toon_string_with_options(&json!({ "a": { "b": { "c": 1 } } }), options)
+            .expect_err("too deep");
+        assert!(matches!(err, SerializerError::Codec { .. }));
+    }
+
+    #[test]
+    fn toon_encoder_roundtrip_still_works() {
+        let bytes = ToonEncoder
+            .encode(&json!({ "ok": true }), FORMAT_TOON)
+            .expect("encode");
+        assert!(!bytes.is_empty());
+    }
 }
