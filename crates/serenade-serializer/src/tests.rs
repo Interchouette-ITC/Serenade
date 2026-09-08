@@ -540,6 +540,30 @@ mod toon_tests {
             .expect_err("wrong format");
         assert!(matches!(err, SerializerError::UnsupportedFormat { .. }));
     }
+
+    #[test]
+    fn toon_decoder_wrong_format_is_unsupported() {
+        let err = ToonDecoder
+            .decode(b"x: 1", FORMAT_JSON)
+            .expect_err("wrong format");
+        assert!(matches!(err, SerializerError::UnsupportedFormat { .. }));
+    }
+
+    #[test]
+    fn toon_decoder_rejects_invalid_utf8() {
+        let err = ToonDecoder
+            .decode(&[0xff, 0xfe, 0xfd], FORMAT_TOON)
+            .expect_err("utf8");
+        assert!(matches!(err, SerializerError::Codec { .. }));
+    }
+
+    #[test]
+    fn toon_decoder_rejects_invalid_toon() {
+        let err = ToonDecoder
+            .decode(b"orders[1]{id,customer{}}:\n  1\n", FORMAT_TOON)
+            .expect_err("bad toon");
+        assert!(matches!(err, SerializerError::Codec { .. }));
+    }
 }
 
 #[cfg(not(feature = "toon"))]
