@@ -169,8 +169,10 @@ mod encode_error_tests {
 
     #[test]
     fn encode_rejects_shallow_max_depth() {
-        let mut options = reddb_io_toon::EncodeOptions::default();
-        options.max_depth = 1;
+        let options = reddb_io_toon::EncodeOptions {
+            max_depth: 1,
+            ..Default::default()
+        };
         let err = encode_toon_string_with_options(&json!({ "a": { "b": { "c": 1 } } }), options)
             .expect_err("too deep");
         assert!(matches!(err, SerializerError::Codec { .. }));
