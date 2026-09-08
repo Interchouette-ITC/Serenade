@@ -5,7 +5,13 @@ use crate::Locale;
 /// Formats an integer in a locale-sensitive way.
 ///
 /// With the `icu` feature this uses ICU4X decimal data; without it, falls back
-/// to plain decimal digits.
+/// to plain decimal digits. Locales that ICU cannot parse also fall back to
+/// plain digits.
+///
+/// # Panics
+///
+/// With the `icu` feature, panics only if compiled ICU decimal data cannot
+/// build a formatter for a successfully parsed locale.
 #[must_use]
 pub fn format_number(value: i64, locale: &Locale) -> String {
     #[cfg(feature = "icu")]
@@ -16,14 +22,12 @@ pub fn format_number(value: i64, locale: &Locale) -> String {
         use icu_locale::Locale as IcuLocale;
         use writeable::Writeable;
 
-        let Ok(icu_locale) = locale.as_str().parse::<IcuLocale>() else {
+        let Some(icu_locale) = locale.as_str().parse::<IcuLocale>().ok() else {
             return value.to_string();
         };
-        let Ok(formatter) =
+        let formatter =
             DecimalFormatter::try_new(icu_locale.into(), DecimalFormatterOptions::default())
-        else {
-            return value.to_string();
-        };
+                .expect("icu decimal data");
         formatter
             .format(&Decimal::from(value))
             .write_to_string()
@@ -89,14 +93,12 @@ fn icu_format_number(value: f64, locale: &Locale, fraction_digits: u8) -> String
     use icu_locale::Locale as IcuLocale;
     use writeable::Writeable;
 
-    let Ok(icu_locale) = locale.as_str().parse::<IcuLocale>() else {
+    let Some(icu_locale) = locale.as_str().parse::<IcuLocale>().ok() else {
         return plain_number(value, fraction_digits);
     };
-    let Ok(formatter) =
+    let formatter =
         DecimalFormatter::try_new(icu_locale.into(), DecimalFormatterOptions::default())
-    else {
-        return plain_number(value, fraction_digits);
-    };
+            .expect("icu decimal data");
 
     // Scale to integer then shift decimal point (ICU Decimal API).
     let scale = 10_i64.pow(u32::from(fraction_digits));
@@ -117,15 +119,13 @@ fn icu_format_date(year: i32, month: u8, day: u8, locale: &Locale) -> String {
     use icu_locale::Locale as IcuLocale;
     use writeable::Writeable;
 
-    let Ok(icu_locale) = locale.as_str().parse::<IcuLocale>() else {
+    let Some(icu_locale) = locale.as_str().parse::<IcuLocale>().ok() else {
         return format!("{year:04}-{month:02}-{day:02}");
     };
     let Ok(date) = Date::try_new_iso(year, month, day) else {
         return format!("{year:04}-{month:02}-{day:02}");
     };
-    let Ok(formatter) = DateTimeFormatter::try_new(icu_locale.into(), fieldsets::YMD::medium())
-    else {
-        return format!("{year:04}-{month:02}-{day:02}");
-    };
+    let formatter = DateTimeFormatter::try_new(icu_locale.into(), fieldsets::YMD::medium())
+        .expect("icu datetime data");
     formatter.format(&date).write_to_string().into_owned()
 }

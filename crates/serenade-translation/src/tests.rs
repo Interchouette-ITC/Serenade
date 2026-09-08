@@ -273,6 +273,13 @@ fn arc_translator_interface_covers_choice() {
 }
 
 #[test]
+fn translator_locale_recovers_from_poisoned_lock() {
+    let translator = Translator::new(Locale::new("fr").unwrap());
+    translator.poison_locale_lock_for_test();
+    assert_eq!(translator.locale().as_str(), "fr");
+}
+
+#[test]
 fn plural_message_edges() {
     let locale = Locale::new("en").unwrap();
     assert_eq!(

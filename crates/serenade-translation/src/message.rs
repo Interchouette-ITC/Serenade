@@ -128,14 +128,7 @@ fn plural_category(locale: &Locale, number: i64) -> String {
         .parse::<IcuLocale>()
         .unwrap_or_else(|_| "en".parse().expect("en"));
     let options = PluralRulesOptions::from(PluralRuleType::Cardinal);
-    let rules = PluralRules::try_new(icu_locale.into(), options).unwrap_or_else(|_| {
-        let en: IcuLocale = "en".parse().expect("en");
-        PluralRules::try_new(
-            en.into(),
-            PluralRulesOptions::from(PluralRuleType::Cardinal),
-        )
-        .expect("en plural rules")
-    });
+    let rules = PluralRules::try_new(icu_locale.into(), options).expect("icu plural data");
     let category = rules.category_for(number.unsigned_abs());
     match category {
         PluralCategory::Zero => "zero",

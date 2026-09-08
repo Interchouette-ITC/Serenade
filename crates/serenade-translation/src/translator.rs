@@ -86,6 +86,15 @@ impl Translator {
         }
     }
 
+    /// Poisons the locale lock (test helper for recovery coverage).
+    #[cfg(test)]
+    pub(crate) fn poison_locale_lock_for_test(&self) {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = self.locale.write().expect("locale write");
+            panic!("poison locale lock");
+        }));
+    }
+
     /// Inserts or replaces a catalogue for its locale.
     pub fn add_catalogue(&mut self, catalogue: MessageCatalogue) {
         let key = catalogue.locale().as_str().to_owned();
