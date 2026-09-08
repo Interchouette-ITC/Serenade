@@ -1,0 +1,56 @@
+[package]
+name = "serenade-sandbox"
+description = "Wasmer WASIX host helpers (package/module run, cache, GuestOutput)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["wasix"]
+## Enable Wasmer WASIX runners.
+wasix = [
+    "dep:bytes",
+    "dep:reqwest",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:shared-buffer",
+    "dep:tokio",
+    "dep:virtual-fs",
+    "dep:wasmer",
+    "dep:wasmer-types",
+    "dep:wasmer-package",
+    "dep:wasmer-wasix",
+]
+
+[dependencies]
+anyhow = { workspace = true }
+bytes = { version = "1", optional = true }
+reqwest = { version = "0.12", optional = true, default-features = false, features = [
+    "rustls-tls",
+] }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+shared-buffer = { version = "0.1", optional = true }
+tokio = { workspace = true, optional = true }
+virtual-fs = { version = "0.704.0", optional = true, default-features = false }
+wasmer = { version = "7.4.0", optional = true, default-features = false, features = [
+    "cranelift",
+    "sys",
+] }
+wasmer-types = { version = "7.4.0", optional = true }
+wasmer-package = { version = "0.704.0", optional = true, default-features = false }
+wasmer-wasix = { version = "0.704.0", optional = true, default-features = false, features = [
+    "sys-default",
+] }
+
+[dev-dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true }
+
+[lints]
+workspace = true
