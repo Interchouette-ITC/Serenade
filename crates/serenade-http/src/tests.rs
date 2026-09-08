@@ -71,6 +71,13 @@ fn headers_are_case_insensitive() {
 }
 
 #[test]
+fn request_query_roundtrip() {
+    let request = Request::new(Method::Get, "/").with_query("_locale=fr&x=1");
+    assert_eq!(request.query(), Some("_locale=fr&x=1"));
+    assert!(Request::new(Method::Get, "/").query().is_none());
+}
+
+#[test]
 fn attributes_roundtrip() {
     let mut request = Request::new(Method::Get, "/items/1");
     request.attributes_mut().insert("item_id", 1_u64);

@@ -4,11 +4,13 @@ use crate::{AttributeBag, Headers, Method};
 
 /// Framework-agnostic HTTP request.
 ///
-/// Adapters copy method, path, headers, and body from the server crate.
+/// Adapters copy method, path, optional query string, headers, and body from the
+/// server crate.
 #[derive(Debug)]
 pub struct Request {
     method: Method,
     path: String,
+    query: Option<String>,
     headers: Headers,
     body: Vec<u8>,
     attributes: AttributeBag,
@@ -21,6 +23,7 @@ impl Request {
         Self {
             method,
             path: path.into(),
+            query: None,
             headers: Headers::new(),
             body: Vec::new(),
             attributes: AttributeBag::new(),
@@ -41,16 +44,30 @@ impl Request {
         self
     }
 
+    /// Sets the raw query string without a leading `?`.
+    #[must_use]
+    pub fn with_query(mut self, query: impl Into<String>) -> Self {
+        let query = query.into();
+        self.query = if query.is_empty() { None } else { Some(query) };
+        self
+    }
+
     /// HTTP method.
     #[must_use]
     pub const fn method(&self) -> Method {
         self.method
     }
 
-    /// Path (no query string). Query parsing is left to routing or the adapter.
+    /// Path (no query string).
     #[must_use]
     pub fn path(&self) -> &str {
         &self.path
+    }
+
+    /// Raw query string without a leading `?`, when the adapter provided one.
+    #[must_use]
+    pub fn query(&self) -> Option<&str> {
+        self.query.as_deref()
     }
 
     /// Request headers.

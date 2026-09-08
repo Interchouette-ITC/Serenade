@@ -6,6 +6,7 @@ use serenade_form::{escape_attr, escape_html};
 
 use crate::embed::embed_html;
 use crate::emoji::picker_html;
+use crate::i18n::Ui;
 use crate::store::{Comment, FeedStore, Post};
 
 const BOOTSTRAP_CSS: &str =
@@ -17,11 +18,11 @@ const QUILL_JS: &str = "https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js";
 
 /// Full HTML document with Bootstrap, Quill, and Clitorine.
 #[must_use]
-pub fn document(title: &str, body: &str, composer_open: bool) -> String {
+pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> String {
     let open_flag = if composer_open { "1" } else { "0" };
     format!(
         r#"<!DOCTYPE html>
-<html lang="en">
+<html lang="{lang}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -37,12 +38,37 @@ pub fn document(title: &str, body: &str, composer_open: bool) -> String {
 <script src="/assets/clitorine.js?v=4"></script>
 </body>
 </html>"#,
+        lang = escape_attr(lang),
         title = escape_html(title),
+    )
+}
+
+fn locale_switcher(ui: &Ui<'_>) -> String {
+    let active = ui.locale().language();
+    let en_class = if active == "en" {
+        "btn btn-sm btn-primary"
+    } else {
+        "btn btn-sm btn-outline-secondary"
+    };
+    let fr_class = if active == "fr" {
+        "btn btn-sm btn-primary"
+    } else {
+        "btn btn-sm btn-outline-secondary"
+    };
+    format!(
+        r#"<span class="btn-group" role="group" aria-label="Language">
+  <a class="{en_class}" href="/locale/en">{en}</a>
+  <a class="{fr_class}" href="/locale/fr">{fr}</a>
+</span>"#,
+        en = escape_html(&ui.t("lang_en")),
+        fr = escape_html(&ui.t("lang_fr")),
     )
 }
 
 /// Inputs for the public feed page.
 pub struct FeedView<'a> {
+    /// Translated chrome.
+    pub ui: &'a Ui<'a>,
     /// Live store (posts / comments).
     pub store: &'a FeedStore,
     /// Composer HTML.
@@ -64,6 +90,7 @@ pub struct FeedView<'a> {
 /// Public feed page.
 #[must_use]
 pub fn feed_page(view: &FeedView<'_>) -> String {
+    let ui = view.ui;
     let posts_html = render_wall(view);
     let flash_html = view.flash.map_or(String::new(), |msg| {
         let class = if view.flash_err {
@@ -82,21 +109,22 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
   <header class="d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
     <div class="me-auto">
       <h1 class="myfeed-brand">MyFeed</h1>
-      <p class="myfeed-tag">Open public wall · self-hosted with Serenade · no signup</p>
+      <p class="myfeed-tag">{tagline}</p>
     </div>
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
-      <a class="link-secondary" href="/">Feed</a>
-      <a class="admin-link btn btn-outline-primary btn-sm" href="/admin">Admin</a>
+      {langs}
+      <a class="link-secondary" href="/">{nav_feed}</a>
+      <a class="admin-link btn btn-outline-primary btn-sm" href="/admin">{nav_admin}</a>
     </nav>
   </header>
   <main>
     {flash_html}
     <section class="card post-card mb-4">
       <div class="card-body p-4">
-        <h2 class="h5 mb-2">Post to the feed</h2>
-        <p class="text-secondary small mb-3">Write freely. Attach media when you want.</p>
-        <label class="visually-hidden" for="composer-trigger">Open composer</label>
-        <input id="composer-trigger" type="text" class="form-control form-control-lg composer-trigger mb-2" placeholder="What's happening?" readonly autocomplete="off" />
+        <h2 class="h5 mb-2">{composer_title}</h2>
+        <p class="text-secondary small mb-3">{composer_help}</p>
+        <label class="visually-hidden" for="composer-trigger">{composer_trigger}</label>
+        <input id="composer-trigger" type="text" class="form-control form-control-lg composer-trigger mb-2" placeholder="{composer_placeholder}" readonly autocomplete="off" />
         <div class="collapse" id="composer-panel">
           {post_form_html}
         </div>
@@ -108,33 +136,46 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
   </main>
   <footer class="border-top pt-3 mt-4">
     <p class="mb-0 text-center text-secondary small">
-      <a href="#about-myfeed" class="text-secondary" data-bs-toggle="modal" data-bs-target="#about-myfeed">About</a>
+      <a href="#about-myfeed" class="text-secondary" data-bs-toggle="modal" data-bs-target="#about-myfeed">{footer_about}</a>
       <span class="mx-1">·</span>
-      Bootstrap + Quill + Serenade Form/CSRF
+      {footer_stack}
       <span class="mx-1">·</span>
-      scroll the wall
+      {footer_scroll}
     </p>
   </footer>
 </div>
 {delete_modal}
 {about}
 "##,
+        tagline = escape_html(&ui.t("tagline")),
+        langs = locale_switcher(ui),
+        nav_feed = escape_html(&ui.t("nav_feed")),
+        nav_admin = escape_html(&ui.t("nav_admin")),
+        composer_title = escape_html(&ui.t("composer_title")),
+        composer_help = escape_html(&ui.t("composer_help")),
+        composer_trigger = escape_html(&ui.t("composer_trigger")),
+        composer_placeholder = escape_attr(&ui.t("composer_placeholder")),
         post_form_html = view.post_form_html,
+        footer_about = escape_html(&ui.t("footer_about")),
+        footer_stack = escape_html(&ui.t("footer_stack")),
+        footer_scroll = escape_html(&ui.t("footer_scroll")),
         delete_modal = if view.admin_forms.is_empty() {
-            ""
+            String::new()
         } else {
-            DELETE_POST_MODAL
+            delete_post_modal(ui)
         },
-        about = ABOUT_MODAL,
+        about = about_modal(ui),
     );
-    document("MyFeed", &body, view.composer_open)
+    document("MyFeed", &body, view.composer_open, ui.locale().language())
 }
 
 fn render_wall(view: &FeedView<'_>) -> String {
     let posts = view.store.posts();
     if posts.is_empty() {
-        return r#"<p class="text-secondary mb-0">No posts yet. Be the first on the wall.</p>"#
-            .to_owned();
+        return format!(
+            r#"<p class="text-secondary mb-0">{msg}</p>"#,
+            msg = escape_html(&view.ui.t("empty_wall")),
+        );
     }
     let mut posts_html = String::new();
     for post in &posts {
@@ -155,6 +196,7 @@ fn render_wall(view: &FeedView<'_>) -> String {
             .find(|(id, _)| *id == post.id)
             .map_or("", |(_, html)| html.as_str());
         posts_html.push_str(&post_card(
+            view.ui,
             post,
             &comments,
             comment_form,
@@ -165,46 +207,65 @@ fn render_wall(view: &FeedView<'_>) -> String {
     posts_html
 }
 
-const DELETE_POST_MODAL: &str = r#"<div class="modal fade" id="delete-post-modal" tabindex="-1" aria-labelledby="delete-post-modal-label" aria-hidden="true">
+fn delete_post_modal(ui: &Ui<'_>) -> String {
+    format!(
+        r#"<div class="modal fade" id="delete-post-modal" tabindex="-1" aria-labelledby="delete-post-modal-label" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title fs-6" id="delete-post-modal-label">Delete this post?</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title fs-6" id="delete-post-modal-label">{title}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{close}"></button>
       </div>
       <div class="modal-body small text-secondary">
-        This removes the post and its comments. You cannot undo it.
+        {body}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{cancel}</button>
         <form id="delete-post-confirm-form" method="POST" action="">
           <span id="delete-post-csrf"></span>
-          <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          <button type="submit" class="btn btn-danger btn-sm">{delete}</button>
         </form>
       </div>
     </div>
   </div>
-</div>"#;
+</div>"#,
+        title = escape_html(&ui.t("delete_title")),
+        close = escape_attr(&ui.t("close")),
+        body = escape_html(&ui.t("delete_body")),
+        cancel = escape_html(&ui.t("cancel")),
+        delete = escape_html(&ui.t("delete")),
+    )
+}
 
-const ABOUT_MODAL: &str = r#"<div class="modal fade" id="about-myfeed" tabindex="-1" aria-labelledby="about-myfeed-label" aria-hidden="true">
+fn about_modal(ui: &Ui<'_>) -> String {
+    format!(
+        r#"<div class="modal fade" id="about-myfeed" tabindex="-1" aria-labelledby="about-myfeed-label" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title fs-5" id="about-myfeed-label">About MyFeed</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title fs-5" id="about-myfeed-label">{title}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{close}"></button>
       </div>
       <div class="modal-body">
-        <p>MyFeed is a beginner demo for the Serenade framework: an open, self-hosted public wall with forms, CSRF, Bootstrap, Quill, and HTML pages you can run locally.</p>
-        <p class="mb-0">Thanks to <a href="https://jarvi3.com/pulse" rel="noopener noreferrer" target="_blank">JARVI3 Pulse</a> for inspiring the feed-first shape of this demo. JARVI3 Pulse is original work - not affiliated with Serenade.</p>
+        <p>{body}</p>
+        <p class="mb-0">{thanks}</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{close_btn}</button>
       </div>
     </div>
   </div>
-</div>"#;
+</div>"#,
+        title = escape_html(&ui.t("about_title")),
+        close = escape_attr(&ui.t("close")),
+        body = escape_html(&ui.t("about_body")),
+        thanks = escape_html(&ui.t("about_thanks")),
+        close_btn = escape_html(&ui.t("close")),
+    )
+}
 
 fn post_card(
+    ui: &Ui<'_>,
     post: &Post,
     comments: &[Comment],
     comment_form: &str,
@@ -235,8 +296,11 @@ fn post_card(
         );
     }
     if comments_html.is_empty() {
-        comments_html
-            .push_str(r#"<p class="text-secondary small mb-2">No approved comments yet.</p>"#);
+        let _ = write!(
+            comments_html,
+            r#"<p class="text-secondary small mb-2">{msg}</p>"#,
+            msg = escape_html(&ui.t("no_comments"))
+        );
     }
     let when = if post.created_at.is_empty() {
         String::new()
@@ -250,7 +314,7 @@ fn post_card(
     <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
       <p class="text-secondary small mb-0">Post #{id} · {category}{when}</p>
       <div class="d-flex flex-wrap align-items-center gap-2">
-        <span class="badge text-bg-light border" data-like-count>{likes} likes</span>
+        <span class="badge text-bg-light border" data-like-count>{likes}</span>
         {like_form}
         {admin_actions}
       </div>
@@ -259,7 +323,7 @@ fn post_card(
     {image}
     {embed}
     <div class="border-top pt-3 mt-3">
-      <h3 class="h6">Comments</h3>
+      <h3 class="h6">{comments_title}</h3>
       {comments_html}
       {comment_form}
     </div>
@@ -268,7 +332,8 @@ fn post_card(
 "#,
         id = post.id,
         category = escape_html(&post.category),
-        likes = post.likes,
+        likes = escape_html(&ui.tn("likes", i64::try_from(post.likes).unwrap_or(0))),
+        comments_title = escape_html(&ui.t("comments")),
         body = post.body,
     )
 }
@@ -276,6 +341,7 @@ fn post_card(
 /// Admin page with logout, comment queue, and category manager.
 #[must_use]
 pub fn admin_page_with_logout(
+    ui: &Ui<'_>,
     pending: &[Comment],
     forms: &[(u64, String, String)],
     logout_form: &str,
@@ -290,7 +356,11 @@ pub fn admin_page_with_logout(
     });
     let mut rows = String::new();
     if pending.is_empty() {
-        rows.push_str(r#"<p class="text-secondary mb-0">Queue empty.</p>"#);
+        let _ = write!(
+            rows,
+            r#"<p class="text-secondary mb-0">{msg}</p>"#,
+            msg = escape_html(&ui.t("queue_empty"))
+        );
     }
     for comment in pending {
         let (approve, reject) = forms
@@ -320,35 +390,43 @@ pub fn admin_page_with_logout(
 <div class="myfeed-shell">
   <header class="d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
     <div class="me-auto">
-      <h1 class="myfeed-brand">MyFeed Admin</h1>
-      <p class="myfeed-tag">Moderation queue and categories</p>
+      <h1 class="myfeed-brand">{admin_title}</h1>
+      <p class="myfeed-tag">{admin_tag}</p>
     </div>
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
-      <a class="link-secondary" href="/">Feed</a>
-      <a class="admin-link btn btn-primary btn-sm" href="/admin">Admin</a>
+      {langs}
+      <a class="link-secondary" href="/">{nav_feed}</a>
+      <a class="admin-link btn btn-primary btn-sm" href="/admin">{nav_admin}</a>
       {logout_form}
     </nav>
   </header>
   <main class="row g-4">
     <div class="col-lg-7">
-      <h2 class="h5 mb-3">Pending comments</h2>
+      <h2 class="h5 mb-3">{pending_title}</h2>
       {notice_html}
       {rows}
     </div>
     <div class="col-lg-5">
-      <h2 class="h5 mb-3">Categories</h2>
+      <h2 class="h5 mb-3">{categories_title}</h2>
       {categories_html}
     </div>
   </main>
 </div>
-"#
+"#,
+        admin_title = escape_html(&ui.t("admin_title")),
+        admin_tag = escape_html(&ui.t("admin_tag")),
+        langs = locale_switcher(ui),
+        nav_feed = escape_html(&ui.t("nav_feed")),
+        nav_admin = escape_html(&ui.t("nav_admin")),
+        pending_title = escape_html(&ui.t("pending_title")),
+        categories_title = escape_html(&ui.t("categories_title")),
     );
-    document("MyFeed Admin", &body, false)
+    document(&ui.t("admin_title"), &body, false, ui.locale().language())
 }
 
 /// Login form when admin cookie is missing.
 #[must_use]
-pub fn admin_login_page(login_form: &str, err: Option<&str>) -> String {
+pub fn admin_login_page(ui: &Ui<'_>, login_form: &str, err: Option<&str>) -> String {
     let err_html = err.map_or(String::new(), |msg| {
         format!(
             r#"<div class="alert alert-danger" role="alert">{msg}</div>"#,
@@ -360,29 +438,35 @@ pub fn admin_login_page(login_form: &str, err: Option<&str>) -> String {
 <div class="myfeed-shell">
   <header class="d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
     <div class="me-auto">
-      <h1 class="myfeed-brand">MyFeed Admin</h1>
-      <p class="myfeed-tag">Owner sign-in for the moderation queue</p>
+      <h1 class="myfeed-brand">{admin_title}</h1>
+      <p class="myfeed-tag">{admin_login_tag}</p>
     </div>
-    <nav class="myfeed-nav pt-2">
-      <a class="link-secondary" href="/">Feed</a>
+    <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
+      {langs}
+      <a class="link-secondary" href="/">{nav_feed}</a>
     </nav>
   </header>
   <main class="card post-card">
     <div class="card-body p-4">
       {err_html}
-      <p class="text-secondary small">Use the local demo token from the README (cookie session after login).</p>
+      <p class="text-secondary small">{admin_login_help}</p>
       {login_form}
     </div>
   </main>
 </div>
-"#
+"#,
+        admin_title = escape_html(&ui.t("admin_title")),
+        admin_login_tag = escape_html(&ui.t("admin_login_tag")),
+        langs = locale_switcher(ui),
+        nav_feed = escape_html(&ui.t("nav_feed")),
+        admin_login_help = escape_html(&ui.t("admin_login_help")),
     );
-    document("MyFeed Admin", &body, false)
+    document(&ui.t("admin_title"), &body, false, ui.locale().language())
 }
 
 /// Edit an existing post (admin).
 #[must_use]
-pub fn edit_post_page(post_id: u64, form_html: &str, err: Option<&str>) -> String {
+pub fn edit_post_page(ui: &Ui<'_>, post_id: u64, form_html: &str, err: Option<&str>) -> String {
     let err_html = err.map_or(String::new(), |msg| {
         format!(
             r#"<div class="alert alert-danger" role="alert">{msg}</div>"#,
@@ -411,7 +495,12 @@ pub fn edit_post_page(post_id: u64, form_html: &str, err: Option<&str>) -> Strin
 </div>
 "#
     );
-    document(&format!("Edit post #{post_id}"), &body, false)
+    document(
+        &format!("Edit post #{post_id}"),
+        &body,
+        false,
+        ui.locale().language(),
+    )
 }
 
 /// HTML response helper.

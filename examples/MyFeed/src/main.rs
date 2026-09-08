@@ -6,11 +6,14 @@
 mod embed;
 mod emoji;
 mod html;
+mod i18n;
 mod sanitize;
 mod store;
 
 use std::fmt::Write as _;
 use std::sync::Arc;
+
+use std::path::PathBuf;
 
 use serenade_form::{Form, FormStatus, escape_attr, escape_html};
 use serenade_http::{
@@ -18,6 +21,7 @@ use serenade_http::{
     UrlMatcher,
 };
 use serenade_security::HmacCsrfTokenManager;
+use serenade_translation::{Locale, LocaleNegotiator, Translator};
 use serenade_validator::NotBlank;
 
 use crate::embed::is_allowed_embed;
@@ -25,6 +29,7 @@ use crate::html::{
     FeedView, admin_login_page, admin_page_with_logout, asset_response, edit_post_page,
     emoji_picker, feed_page, html_response, redirect, redirect_with_cookie,
 };
+use crate::i18n::Ui;
 use crate::sanitize::{plain_len, sanitize_post_html};
 use crate::store::{FeedStore, NewPost, Post};
 
@@ -32,6 +37,7 @@ const DEFAULT_BIND: &str = "127.0.0.1:8090";
 const DEFAULT_CSRF: &str = "myfeed-dev-csrf-secret-change-me!!";
 const DEFAULT_ADMIN: &str = "myfeed-dev-admin";
 const ADMIN_COOKIE: &str = "myfeed_admin";
+const LOCALE_COOKIE: &str = "_locale";
 const MAX_IMAGE_DATA: usize = 280_000;
 const MAX_BODY_CHARS: usize = 2000;
 
@@ -40,6 +46,8 @@ struct AppState {
     csrf: HmacCsrfTokenManager,
     matcher: UrlMatcher,
     admin_token: String,
+    translator: Translator,
+    negotiator: LocaleNegotiator,
 }
 
 fn routes() -> Result<RouteCollection, HttpError> {
@@ -110,6 +118,11 @@ fn routes() -> Result<RouteCollection, HttpError> {
     collection.add(Route::with_method(
         "asset_js",
         "/assets/clitorine.js",
+        Method::Get,
+    ))?;
+    collection.add(Route::with_method(
+        "locale_set",
+        "/locale/{code}",
         Method::Get,
     ))?;
     Ok(collection)
@@ -453,6 +466,34 @@ fn is_admin(request: &Request, expected: &str) -> bool {
     cookie_value(request, ADMIN_COOKIE).is_some_and(|value| value == expected)
 }
 
+fn ui_for<'a>(state: &'a AppState, request: &Request) -> Ui<'a> {
+    let locale = serenade_translation::request_locale(request)
+        .cloned()
+        .unwrap_or_else(|| state.negotiator.resolve(request));
+    state.translator.set_locale(locale.clone());
+    Ui::new(&state.translator, locale)
+}
+
+fn handle_locale_set(state: &AppState, request: &Request) -> Response {
+    let code = request
+        .attributes()
+        .get::<String>("code")
+        .map_or("en", String::as_str);
+    let locale = Locale::new(code).unwrap_or_else(|_| Locale::new("en").expect("en"));
+    let matched = state
+        .negotiator
+        .allowed()
+        .iter()
+        .find(|item| item.language() == locale.language())
+        .cloned()
+        .unwrap_or_else(|| state.negotiator.default_locale().clone());
+    let cookie = format!(
+        "{LOCALE_COOKIE}={tag}; Path=/; SameSite=Lax; Max-Age=31536000",
+        tag = matched.as_str()
+    );
+    redirect_with_cookie("/", &cookie)
+}
+
 fn feed_with_flash(
     state: &AppState,
     request: &Request,
@@ -460,6 +501,7 @@ fn feed_with_flash(
     is_err: bool,
     composer_open: bool,
 ) -> Result<Response, HttpError> {
+    let ui = ui_for(state, request);
     let categories = state.store.categories();
     let post_form = build_post_form(&state.csrf, &categories)?;
     let mut comment_forms = Vec::new();
@@ -476,6 +518,7 @@ fn feed_with_flash(
     Ok(html_response(
         if is_err { 400 } else { 200 },
         feed_page(&FeedView {
+            ui: &ui,
             store: &state.store,
             post_form_html: &post_form,
             comment_forms: &comment_forms,
@@ -490,6 +533,7 @@ fn feed_with_flash(
 
 fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError> {
     state.matcher.apply(request)?;
+    let _locale = state.negotiator.apply(request);
     let route = request
         .attributes()
         .get::<String>(ROUTE_ATTRIBUTE)
@@ -518,6 +562,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
             "text/javascript; charset=utf-8",
             include_bytes!("../assets/clitorine.js"),
         )),
+        "locale_set" => Ok(handle_locale_set(state, request)),
         _ => Err(HttpError::not_found("no handler")),
     }
 }
@@ -687,9 +732,12 @@ fn handle_like(state: &AppState, request: &Request) -> Result<Response, HttpErro
 fn handle_admin_get(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
         let login = build_login_form(&state.csrf)?;
-        return Ok(html_response(200, admin_login_page(&login, None)));
+        return Ok(html_response(
+            200,
+            admin_login_page(&ui_for(state, request), &login, None),
+        ));
     }
-    render_admin(state, None)
+    render_admin(state, request, None)
 }
 
 fn handle_admin_login(state: &AppState, request: &Request) -> Result<Response, HttpError> {
@@ -703,7 +751,11 @@ fn handle_admin_login(state: &AppState, request: &Request) -> Result<Response, H
                 let login = build_login_form(&state.csrf)?;
                 return Ok(html_response(
                     401,
-                    admin_login_page(&login, Some("Invalid admin token.")),
+                    admin_login_page(
+                        &ui_for(state, request),
+                        &login,
+                        Some("Invalid admin token."),
+                    ),
                 ));
             }
             let cookie =
@@ -714,7 +766,11 @@ fn handle_admin_login(state: &AppState, request: &Request) -> Result<Response, H
             let login = build_login_form(&state.csrf)?;
             Ok(html_response(
                 400,
-                admin_login_page(&login, Some("Login failed. Try again.")),
+                admin_login_page(
+                    &ui_for(state, request),
+                    &login,
+                    Some("Login failed. Try again."),
+                ),
             ))
         }
     }
@@ -727,7 +783,11 @@ fn handle_admin_logout(state: &AppState, request: &Request) -> Response {
     redirect_with_cookie("/", &cookie)
 }
 
-fn render_admin(state: &AppState, notice: Option<&str>) -> Result<Response, HttpError> {
+fn render_admin(
+    state: &AppState,
+    request: &Request,
+    notice: Option<&str>,
+) -> Result<Response, HttpError> {
     let pending = state.store.pending_comments();
     let mut forms = Vec::new();
     for comment in &pending {
@@ -752,7 +812,14 @@ fn render_admin(state: &AppState, notice: Option<&str>) -> Result<Response, Http
     let categories_html = build_categories_admin(&state.csrf, &categories)?;
     Ok(html_response(
         200,
-        admin_page_with_logout(&pending, &forms, &logout, &categories_html, notice),
+        admin_page_with_logout(
+            &ui_for(state, request),
+            &pending,
+            &forms,
+            &logout,
+            &categories_html,
+            notice,
+        ),
     ))
 }
 
@@ -765,7 +832,7 @@ fn handle_admin_moderation(
         let login = build_login_form(&state.csrf)?;
         return Ok(html_response(
             401,
-            admin_login_page(&login, Some("Sign in first.")),
+            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
         ));
     }
     let id = request
@@ -795,7 +862,7 @@ fn handle_category_add(state: &AppState, request: &Request) -> Result<Response, 
         let login = build_login_form(&state.csrf)?;
         return Ok(html_response(
             401,
-            admin_login_page(&login, Some("Sign in first.")),
+            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
         ));
     }
     let mut form = Form::builder("category-add")
@@ -806,7 +873,7 @@ fn handle_category_add(state: &AppState, request: &Request) -> Result<Response, 
             let name = form.get("name").unwrap_or("").trim();
             match state.store.add_category(name) {
                 Ok(()) => Ok(redirect("/admin")),
-                Err(msg) => render_admin(state, Some(msg)),
+                Err(msg) => render_admin(state, request, Some(msg)),
             }
         }
         _ => Ok(redirect("/admin")),
@@ -818,7 +885,7 @@ fn handle_category_delete(state: &AppState, request: &Request) -> Result<Respons
         let login = build_login_form(&state.csrf)?;
         return Ok(html_response(
             401,
-            admin_login_page(&login, Some("Sign in first.")),
+            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
         ));
     }
     let mut form = Form::builder("category-delete")
@@ -847,7 +914,7 @@ fn handle_post_edit_get(state: &AppState, request: &Request) -> Result<Response,
         let login = build_login_form(&state.csrf)?;
         return Ok(html_response(
             401,
-            admin_login_page(&login, Some("Sign in first.")),
+            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
         ));
     }
     let id = route_post_id(request)?;
@@ -856,7 +923,10 @@ fn handle_post_edit_get(state: &AppState, request: &Request) -> Result<Response,
     };
     let categories = state.store.categories();
     let form = build_edit_form(&state.csrf, &categories, &post)?;
-    Ok(html_response(200, edit_post_page(id, &form, None)))
+    Ok(html_response(
+        200,
+        edit_post_page(&ui_for(state, request), id, &form, None),
+    ))
 }
 
 fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response, HttpError> {
@@ -864,7 +934,7 @@ fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response
         let login = build_login_form(&state.csrf)?;
         return Ok(html_response(
             401,
-            admin_login_page(&login, Some("Sign in first.")),
+            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
         ));
     }
     let id = route_post_id(request)?;
@@ -889,7 +959,7 @@ fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response
                 let form_html = build_edit_form(&state.csrf, &categories, &post)?;
                 Ok(html_response(
                     400,
-                    edit_post_page(id, &form_html, Some(msg)),
+                    edit_post_page(&ui_for(state, request), id, &form_html, Some(msg)),
                 ))
             }
         },
@@ -902,7 +972,7 @@ fn handle_post_delete(state: &AppState, request: &Request) -> Result<Response, H
         let login = build_login_form(&state.csrf)?;
         return Ok(html_response(
             401,
-            admin_login_page(&login, Some("Sign in first.")),
+            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
         ));
     }
     let id = route_post_id(request)?;
@@ -936,11 +1006,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_path = std::env::var("MYFEED_DB").unwrap_or_else(|_| ".myfeed.sqlite".to_owned());
     let store = FeedStore::open(db_path);
     seed_if_empty(&store);
+    let translations = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations");
+    let mut translator = Translator::new(Locale::new("en").expect("en"))
+        .with_fallbacks(vec![Locale::new("en").expect("en")]);
+    translator
+        .load_path(&translations)
+        .map_err(|err| format!("load translations: {err}"))?;
+    let negotiator = LocaleNegotiator::new(Locale::new("en").expect("en"))
+        .with_allowed(vec![
+            Locale::new("en").expect("en"),
+            Locale::new("fr").expect("fr"),
+        ])
+        .with_cookie_name(LOCALE_COOKIE);
+
     let state = Arc::new(AppState {
         store,
         csrf: HmacCsrfTokenManager::new(csrf_secret.as_bytes()),
         matcher: UrlMatcher::new(routes()?),
         admin_token: admin_token.clone(),
+        translator,
+        negotiator,
     });
 
     let state_for_handler = Arc::clone(&state);

@@ -17,6 +17,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Cache** | PSR-like cache contracts; in-memory / Redis adapters |
 | **Security** | AuthN/Z hooks, firewall, voters, CSRF token manager |
 | **Form** | HTML forms: bind, CSRF by default, XSS-safe render ([FORMS.md](FORMS.md)) |
+| **Translation** | Translator, catalogues, locale negotiation, ICU format helpers ([I18N.md](I18N.md)) |
 | **Messenger** | Command/query/event bus; async transport adapters |
 | **Serializer** | DTO ↔ JSON (and other formats); normalizers |
 | **Validator** | Constraint validation on DTOs and commands |
@@ -156,6 +157,19 @@ HTML form helpers live in **`serenade-form`** ([#110](https://github.com/Interch
 | `escape_html` / `escape_attr` | XSS-safe output |
 
 Apps stay thin: declare fields and constraints; framework owns CSRF and escape.
+
+## Translation / i18n
+
+UI strings and locale live in **`serenade-translation`** ([#132](https://github.com/Interchouette-ITC/Serenade/issues/132)). See [I18N.md](I18N.md).
+
+| Piece | Role |
+| --- | --- |
+| `Translator` / catalogues | TOML-first domains, fallbacks, `{name}` + ICU plural subset |
+| `LocaleNegotiator` | Query / cookie / `Accept-Language` → `_locale` |
+| ICU format helpers | Number, currency code, date (feature `icu`) |
+| `TranslationExtension` | DI service `translator` |
+
+Product multilang entity rows stay in the application database.
 
 ## Cache
 
