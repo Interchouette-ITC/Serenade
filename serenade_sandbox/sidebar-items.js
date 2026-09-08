@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["decode_json","load_webc_from","run_module","run_package","version","wasmer_cache_root","wasmer_cache_root_from"],"struct":["GuestOutput","PackageRun"]};
