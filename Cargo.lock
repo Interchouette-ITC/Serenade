@@ -3575,10 +3575,14 @@ dependencies = [
  "serenade-form",
  "serenade-http",
  "serenade-http-actix",
+ "serenade-observability",
+ "serenade-profiler",
  "serenade-security",
  "serenade-translation",
  "serenade-validator",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -5585,6 +5589,17 @@ dependencies = [
  "thiserror 2.0.20",
  "tracing",
  "tracing-appender",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "serenade-profiler"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "serenade-http",
+ "tokio",
+ "tracing",
  "tracing-subscriber",
 ]
 

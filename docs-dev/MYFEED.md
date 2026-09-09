@@ -14,6 +14,7 @@ Path: [`examples/MyFeed`](../examples/MyFeed). Epic [#112](https://github.com/In
 | HTTP      | Actix via `serenade-http-actix::listen`                                      |
 | Forms     | `serenade-form` (CSRF default-on, `escape_html`)                             |
 | i18n      | `serenade-translation` catalogues `en` + `fr`; `/locale/{code}` cookie       |
+| Profiler  | `serenade-profiler` toolbar + `/_profiler` (disable with `MYFEED_PROFILER=0`) |
 | Rich text | Quill HTML sanitized with ammonia before store/render                        |
 | Admin     | Cookie login on `/admin` (Bearer still accepted); category manager           |
 | Data      | SQLite file (default `.myfeed.sqlite`) so restarts keep posts                |
@@ -26,6 +27,7 @@ Path: [`examples/MyFeed`](../examples/MyFeed). Epic [#112](https://github.com/In
 - `POST /posts/{id}/like` public like
 - `POST /posts/{id}/comments` pending comment
 - `/admin` login + pending queue + categories; approve / reject
+- `/_profiler` request list and `/_profiler/{token}` detail (toolbar on HTML pages)
 
 ## Run
 

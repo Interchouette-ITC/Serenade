@@ -186,7 +186,9 @@ Default DI pool is in-memory. Apps register `RedisAdapter` when they need Redis.
 
 ## Observability (structured logging)
 
-`serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Apps call `init` from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md). The web profiler is a separate surface ([#56](https://github.com/Interchouette-ITC/Serenade/issues/56)); this crate does not install a profiler collector.
+`serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Apps call `init` from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md).
+
+The browser Web Debug Toolbar / Profiler lives in **`serenade-profiler`** ([PROFILER.md](PROFILER.md)): per-request collectors, HTML toolbar injection, and `/_profiler/{token}`. It is not the console. `AsyncHttpKernel` supports an async middleware pipeline (`AsyncMiddleware`) so Actix/`listen` apps can push the profiler the same way sync `HttpKernel` pushes `Middleware`.
 
 ## Configuration layers
 

@@ -11,18 +11,24 @@ mod sanitize;
 mod store;
 
 use std::fmt::Write as _;
-use std::sync::Arc;
-
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serenade_form::{Form, FormStatus, escape_attr, escape_html};
 use serenade_http::{
     AsyncHttpKernel, HttpError, Method, ROUTE_ATTRIBUTE, Request, Response, Route, RouteCollection,
     UrlMatcher,
 };
+use serenade_observability::REQUEST;
+use serenade_profiler::{
+    AsyncProfilerMiddleware, PROFILER_TOKEN_ATTRIBUTE, ProfileStore, ProfilerConfig,
+    ProfilerLogLayer, QueryEvent, record_query, try_handle_profiler,
+};
 use serenade_security::HmacCsrfTokenManager;
 use serenade_translation::{Locale, LocaleNegotiator, Translator};
 use serenade_validator::NotBlank;
+use tracing_subscriber::prelude::*;
 
 use crate::embed::is_allowed_embed;
 use crate::html::{
@@ -48,6 +54,7 @@ struct AppState {
     admin_token: String,
     translator: Translator,
     negotiator: LocaleNegotiator,
+    profiler: Arc<ProfileStore>,
 }
 
 fn routes() -> Result<RouteCollection, HttpError> {
@@ -502,13 +509,25 @@ fn feed_with_flash(
     composer_open: bool,
 ) -> Result<Response, HttpError> {
     let ui = ui_for(state, request);
+    let started = Instant::now();
     let categories = state.store.categories();
+    let posts = state.store.posts();
+    if let Some(token) = request.attributes().get::<String>(PROFILER_TOKEN_ATTRIBUTE) {
+        record_query(
+            &state.profiler,
+            token,
+            QueryEvent::new(
+                "SELECT posts + categories (feed page)",
+                started.elapsed().max(Duration::from_micros(1)),
+            ),
+        );
+    }
     let post_form = build_post_form(&state.csrf, &categories)?;
     let mut comment_forms = Vec::new();
     let mut like_forms = Vec::new();
     let mut admin_forms = Vec::new();
     let admin = is_admin(request, &state.admin_token);
-    for post in state.store.posts() {
+    for post in &posts {
         comment_forms.push((post.id, build_comment_form(&state.csrf, post.id)?));
         like_forms.push((post.id, build_like_form(&state.csrf, post.id)?));
         if admin {
@@ -532,8 +551,12 @@ fn feed_with_flash(
 }
 
 fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError> {
+    if let Some(response) = try_handle_profiler(&state.profiler, "/_profiler", request) {
+        return Ok(response);
+    }
     state.matcher.apply(request)?;
     let _locale = state.negotiator.apply(request);
+    tracing::info!(target: REQUEST, path = request.path(), "myfeed request");
     let route = request
         .attributes()
         .get::<String>(ROUTE_ATTRIBUTE)
@@ -1019,6 +1042,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .with_cookie_name(LOCALE_COOKIE);
 
+    let profiler_enabled = std::env::var("MYFEED_PROFILER").map_or(true, |value| {
+        value != "0" && !value.eq_ignore_ascii_case("false")
+    });
+    let profiler_store = Arc::new(ProfileStore::new(50));
+    let _ = tracing_subscriber::registry()
+        .with(ProfilerLogLayer)
+        .with(tracing_subscriber::fmt::layer().with_target(true))
+        .try_init();
+
     let state = Arc::new(AppState {
         store,
         csrf: HmacCsrfTokenManager::new(csrf_secret.as_bytes()),
@@ -1026,15 +1058,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         admin_token: admin_token.clone(),
         translator,
         negotiator,
+        profiler: Arc::clone(&profiler_store),
     });
 
     let state_for_handler = Arc::clone(&state);
-    let async_kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| {
+    let mut async_kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| {
         handle(state_for_handler.as_ref(), request)
     });
+    if profiler_enabled {
+        async_kernel.push_middleware(AsyncProfilerMiddleware::new(
+            Arc::clone(&profiler_store),
+            ProfilerConfig::enabled(50),
+        ));
+    }
 
     println!("MyFeed listening on http://{bind}/");
     println!("Admin: open /admin and sign in with token `{admin_token}`");
+    if profiler_enabled {
+        println!("Profiler: http://{bind}/_profiler (disable with MYFEED_PROFILER=0)");
+    }
 
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(serenade_http_actix::listen(bind, async_kernel))?;

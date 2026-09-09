@@ -4,6 +4,7 @@
 
 mod async_handler;
 mod async_kernel;
+mod async_middleware;
 mod attributes;
 mod error;
 mod exception;
@@ -20,6 +21,7 @@ mod route;
 
 pub use async_handler::{AsyncFn, AsyncRequestHandler, BoxFuture, SyncToAsync, box_future};
 pub use async_kernel::AsyncHttpKernel;
+pub use async_middleware::{AsyncMiddleware, AsyncNext};
 pub use attributes::AttributeBag;
 pub use error::HttpError;
 pub use exception::{DefaultExceptionHandler, ExceptionHandler};

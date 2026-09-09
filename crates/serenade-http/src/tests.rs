@@ -1,9 +1,10 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    AsyncHttpKernel, DefaultExceptionHandler, ExceptionHandler, HttpError, HttpKernel, Method,
-    Middleware, ROUTE_ATTRIBUTE, Request, RequestHandler, Response, Route, RouteCollection,
-    RouteLoader, UrlMatcher, box_future, load_routes,
+    AsyncHttpKernel, AsyncMiddleware, AsyncNext, BoxFuture, DefaultExceptionHandler,
+    ExceptionHandler, HttpError, HttpKernel, Method, Middleware, ROUTE_ATTRIBUTE, Request,
+    RequestHandler, Response, Route, RouteCollection, RouteLoader, UrlMatcher, box_future,
+    load_routes,
 };
 
 struct TraceLayer {
@@ -19,6 +20,24 @@ impl Middleware for TraceLayer {
     ) -> Result<Response, HttpError> {
         self.log.lock().expect("log").push(self.name);
         next.handle(request)
+    }
+}
+
+struct AsyncTraceLayer {
+    name: &'static str,
+    log: Arc<Mutex<Vec<&'static str>>>,
+}
+
+impl AsyncMiddleware for AsyncTraceLayer {
+    fn process<'a>(
+        &'a self,
+        request: &'a mut Request,
+        next: AsyncNext<'a>,
+    ) -> BoxFuture<'a, Result<Response, HttpError>> {
+        Box::pin(async move {
+            self.log.lock().expect("log").push(self.name);
+            next.run(request).await
+        })
     }
 }
 
@@ -337,4 +356,40 @@ async fn async_kernel_custom_exception_handler() {
     let response = kernel.handle(Request::new(Method::Post, "/")).await;
     assert_eq!(response.status(), 503);
     assert_eq!(response.body_str(), Some("mapped:nope"));
+}
+
+#[tokio::test]
+async fn async_middleware_runs_outer_first() {
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut kernel = AsyncHttpKernel::from_sync({
+        let log = Arc::clone(&log);
+        move |_request: &mut Request| {
+            log.lock().expect("log").push("controller");
+            Ok(Response::new(204))
+        }
+    });
+    kernel.push_middleware(AsyncTraceLayer {
+        name: "outer",
+        log: Arc::clone(&log),
+    });
+    kernel.push_middleware(AsyncTraceLayer {
+        name: "inner",
+        log: Arc::clone(&log),
+    });
+    let response = kernel.handle(Request::new(Method::Get, "/")).await;
+    assert_eq!(response.status(), 204);
+    assert_eq!(*log.lock().expect("log"), ["outer", "inner", "controller"]);
+}
+
+#[tokio::test]
+async fn async_middleware_maps_controller_errors() {
+    let mut kernel =
+        AsyncHttpKernel::from_sync(|_: &mut Request| Err(HttpError::status(418, "teapot")));
+    kernel.push_middleware(AsyncTraceLayer {
+        name: "mw",
+        log: Arc::new(Mutex::new(Vec::new())),
+    });
+    let response = kernel.handle(Request::new(Method::Get, "/")).await;
+    assert_eq!(response.status(), 418);
+    assert_eq!(response.body_str(), Some("teapot"));
 }
