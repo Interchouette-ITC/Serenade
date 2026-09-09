@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["asset","escape_attr","escape_html","partial","path","version"],"struct":["AssetConfig","ViewError"]};
