@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use serenade_form::{Form, FormStatus, escape_attr, escape_html};
+use serenade_form::{Form, FormStatus};
 use serenade_http::{
     AsyncHttpKernel, HttpError, Method, ROUTE_ATTRIBUTE, Request, Response, Route, RouteCollection,
     UrlMatcher,
@@ -28,6 +28,7 @@ use serenade_profiler::{
 use serenade_security::HmacCsrfTokenManager;
 use serenade_translation::{Locale, LocaleNegotiator, Translator};
 use serenade_validator::NotBlank;
+use serenade_view::{escape_attr, escape_html, path};
 use tracing_subscriber::prelude::*;
 
 use crate::embed::is_allowed_embed;
@@ -153,19 +154,33 @@ fn not_blank() -> Vec<Arc<dyn serenade_validator::Constraint>> {
 
 fn build_post_form(
     csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
     categories: &[String],
 ) -> Result<String, HttpError> {
-    build_composer_form(csrf, categories, "post", "/posts", None, "Post")
+    let action = path(routes, "post_create", &[])?;
+    let cancel = path(routes, "feed", &[])?;
+    build_composer_form(csrf, categories, "post", &action, None, "Post", &cancel)
 }
 
 fn build_edit_form(
     csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
     categories: &[String],
     post: &Post,
 ) -> Result<String, HttpError> {
     let name = format!("edit-{}", post.id);
-    let action = format!("/admin/posts/{}/edit", post.id);
-    build_composer_form(csrf, categories, &name, &action, Some(post), "Save changes")
+    let id = post.id.to_string();
+    let action = path(routes, "admin_post_edit_post", &[("id", id.as_str())])?;
+    let cancel = path(routes, "feed", &[])?;
+    build_composer_form(
+        csrf,
+        categories,
+        &name,
+        &action,
+        Some(post),
+        "Save changes",
+        &cancel,
+    )
 }
 
 fn build_composer_form(
@@ -175,6 +190,7 @@ fn build_composer_form(
     action: &str,
     post: Option<&Post>,
     submit_label: &str,
+    cancel_href: &str,
 ) -> Result<String, HttpError> {
     let mut form = Form::builder(form_name)
         .action(action)
@@ -219,9 +235,13 @@ fn build_composer_form(
         )
     });
     let cancel = if post.is_some() {
-        r#"<a href="/" class="btn btn-outline-secondary">Cancel</a>"#
+        format!(
+            r#"<a href="{href}" class="btn btn-outline-secondary">Cancel</a>"#,
+            href = escape_attr(cancel_href)
+        )
     } else {
         r#"<button type="button" id="composer-cancel" class="btn btn-outline-secondary">Cancel</button>"#
+            .to_owned()
     };
     Ok(format!(
         r#"<form name="{form_name}" method="POST" action="{action}" class="composer-form">
@@ -265,10 +285,14 @@ fn build_composer_form(
 
 fn build_admin_post_actions(
     csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
     post_id: u64,
 ) -> Result<String, HttpError> {
+    let id = post_id.to_string();
+    let delete_action = path(routes, "admin_post_delete", &[("id", id.as_str())])?;
+    let edit_href = path(routes, "admin_post_edit_get", &[("id", id.as_str())])?;
     let mut form = Form::builder(format!("delete-{post_id}"))
-        .action(format!("/admin/posts/{post_id}/delete"))
+        .action(delete_action.clone())
         .build();
     form.prepare_csrf(csrf)
         .map_err(|err| HttpError::failed(err.to_string()))?;
@@ -278,8 +302,10 @@ fn build_admin_post_actions(
     let csrf_field = extract_csrf_hidden(full.as_html());
     let csrf_token = extract_csrf_value(&csrf_field);
     Ok(format!(
-        r#"<a class="btn btn-sm btn-outline-primary" href="/admin/posts/{post_id}/edit">Edit</a>
-<button type="button" class="btn btn-sm btn-outline-danger" data-clitorine-delete data-delete-action="/admin/posts/{post_id}/delete" data-delete-token="{token}">Delete</button>"#,
+        r#"<a class="btn btn-sm btn-outline-primary" href="{edit}">Edit</a>
+<button type="button" class="btn btn-sm btn-outline-danger" data-clitorine-delete data-delete-action="{delete}" data-delete-token="{token}">Delete</button>"#,
+        edit = escape_attr(&edit_href),
+        delete = escape_attr(&delete_action),
         token = escape_attr(&csrf_token),
     ))
 }
@@ -296,10 +322,16 @@ fn extract_csrf_value(csrf_hidden: &str) -> String {
         .to_owned()
 }
 
-fn build_comment_form(csrf: &HmacCsrfTokenManager, post_id: u64) -> Result<String, HttpError> {
+fn build_comment_form(
+    csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
+    post_id: u64,
+) -> Result<String, HttpError> {
     let name = format!("comment-{post_id}");
+    let id = post_id.to_string();
+    let action = path(routes, "comment_create", &[("id", id.as_str())])?;
     let mut form = Form::builder(name)
-        .action(format!("/posts/{post_id}/comments"))
+        .action(action.clone())
         .field("body", not_blank())
         .build();
     form.prepare_csrf(csrf)
@@ -309,20 +341,25 @@ fn build_comment_form(csrf: &HmacCsrfTokenManager, post_id: u64) -> Result<Strin
         .map_err(|err| HttpError::failed(err.to_string()))?;
     let csrf_field = extract_csrf_hidden(full.as_html());
     Ok(format!(
-        r#"<form method="POST" action="/posts/{post_id}/comments" class="mt-2" data-clitorine-ajax="comment">
+        r#"<form method="POST" action="{action}" class="mt-2" data-clitorine-ajax="comment">
 {csrf_field}
 <label class="form-label" for="cbody-{post_id}">Add a comment (needs approval)</label>
 <textarea class="form-control" id="cbody-{post_id}" name="body" maxlength="1000" rows="2" required></textarea>
 <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Submit comment</button>
-</form>"#
+</form>"#,
+        action = escape_attr(&action),
     ))
 }
 
-fn build_like_form(csrf: &HmacCsrfTokenManager, post_id: u64) -> Result<String, HttpError> {
+fn build_like_form(
+    csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
+    post_id: u64,
+) -> Result<String, HttpError> {
     let name = format!("like-{post_id}");
-    let mut form = Form::builder(name)
-        .action(format!("/posts/{post_id}/like"))
-        .build();
+    let id = post_id.to_string();
+    let action = path(routes, "post_like", &[("id", id.as_str())])?;
+    let mut form = Form::builder(name).action(action.clone()).build();
     form.prepare_csrf(csrf)
         .map_err(|err| HttpError::failed(err.to_string()))?;
     let full = form
@@ -330,7 +367,8 @@ fn build_like_form(csrf: &HmacCsrfTokenManager, post_id: u64) -> Result<String, 
         .map_err(|err| HttpError::failed(err.to_string()))?;
     let csrf_field = extract_csrf_hidden(full.as_html());
     Ok(format!(
-        r#"<form method="POST" action="/posts/{post_id}/like" class="like-form" data-clitorine-ajax="like">{csrf_field}<button type="submit" class="btn btn-sm btn-outline-secondary">Like</button></form>"#
+        r#"<form method="POST" action="{action}" class="like-form" data-clitorine-ajax="like">{csrf_field}<button type="submit" class="btn btn-sm btn-outline-secondary">Like</button></form>"#,
+        action = escape_attr(&action),
     ))
 }
 
@@ -349,13 +387,20 @@ fn build_admin_action_form(
         .map_err(|err| HttpError::failed(err.to_string()))?;
     let csrf_field = extract_csrf_hidden(full.as_html());
     Ok(format!(
-        r#"<form method="POST" action="{action}" class="d-inline">{csrf_field}<button type="submit" class="{class}">{label}</button></form>"#
+        r#"<form method="POST" action="{action}" class="d-inline">{csrf_field}<button type="submit" class="{class}">{label}</button></form>"#,
+        action = escape_attr(action),
+        label = escape_html(label),
+        class = escape_attr(class),
     ))
 }
 
-fn build_login_form(csrf: &HmacCsrfTokenManager) -> Result<String, HttpError> {
+fn build_login_form(
+    csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
+) -> Result<String, HttpError> {
+    let action = path(routes, "admin_login", &[])?;
     let mut form = Form::builder("admin-login")
-        .action("/admin/login")
+        .action(action.clone())
         .field("token", not_blank())
         .build();
     form.prepare_csrf(csrf)
@@ -365,19 +410,22 @@ fn build_login_form(csrf: &HmacCsrfTokenManager) -> Result<String, HttpError> {
         .map_err(|err| HttpError::failed(err.to_string()))?;
     let csrf_field = extract_csrf_hidden(full.as_html());
     Ok(format!(
-        r#"<form method="POST" action="/admin/login">
+        r#"<form method="POST" action="{action}">
 {csrf_field}
 <label class="form-label" for="token">Admin token</label>
 <input class="form-control" type="password" id="token" name="token" required autocomplete="current-password" />
 <button type="submit" class="btn btn-primary mt-3">Open queue</button>
-</form>"#
+</form>"#,
+        action = escape_attr(&action),
     ))
 }
 
-fn build_logout_form(csrf: &HmacCsrfTokenManager) -> Result<String, HttpError> {
-    let mut form = Form::builder("admin-logout")
-        .action("/admin/logout")
-        .build();
+fn build_logout_form(
+    csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
+) -> Result<String, HttpError> {
+    let action = path(routes, "admin_logout", &[])?;
+    let mut form = Form::builder("admin-logout").action(action.clone()).build();
     form.prepare_csrf(csrf)
         .map_err(|err| HttpError::failed(err.to_string()))?;
     let full = form
@@ -385,16 +433,20 @@ fn build_logout_form(csrf: &HmacCsrfTokenManager) -> Result<String, HttpError> {
         .map_err(|err| HttpError::failed(err.to_string()))?;
     let csrf_field = extract_csrf_hidden(full.as_html());
     Ok(format!(
-        r#"<form method="POST" action="/admin/logout" class="d-inline">{csrf_field}<button type="submit" class="btn btn-outline-secondary btn-sm">Log out</button></form>"#
+        r#"<form method="POST" action="{action}" class="d-inline">{csrf_field}<button type="submit" class="btn btn-outline-secondary btn-sm">Log out</button></form>"#,
+        action = escape_attr(&action),
     ))
 }
 
 fn build_categories_admin(
     csrf: &HmacCsrfTokenManager,
+    routes: &RouteCollection,
     categories: &[String],
 ) -> Result<String, HttpError> {
+    let add_action = path(routes, "admin_category_add", &[])?;
+    let delete_action = path(routes, "admin_category_delete", &[])?;
     let mut add = Form::builder("category-add")
-        .action("/admin/categories")
+        .action(add_action.clone())
         .field("name", not_blank())
         .build();
     add.prepare_csrf(csrf)
@@ -404,49 +456,51 @@ fn build_categories_admin(
             .map_err(|err| HttpError::failed(err.to_string()))?
             .as_html(),
     );
-
-    let mut list = String::new();
+    let mut rows = String::new();
     for name in categories {
-        let mut del = Form::builder("category-delete")
-            .action("/admin/categories/delete")
+        let mut delete = Form::builder("category-delete")
+            .action(delete_action.clone())
             .field("name", not_blank())
             .build();
-        del.prepare_csrf(csrf)
+        delete
+            .prepare_csrf(csrf)
             .map_err(|err| HttpError::failed(err.to_string()))?;
         let del_csrf = extract_csrf_hidden(
-            del.render()
+            delete
+                .render()
                 .map_err(|err| HttpError::failed(err.to_string()))?
                 .as_html(),
         );
         let _ = write!(
-            list,
-            r#"<span class="category-chip">{label}
-<form method="POST" action="/admin/categories/delete" class="d-inline">
+            rows,
+            r#"
+<li class="list-group-item d-flex justify-content-between align-items-center">
+  <span>{label}</span>
+<form method="POST" action="{delete_action}" class="d-inline">
 {del_csrf}
 <input type="hidden" name="name" value="{value}" />
-<button type="submit" class="btn btn-sm btn-link text-danger p-0">Remove</button>
+<button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
 </form>
-</span>"#,
+</li>"#,
             label = escape_html(name),
             value = escape_html(name),
+            delete_action = escape_attr(&delete_action),
         );
     }
-
     Ok(format!(
-        r#"<div class="card post-card"><div class="card-body">
-<p class="text-secondary small">Natural labels for the composer. Visitors pick one when posting.</p>
-<div class="mb-3">{list}</div>
-<form method="POST" action="/admin/categories" class="row g-2 align-items-end">
+        r#"
+<ul class="list-group mb-3">{rows}</ul>
+<form method="POST" action="{add_action}" class="row g-2 align-items-end">
 {add_csrf}
 <div class="col">
-  <label class="form-label" for="cat-name">Add category</label>
-  <input class="form-control" id="cat-name" name="name" maxlength="40" required />
+  <label class="form-label" for="cat-name">New category</label>
+  <input class="form-control" id="cat-name" name="name" required maxlength="40" />
 </div>
 <div class="col-auto">
   <button type="submit" class="btn btn-primary">Add</button>
 </div>
-</form>
-</div></div>"#
+</form>"#,
+        add_action = escape_attr(&add_action),
     ))
 }
 
@@ -522,16 +576,25 @@ fn feed_with_flash(
             ),
         );
     }
-    let post_form = build_post_form(&state.csrf, &categories)?;
+    let post_form = build_post_form(&state.csrf, state.matcher.collection(), &categories)?;
     let mut comment_forms = Vec::new();
     let mut like_forms = Vec::new();
     let mut admin_forms = Vec::new();
     let admin = is_admin(request, &state.admin_token);
     for post in &posts {
-        comment_forms.push((post.id, build_comment_form(&state.csrf, post.id)?));
-        like_forms.push((post.id, build_like_form(&state.csrf, post.id)?));
+        comment_forms.push((
+            post.id,
+            build_comment_form(&state.csrf, state.matcher.collection(), post.id)?,
+        ));
+        like_forms.push((
+            post.id,
+            build_like_form(&state.csrf, state.matcher.collection(), post.id)?,
+        ));
         if admin {
-            admin_forms.push((post.id, build_admin_post_actions(&state.csrf, post.id)?));
+            admin_forms.push((
+                post.id,
+                build_admin_post_actions(&state.csrf, state.matcher.collection(), post.id)?,
+            ));
         }
     }
     Ok(html_response(
@@ -546,6 +609,7 @@ fn feed_with_flash(
             flash,
             flash_err: is_err,
             composer_open,
+            routes: state.matcher.collection(),
         }),
     ))
 }
@@ -754,10 +818,15 @@ fn handle_like(state: &AppState, request: &Request) -> Result<Response, HttpErro
 
 fn handle_admin_get(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf)?;
+        let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
             200,
-            admin_login_page(&ui_for(state, request), &login, None),
+            admin_login_page(
+                &ui_for(state, request),
+                state.matcher.collection(),
+                &login,
+                None,
+            ),
         ));
     }
     render_admin(state, request, None)
@@ -771,11 +840,12 @@ fn handle_admin_login(state: &AppState, request: &Request) -> Result<Response, H
         Ok(FormStatus::Bound) if form.is_valid() => {
             let token = form.get("token").unwrap_or("").trim();
             if token != state.admin_token {
-                let login = build_login_form(&state.csrf)?;
+                let login = build_login_form(&state.csrf, state.matcher.collection())?;
                 return Ok(html_response(
                     401,
                     admin_login_page(
                         &ui_for(state, request),
+                        state.matcher.collection(),
                         &login,
                         Some("Invalid admin token."),
                     ),
@@ -786,11 +856,12 @@ fn handle_admin_login(state: &AppState, request: &Request) -> Result<Response, H
             Ok(redirect_with_cookie("/admin", &cookie))
         }
         _ => {
-            let login = build_login_form(&state.csrf)?;
+            let login = build_login_form(&state.csrf, state.matcher.collection())?;
             Ok(html_response(
                 400,
                 admin_login_page(
                     &ui_for(state, request),
+                    state.matcher.collection(),
                     &login,
                     Some("Login failed. Try again."),
                 ),
@@ -814,29 +885,42 @@ fn render_admin(
     let pending = state.store.pending_comments();
     let mut forms = Vec::new();
     for comment in &pending {
+        let cid = comment.id.to_string();
+        let approve_path = path(
+            state.matcher.collection(),
+            "admin_approve",
+            &[("id", cid.as_str())],
+        )?;
+        let reject_path = path(
+            state.matcher.collection(),
+            "admin_reject",
+            &[("id", cid.as_str())],
+        )?;
         let approve = build_admin_action_form(
             &state.csrf,
             &format!("approve-{}", comment.id),
-            &format!("/admin/comments/{}/approve", comment.id),
+            &approve_path,
             "Approve",
             "btn btn-success btn-sm",
         )?;
         let reject = build_admin_action_form(
             &state.csrf,
             &format!("reject-{}", comment.id),
-            &format!("/admin/comments/{}/reject", comment.id),
+            &reject_path,
             "Reject",
             "btn btn-outline-danger btn-sm",
         )?;
         forms.push((comment.id, approve, reject));
     }
-    let logout = build_logout_form(&state.csrf)?;
+    let logout = build_logout_form(&state.csrf, state.matcher.collection())?;
     let categories = state.store.categories();
-    let categories_html = build_categories_admin(&state.csrf, &categories)?;
+    let categories_html =
+        build_categories_admin(&state.csrf, state.matcher.collection(), &categories)?;
     Ok(html_response(
         200,
         admin_page_with_logout(
             &ui_for(state, request),
+            state.matcher.collection(),
             &pending,
             &forms,
             &logout,
@@ -852,10 +936,15 @@ fn handle_admin_moderation(
     approve: bool,
 ) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf)?;
+        let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
             401,
-            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
+            admin_login_page(
+                &ui_for(state, request),
+                state.matcher.collection(),
+                &login,
+                Some("Sign in first."),
+            ),
         ));
     }
     let id = request
@@ -882,10 +971,15 @@ fn handle_admin_moderation(
 
 fn handle_category_add(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf)?;
+        let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
             401,
-            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
+            admin_login_page(
+                &ui_for(state, request),
+                state.matcher.collection(),
+                &login,
+                Some("Sign in first."),
+            ),
         ));
     }
     let mut form = Form::builder("category-add")
@@ -905,10 +999,15 @@ fn handle_category_add(state: &AppState, request: &Request) -> Result<Response, 
 
 fn handle_category_delete(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf)?;
+        let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
             401,
-            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
+            admin_login_page(
+                &ui_for(state, request),
+                state.matcher.collection(),
+                &login,
+                Some("Sign in first."),
+            ),
         ));
     }
     let mut form = Form::builder("category-delete")
@@ -934,10 +1033,15 @@ fn route_post_id(request: &Request) -> Result<u64, HttpError> {
 
 fn handle_post_edit_get(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf)?;
+        let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
             401,
-            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
+            admin_login_page(
+                &ui_for(state, request),
+                state.matcher.collection(),
+                &login,
+                Some("Sign in first."),
+            ),
         ));
     }
     let id = route_post_id(request)?;
@@ -945,19 +1049,30 @@ fn handle_post_edit_get(state: &AppState, request: &Request) -> Result<Response,
         return Err(HttpError::not_found("post missing"));
     };
     let categories = state.store.categories();
-    let form = build_edit_form(&state.csrf, &categories, &post)?;
+    let form = build_edit_form(&state.csrf, state.matcher.collection(), &categories, &post)?;
     Ok(html_response(
         200,
-        edit_post_page(&ui_for(state, request), id, &form, None),
+        edit_post_page(
+            &ui_for(state, request),
+            state.matcher.collection(),
+            id,
+            &form,
+            None,
+        ),
     ))
 }
 
 fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf)?;
+        let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
             401,
-            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
+            admin_login_page(
+                &ui_for(state, request),
+                state.matcher.collection(),
+                &login,
+                Some("Sign in first."),
+            ),
         ));
     }
     let id = route_post_id(request)?;
@@ -979,10 +1094,17 @@ fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response
             }
             Err(msg) => {
                 let categories = state.store.categories();
-                let form_html = build_edit_form(&state.csrf, &categories, &post)?;
+                let form_html =
+                    build_edit_form(&state.csrf, state.matcher.collection(), &categories, &post)?;
                 Ok(html_response(
                     400,
-                    edit_post_page(&ui_for(state, request), id, &form_html, Some(msg)),
+                    edit_post_page(
+                        &ui_for(state, request),
+                        state.matcher.collection(),
+                        id,
+                        &form_html,
+                        Some(msg),
+                    ),
                 ))
             }
         },
@@ -992,10 +1114,15 @@ fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response
 
 fn handle_post_delete(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf)?;
+        let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
             401,
-            admin_login_page(&ui_for(state, request), &login, Some("Sign in first.")),
+            admin_login_page(
+                &ui_for(state, request),
+                state.matcher.collection(),
+                &login,
+                Some("Sign in first."),
+            ),
         ));
     }
     let id = route_post_id(request)?;

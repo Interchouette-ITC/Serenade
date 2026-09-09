@@ -158,6 +158,17 @@ HTML form helpers live in **`serenade-form`** ([#110](https://github.com/Interch
 
 Apps stay thin: declare fields and constraints; framework owns CSRF and escape.
 
+## View helpers
+
+Optional HTML helpers live in **`serenade-view`** ([#111](https://github.com/Interchouette-ITC/Serenade/issues/111)). See [VIEW.md](VIEW.md).
+
+| Piece | Role |
+| --- | --- |
+| `path` / `RouteCollection::generate` | Named reverse routing |
+| `asset` / `AssetConfig` | Asset URL under a base prefix |
+| `partial` | Include-style fragment nesting (no engine) |
+| Re-exported escape | Same XSS helpers as Forms |
+
 ## Translation / i18n
 
 UI strings and locale live in **`serenade-translation`** ([#132](https://github.com/Interchouette-ITC/Serenade/issues/132)). See [I18N.md](I18N.md).
