@@ -1,6 +1,11 @@
 # CI / quality gates.
 
-.PHONY: check test lint format format-check doc doc-open doc-clean clean ci audit deny coverage
+.PHONY: check test lint format format-check doc doc-open doc-clean clean ci audit deny \
+	coverage coverage-summary coverage-html tarpaulin machete outdated
+
+# Keep in sync with codecov.yml ignore paths and CI coverage.
+COVERAGE_FEATURES := --features serenade-cache/redis,serenade-serializer/toon
+COVERAGE_IGNORE := examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs
 
 check:
 	cd $(ROOT) && $(CARGO) check --workspace
@@ -8,12 +13,44 @@ check:
 test:
 	cd $(ROOT) && $(CARGO) test --workspace
 
-## Requires `cargo install cargo-llvm-cov`. Writes `coverage/lcov.info`.
+## Requires `cargo install cargo-llvm-cov`. Writes `coverage/lcov.info` (CI / Codecov).
 ## Uses the stable toolchain so llvm-cov finds instrumented objects.
 coverage:
-	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --lcov \
-		--ignore-filename-regex 'examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs' \
+	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --locked --lcov \
+		$(COVERAGE_FEATURES) \
+		--ignore-filename-regex '$(COVERAGE_IGNORE)' \
 		--output-path coverage/lcov.info
+
+## Terminal summary only (fast local check). Same features / ignores as `coverage`.
+coverage-summary:
+	cd $(ROOT) && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --locked --summary-only \
+		$(COVERAGE_FEATURES) \
+		--ignore-filename-regex '$(COVERAGE_IGNORE)'
+
+## HTML report → `coverage/html/` (open coverage/html/index.html).
+coverage-html:
+	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --locked --html \
+		$(COVERAGE_FEATURES) \
+		--ignore-filename-regex '$(COVERAGE_IGNORE)' \
+		--output-dir coverage/html
+
+## Alternate local coverage via tarpaulin (not used by CI; Codecov stays on llvm-cov).
+## Requires `cargo install cargo-tarpaulin`. Writes under `coverage/tarpaulin/`.
+tarpaulin:
+	cd $(ROOT) && mkdir -p coverage/tarpaulin && $(CARGO) tarpaulin --workspace --locked \
+		$(COVERAGE_FEATURES) \
+		--exclude-files 'examples/*' 'crates/serenade-cli/*' \
+		'serenade-console/src/interactive.rs' 'serenade-console/src/commands/*' \
+		'crates/serenade-contracts/src/tests.rs' \
+		--out Html --out Xml --output-dir coverage/tarpaulin
+
+## Unused workspace dependencies. Requires `cargo install cargo-machete`.
+machete:
+	cd $(ROOT) && $(CARGO) machete
+
+## Outdated crates report. Requires `cargo install cargo-outdated`.
+outdated:
+	cd $(ROOT) && $(CARGO) outdated --workspace
 
 format:
 	cd $(ROOT) && $(CARGO) fmt

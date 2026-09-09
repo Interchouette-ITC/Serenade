@@ -26,7 +26,12 @@ make ci
 | --- | --- |
 | Format + Clippy | `make lint` |
 | Tests | `make test` |
-| Coverage (lcov) | `make coverage` (needs `cargo llvm-cov`) |
+| Coverage (lcov / Codecov) | `make coverage` (needs `cargo llvm-cov`) |
+| Coverage summary | `make coverage-summary` |
+| Coverage HTML | `make coverage-html` |
+| Tarpaulin (local) | `make tarpaulin` (needs `cargo tarpaulin`; CI stays on llvm-cov) |
+| Unused deps | `make machete` (needs `cargo machete`) |
+| Outdated deps | `make outdated` (needs `cargo outdated`) |
 | Rustdoc | `make doc` |
 | Full CI slice | `make ci` |
 
