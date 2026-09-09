@@ -13,6 +13,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [SECURITY.md](SECURITY.md)   | AuthN/Z, firewall, voters, CSRF, bearer/API key |
 | [FORMS.md](FORMS.md)         | HTML forms, CSRF default-on, XSS-safe render   |
 | [I18N.md](I18N.md)           | Translator, catalogues, locale, ICU helpers    |
+| [PROFILER.md](PROFILER.md)   | Web debug toolbar / per-request profiler       |
 | [SERIALIZER.md](SERIALIZER.md) | JSON + optional TOON (agent context export)  |
 | [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/MyFeed`) |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |

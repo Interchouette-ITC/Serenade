@@ -68,7 +68,7 @@ Messenger apps can implement `serenade_messenger::LogSink` with `tracing::info!(
 
 ## Profiler
 
-The Web Debug Toolbar / Profiler ([#56](https://github.com/Interchouette-ITC/Serenade/issues/56)) is a separate surface. Request-scoped log capture would subscribe to these channels; this crate does not install a profiler collector.
+The Web Debug Toolbar / Profiler is implemented in **`serenade-profiler`** ([PROFILER.md](PROFILER.md)). Install `ProfilerLogLayer` on the same subscriber as `serenade-observability` so request-scoped events fill the Logs panel. This crate still does not embed the toolbar; apps enable the profiler middleware explicitly.
 
 ## Non-goals
 

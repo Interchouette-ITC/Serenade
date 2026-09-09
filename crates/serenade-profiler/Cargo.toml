@@ -1,0 +1,21 @@
+[package]
+name = "serenade-profiler"
+description = "Web debug toolbar and per-request profiler for Serenade HTML apps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+getrandom = { workspace = true }
+serenade-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+
+[lints]
+workspace = true

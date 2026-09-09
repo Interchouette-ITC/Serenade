@@ -1,15 +1,11 @@
-//! Async HTTP kernel: controller pipeline with exception mapping.
+//! Async HTTP kernel: middleware pipeline plus exception mapping.
 
 use crate::{
-    AsyncFn, AsyncRequestHandler, BoxFuture, DefaultExceptionHandler, ExceptionHandler, HttpError,
-    Request, Response, SyncToAsync,
+    AsyncMiddleware, AsyncNext, AsyncRequestHandler, BoxFuture, DefaultExceptionHandler,
+    ExceptionHandler, HttpError, Request, Response, SyncToAsync,
 };
 
-/// Runs an async controller and maps errors to responses.
-///
-/// Unlike [`crate::HttpKernel`], this type has no middleware pipeline: use it
-/// for Actix/`listen` apps that need `await` in controllers (database I/O).
-/// Sync stacks keep using [`crate::HttpKernel`].
+/// Runs async middleware, then the controller, and maps errors to responses.
 ///
 /// # Examples
 ///
@@ -21,6 +17,7 @@ use crate::{
 /// });
 /// ```
 pub struct AsyncHttpKernel {
+    middleware: Vec<Box<dyn AsyncMiddleware>>,
     controller: Box<dyn AsyncRequestHandler>,
     exceptions: Box<dyn ExceptionHandler>,
 }
@@ -30,6 +27,7 @@ impl AsyncHttpKernel {
     #[must_use]
     pub fn new(controller: impl AsyncRequestHandler + 'static) -> Self {
         Self {
+            middleware: Vec::new(),
             controller: Box::new(controller),
             exceptions: Box::new(DefaultExceptionHandler),
         }
@@ -44,7 +42,7 @@ impl AsyncHttpKernel {
             + Sync
             + 'static,
     {
-        Self::new(AsyncFn(handler))
+        Self::new(crate::AsyncFn(handler))
     }
 
     /// Wraps a sync [`crate::RequestHandler`] as an async kernel.
@@ -57,6 +55,12 @@ impl AsyncHttpKernel {
     #[must_use]
     pub fn with_exception_handler(mut self, handler: impl ExceptionHandler + 'static) -> Self {
         self.exceptions = Box::new(handler);
+        self
+    }
+
+    /// Appends middleware. The first pushed layer is outermost (runs first).
+    pub fn push_middleware(&mut self, middleware: impl AsyncMiddleware + 'static) -> &mut Self {
+        self.middleware.push(Box::new(middleware));
         self
     }
 
@@ -75,6 +79,10 @@ impl AsyncHttpKernel {
         &'req self,
         request: &'req mut Request,
     ) -> BoxFuture<'req, Result<Response, HttpError>> {
-        self.controller.handle(request)
+        AsyncNext {
+            middleware: &self.middleware,
+            controller: self.controller.as_ref(),
+        }
+        .run(request)
     }
 }
