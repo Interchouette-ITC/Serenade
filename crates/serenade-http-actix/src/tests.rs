@@ -121,6 +121,16 @@ async fn from_actix_copies_headers_and_body() {
 }
 
 #[actix_web::test]
+async fn from_actix_copies_query_string() {
+    let request = actix_test::TestRequest::get()
+        .uri("/feed?_locale=fr&x=1")
+        .to_http_request();
+    let serenade = from_actix(&request, []).expect("convert");
+    assert_eq!(serenade.path(), "/feed");
+    assert_eq!(serenade.query(), Some("_locale=fr&x=1"));
+}
+
+#[actix_web::test]
 async fn from_actix_rejects_unsupported_method_in_isolation() {
     let request = actix_test::TestRequest::default()
         .method(actix_web::http::Method::TRACE)

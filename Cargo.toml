@@ -20,6 +20,7 @@ members = [
     "crates/serenade-observability",
     "crates/serenade-component-host",
     "crates/serenade-sandbox",
+    "crates/serenade-translation",
     "examples/demo-app",
     "examples/MyFeed",
 ]
@@ -54,6 +55,7 @@ serenade-cache = { path = "crates/serenade-cache", version = "0.1.0" }
 serenade-observability = { path = "crates/serenade-observability", version = "0.1.0" }
 serenade-component-host = { path = "crates/serenade-component-host", version = "0.1.0" }
 serenade-sandbox = { path = "crates/serenade-sandbox", version = "0.1.0" }
+serenade-translation = { path = "crates/serenade-translation", version = "0.1.0" }
 actix-web = "4"
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }

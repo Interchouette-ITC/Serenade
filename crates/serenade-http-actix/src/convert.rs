@@ -10,8 +10,8 @@ use serenade_http::{
 
 /// Builds a Serenade [`Request`] from an Actix request and body bytes.
 ///
-/// Path is `HttpRequest::path` (no query string). Unsupported methods become
-/// [`HttpError`] with status 405.
+/// Path is `HttpRequest::path`. The raw query string (without `?`) is copied when
+/// present. Unsupported methods become [`HttpError`] with status 405.
 ///
 /// # Errors
 ///
@@ -19,6 +19,9 @@ use serenade_http::{
 pub fn from_actix(request: &HttpRequest, body: impl AsRef<[u8]>) -> Result<Request, HttpError> {
     let method = Method::from_str(request.method().as_str())?;
     let mut serenade = Request::new(method, request.path()).with_body(body.as_ref().to_vec());
+    if let Some(query) = request.uri().query() {
+        serenade = serenade.with_query(query);
+    }
     for (name, value) in request.headers() {
         if let Ok(text) = value.to_str() {
             serenade.headers_mut().insert(name.as_str(), text);

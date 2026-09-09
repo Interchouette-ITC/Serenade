@@ -22,6 +22,7 @@ serenade-http = { workspace = true }
 serenade-http-actix = { workspace = true }
 serenade-security = { workspace = true }
 serenade-validator = { workspace = true }
+serenade-translation = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]
