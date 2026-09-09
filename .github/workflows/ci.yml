@@ -220,12 +220,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         env:
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: |
-          mkdir -p coverage
-          RUSTUP_TOOLCHAIN=stable cargo llvm-cov --workspace --lcov \
-            --features serenade-cache/redis,serenade-serializer/toon \
-            --ignore-filename-regex 'examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs' \
-            --output-path coverage/lcov.info
+        run: make coverage
       - name: Upload to Codecov
         if: needs.changes.outputs.code == 'true'
         uses: codecov/codecov-action@v6
