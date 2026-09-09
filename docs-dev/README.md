@@ -14,6 +14,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [FORMS.md](FORMS.md)         | HTML forms, CSRF default-on, XSS-safe render   |
 | [I18N.md](I18N.md)           | Translator, catalogues, locale, ICU helpers    |
 | [PROFILER.md](PROFILER.md)   | Web debug toolbar / per-request profiler       |
+| [VIEW.md](VIEW.md)           | path / asset / partial HTML helpers            |
 | [SERIALIZER.md](SERIALIZER.md) | JSON + optional TOON (agent context export)  |
 | [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/MyFeed`) |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
@@ -48,6 +49,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [#56](https://github.com/Interchouette-ITC/Serenade/issues/56) | Web Debug Toolbar / Profiler (logs + DB/query panels) |
 | [#57](https://github.com/Interchouette-ITC/Serenade/issues/57) | Observability / structured logging (Monolog-like) |
 | [#110](https://github.com/Interchouette-ITC/Serenade/issues/110) | Forms, CSRF, HTML escape |
+| [#111](https://github.com/Interchouette-ITC/Serenade/issues/111) | View helpers (`path` / `asset` / partials) |
 | [#112](https://github.com/Interchouette-ITC/Serenade/issues/112) | MyFeed beginner demo (`examples/MyFeed`) |
 
 Config packages prefer **TOML**; console is the `bin/console` analogue (optional ratatui for rich TUI). Composer maps to **Cargo**, not a second package manager.

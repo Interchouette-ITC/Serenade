@@ -1,5 +1,7 @@
 //! Named route definition and collection.
 
+use std::collections::HashMap;
+
 use crate::Method;
 
 /// A single route: name, path pattern, and allowed methods.
@@ -91,6 +93,65 @@ impl RouteCollection {
         Ok(())
     }
 
+    /// Looks up a route by name.
+    #[must_use]
+    pub fn get(&self, name: &str) -> Option<&Route> {
+        self.routes.iter().find(|route| route.name() == name)
+    }
+
+    /// Builds a path for the named route by substituting `{param}` segments.
+    ///
+    /// Values are percent-encoded as path segments. Every pattern parameter must
+    /// be provided; unused keys are rejected.
+    ///
+    /// # Errors
+    ///
+    /// - Status **404** when `name` is not registered.
+    /// - Status **400** when a required parameter is missing or an unused key remains.
+    pub fn generate(
+        &self,
+        name: &str,
+        params: &[(&str, &str)],
+    ) -> Result<String, crate::HttpError> {
+        let route = self
+            .get(name)
+            .ok_or_else(|| crate::HttpError::status(404, format!("no route named `{name}`")))?;
+        let mut unused: HashMap<&str, &str> = HashMap::with_capacity(params.len());
+        for &(key, value) in params {
+            if unused.insert(key, value).is_some() {
+                return Err(crate::HttpError::status(
+                    400,
+                    format!("duplicate parameter `{key}` for route `{name}`"),
+                ));
+            }
+        }
+        let segments = split_segments(route.path());
+        let mut out = Vec::with_capacity(segments.len());
+        for segment in segments {
+            if let Some(param) = parameter_name(segment) {
+                let Some(value) = unused.remove(param) else {
+                    return Err(crate::HttpError::status(
+                        400,
+                        format!("missing parameter `{param}` for route `{name}`"),
+                    ));
+                };
+                out.push(encode_path_segment(value));
+            } else {
+                out.push(segment.to_owned());
+            }
+        }
+        if let Some((extra, _)) = unused.iter().next() {
+            return Err(crate::HttpError::status(
+                400,
+                format!("unused parameter `{extra}` for route `{name}`"),
+            ));
+        }
+        if out.is_empty() {
+            return Ok("/".to_owned());
+        }
+        Ok(format!("/{}", out.join("/")))
+    }
+
     /// Registered routes in order.
     #[must_use]
     pub fn routes(&self) -> &[Route] {
@@ -108,4 +169,33 @@ impl RouteCollection {
     pub fn is_empty(&self) -> bool {
         self.routes.is_empty()
     }
+}
+
+pub fn split_segments(path: &str) -> Vec<&str> {
+    path.trim_matches('/')
+        .split('/')
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+pub fn parameter_name(segment: &str) -> Option<&str> {
+    segment
+        .strip_prefix('{')
+        .and_then(|rest| rest.strip_suffix('}'))
+        .filter(|name| !name.is_empty())
+}
+
+fn encode_path_segment(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(char::from(byte));
+            }
+            _ => {
+                let _ = std::fmt::Write::write_fmt(&mut out, format_args!("%{byte:02X}"));
+            }
+        }
+    }
+    out
 }

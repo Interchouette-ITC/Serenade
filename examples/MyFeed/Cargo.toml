@@ -24,6 +24,7 @@ serenade-security = { workspace = true }
 serenade-validator = { workspace = true }
 serenade-translation = { workspace = true }
 serenade-profiler = { workspace = true }
+serenade-view = { workspace = true }
 serenade-observability = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

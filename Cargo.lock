@@ -3580,6 +3580,7 @@ dependencies = [
  "serenade-security",
  "serenade-translation",
  "serenade-validator",
+ "serenade-view",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -5682,6 +5683,15 @@ name = "serenade-validator"
 version = "0.1.0"
 dependencies = [
  "serenade-messenger",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "serenade-view"
+version = "0.1.0"
+dependencies = [
+ "serenade-form",
+ "serenade-http",
  "thiserror 2.0.20",
 ]
 

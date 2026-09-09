@@ -95,32 +95,18 @@ impl UrlMatcher {
 }
 
 fn match_path(pattern: &str, path: &str) -> Option<HashMap<String, String>> {
-    let pattern_segments = split_segments(pattern);
-    let path_segments = split_segments(path);
+    let pattern_segments = crate::route::split_segments(pattern);
+    let path_segments = crate::route::split_segments(path);
     if pattern_segments.len() != path_segments.len() {
         return None;
     }
     let mut parameters = HashMap::new();
     for (expected, actual) in pattern_segments.into_iter().zip(path_segments) {
-        if let Some(name) = parameter_name(expected) {
+        if let Some(name) = crate::route::parameter_name(expected) {
             parameters.insert(name.to_owned(), actual.to_owned());
         } else if expected != actual {
             return None;
         }
     }
     Some(parameters)
-}
-
-fn split_segments(path: &str) -> Vec<&str> {
-    path.trim_matches('/')
-        .split('/')
-        .filter(|s| !s.is_empty())
-        .collect()
-}
-
-fn parameter_name(segment: &str) -> Option<&str> {
-    segment
-        .strip_prefix('{')
-        .and_then(|rest| rest.strip_suffix('}'))
-        .filter(|name| !name.is_empty())
 }

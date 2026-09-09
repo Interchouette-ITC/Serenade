@@ -1,8 +1,9 @@
-//! HTML page builders (user plain text via `escape_html`; post bodies via ammonia).
+//! HTML page builders (user plain text via escape; post bodies via ammonia).
 
 use std::fmt::Write as _;
 
-use serenade_form::{escape_attr, escape_html};
+use serenade_http::RouteCollection;
+use serenade_view::{asset, escape_attr, escape_html, partial, path};
 
 use crate::embed::embed_html;
 use crate::emoji::picker_html;
@@ -20,6 +21,8 @@ const QUILL_JS: &str = "https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js";
 #[must_use]
 pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> String {
     let open_flag = if composer_open { "1" } else { "0" };
+    let css = asset("myfeed.css?v=5").unwrap_or_else(|_| "/assets/myfeed.css?v=5".into());
+    let js = asset("clitorine.js?v=4").unwrap_or_else(|_| "/assets/clitorine.js?v=4".into());
     format!(
         r#"<!DOCTYPE html>
 <html lang="{lang}">
@@ -29,40 +32,50 @@ pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> Str
 <title>{title}</title>
 <link rel="stylesheet" href="{BOOTSTRAP_CSS}" />
 <link rel="stylesheet" href="{QUILL_CSS}" />
-<link rel="stylesheet" href="/assets/myfeed.css?v=5" />
+<link rel="stylesheet" href="{css}" />
 </head>
 <body class="myfeed" data-composer-open="{open_flag}">
 {body}
 <script src="{BOOTSTRAP_JS}"></script>
 <script src="{QUILL_JS}"></script>
-<script src="/assets/clitorine.js?v=4"></script>
+<script src="{js}"></script>
 </body>
 </html>"#,
         lang = escape_attr(lang),
         title = escape_html(title),
+        css = escape_attr(&css),
+        js = escape_attr(&js),
     )
 }
 
-fn locale_switcher(ui: &Ui<'_>) -> String {
-    let active = ui.locale().language();
-    let en_class = if active == "en" {
-        "btn btn-sm btn-primary"
-    } else {
-        "btn btn-sm btn-outline-secondary"
-    };
-    let fr_class = if active == "fr" {
-        "btn btn-sm btn-primary"
-    } else {
-        "btn btn-sm btn-outline-secondary"
-    };
-    format!(
-        r#"<span class="btn-group" role="group" aria-label="Language">
-  <a class="{en_class}" href="/locale/en">{en}</a>
-  <a class="{fr_class}" href="/locale/fr">{fr}</a>
+fn locale_switcher(ui: &Ui<'_>, routes: &RouteCollection) -> String {
+    partial(|| {
+        let active = ui.locale().language();
+        let en_class = if active == "en" {
+            "btn btn-sm btn-primary"
+        } else {
+            "btn btn-sm btn-outline-secondary"
+        };
+        let fr_class = if active == "fr" {
+            "btn btn-sm btn-primary"
+        } else {
+            "btn btn-sm btn-outline-secondary"
+        };
+        let en_href =
+            path(routes, "locale_set", &[("code", "en")]).unwrap_or_else(|_| "/locale/en".into());
+        let fr_href =
+            path(routes, "locale_set", &[("code", "fr")]).unwrap_or_else(|_| "/locale/fr".into());
+        format!(
+            r#"<span class="btn-group" role="group" aria-label="Language">
+  <a class="{en_class}" href="{en_href}">{en}</a>
+  <a class="{fr_class}" href="{fr_href}">{fr}</a>
 </span>"#,
-        en = escape_html(&ui.t("lang_en")),
-        fr = escape_html(&ui.t("lang_fr")),
-    )
+            en_href = escape_attr(&en_href),
+            fr_href = escape_attr(&fr_href),
+            en = escape_html(&ui.t("lang_en")),
+            fr = escape_html(&ui.t("lang_fr")),
+        )
+    })
 }
 
 /// Inputs for the public feed page.
@@ -85,6 +98,8 @@ pub struct FeedView<'a> {
     pub flash_err: bool,
     /// Open the composer collapse.
     pub composer_open: bool,
+    /// Named routes for `path()` helpers.
+    pub routes: &'a RouteCollection,
 }
 
 /// Public feed page.
@@ -103,6 +118,8 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
             msg = escape_html(msg)
         )
     });
+    let feed_href = path(view.routes, "feed", &[]).unwrap_or_else(|_| "/".into());
+    let admin_href = path(view.routes, "admin", &[]).unwrap_or_else(|_| "/admin".into());
     let body = format!(
         r##"
 <div class="myfeed-shell">
@@ -113,8 +130,8 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
     </div>
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
       {langs}
-      <a class="link-secondary" href="/">{nav_feed}</a>
-      <a class="admin-link btn btn-outline-primary btn-sm" href="/admin">{nav_admin}</a>
+      <a class="link-secondary" href="{feed_href}">{nav_feed}</a>
+      <a class="admin-link btn btn-outline-primary btn-sm" href="{admin_href}">{nav_admin}</a>
     </nav>
   </header>
   <main>
@@ -148,7 +165,9 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
 {about}
 "##,
         tagline = escape_html(&ui.t("tagline")),
-        langs = locale_switcher(ui),
+        langs = locale_switcher(ui, view.routes),
+        feed_href = escape_attr(&feed_href),
+        admin_href = escape_attr(&admin_href),
         nav_feed = escape_html(&ui.t("nav_feed")),
         nav_admin = escape_html(&ui.t("nav_admin")),
         composer_title = escape_html(&ui.t("composer_title")),
@@ -342,6 +361,7 @@ fn post_card(
 #[must_use]
 pub fn admin_page_with_logout(
     ui: &Ui<'_>,
+    routes: &RouteCollection,
     pending: &[Comment],
     forms: &[(u64, String, String)],
     logout_form: &str,
@@ -385,6 +405,8 @@ pub fn admin_page_with_logout(
             body = escape_html(&comment.body),
         );
     }
+    let feed_href = path(routes, "feed", &[]).unwrap_or_else(|_| "/".into());
+    let admin_href = path(routes, "admin", &[]).unwrap_or_else(|_| "/admin".into());
     let body = format!(
         r#"
 <div class="myfeed-shell">
@@ -395,8 +417,8 @@ pub fn admin_page_with_logout(
     </div>
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
       {langs}
-      <a class="link-secondary" href="/">{nav_feed}</a>
-      <a class="admin-link btn btn-primary btn-sm" href="/admin">{nav_admin}</a>
+      <a class="link-secondary" href="{feed_href}">{nav_feed}</a>
+      <a class="admin-link btn btn-primary btn-sm" href="{admin_href}">{nav_admin}</a>
       {logout_form}
     </nav>
   </header>
@@ -415,7 +437,9 @@ pub fn admin_page_with_logout(
 "#,
         admin_title = escape_html(&ui.t("admin_title")),
         admin_tag = escape_html(&ui.t("admin_tag")),
-        langs = locale_switcher(ui),
+        langs = locale_switcher(ui, routes),
+        feed_href = escape_attr(&feed_href),
+        admin_href = escape_attr(&admin_href),
         nav_feed = escape_html(&ui.t("nav_feed")),
         nav_admin = escape_html(&ui.t("nav_admin")),
         pending_title = escape_html(&ui.t("pending_title")),
@@ -426,13 +450,19 @@ pub fn admin_page_with_logout(
 
 /// Login form when admin cookie is missing.
 #[must_use]
-pub fn admin_login_page(ui: &Ui<'_>, login_form: &str, err: Option<&str>) -> String {
+pub fn admin_login_page(
+    ui: &Ui<'_>,
+    routes: &RouteCollection,
+    login_form: &str,
+    err: Option<&str>,
+) -> String {
     let err_html = err.map_or(String::new(), |msg| {
         format!(
             r#"<div class="alert alert-danger" role="alert">{msg}</div>"#,
             msg = escape_html(msg)
         )
     });
+    let feed_href = path(routes, "feed", &[]).unwrap_or_else(|_| "/".into());
     let body = format!(
         r#"
 <div class="myfeed-shell">
@@ -443,7 +473,7 @@ pub fn admin_login_page(ui: &Ui<'_>, login_form: &str, err: Option<&str>) -> Str
     </div>
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
       {langs}
-      <a class="link-secondary" href="/">{nav_feed}</a>
+      <a class="link-secondary" href="{feed_href}">{nav_feed}</a>
     </nav>
   </header>
   <main class="card post-card">
@@ -457,7 +487,8 @@ pub fn admin_login_page(ui: &Ui<'_>, login_form: &str, err: Option<&str>) -> Str
 "#,
         admin_title = escape_html(&ui.t("admin_title")),
         admin_login_tag = escape_html(&ui.t("admin_login_tag")),
-        langs = locale_switcher(ui),
+        langs = locale_switcher(ui, routes),
+        feed_href = escape_attr(&feed_href),
         nav_feed = escape_html(&ui.t("nav_feed")),
         admin_login_help = escape_html(&ui.t("admin_login_help")),
     );
@@ -466,13 +497,21 @@ pub fn admin_login_page(ui: &Ui<'_>, login_form: &str, err: Option<&str>) -> Str
 
 /// Edit an existing post (admin).
 #[must_use]
-pub fn edit_post_page(ui: &Ui<'_>, post_id: u64, form_html: &str, err: Option<&str>) -> String {
+pub fn edit_post_page(
+    ui: &Ui<'_>,
+    routes: &RouteCollection,
+    post_id: u64,
+    form_html: &str,
+    err: Option<&str>,
+) -> String {
     let err_html = err.map_or(String::new(), |msg| {
         format!(
             r#"<div class="alert alert-danger" role="alert">{msg}</div>"#,
             msg = escape_html(msg)
         )
     });
+    let feed_href = path(routes, "feed", &[]).unwrap_or_else(|_| "/".into());
+    let admin_href = path(routes, "admin", &[]).unwrap_or_else(|_| "/admin".into());
     let body = format!(
         r#"
 <div class="myfeed-shell">
@@ -482,8 +521,8 @@ pub fn edit_post_page(ui: &Ui<'_>, post_id: u64, form_html: &str, err: Option<&s
       <p class="myfeed-tag">Update body, media, or category</p>
     </div>
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
-      <a class="link-secondary" href="/">Feed</a>
-      <a class="admin-link btn btn-outline-primary btn-sm" href="/admin">Admin</a>
+      <a class="link-secondary" href="{feed_href}">Feed</a>
+      <a class="admin-link btn btn-outline-primary btn-sm" href="{admin_href}">Admin</a>
     </nav>
   </header>
   <main class="card post-card">

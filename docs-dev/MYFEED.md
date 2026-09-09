@@ -13,6 +13,7 @@ Path: [`examples/MyFeed`](../examples/MyFeed). Epic [#112](https://github.com/In
 | UI        | Server-rendered HTML + **Bootstrap 5** + **Quill** + light Clitorine helpers |
 | HTTP      | Actix via `serenade-http-actix::listen`                                      |
 | Forms     | `serenade-form` (CSRF default-on, `escape_html`)                             |
+| View      | `serenade-view` (`path` / `asset` / `partial` for HTML builders)             |
 | i18n      | `serenade-translation` catalogues `en` + `fr`; `/locale/{code}` cookie       |
 | Profiler  | `serenade-profiler` toolbar + `/_profiler` (disable with `MYFEED_PROFILER=0`) |
 | Rich text | Quill HTML sanitized with ammonia before store/render                        |
@@ -36,4 +37,4 @@ make myfeed
 # http://127.0.0.1:8090/
 ```
 
-Embeds: YouTube (nocookie embed), SoundCloud, direct image / `.mp4` URLs. See [FORMS.md](FORMS.md), [SECURITY.md](SECURITY.md), and [I18N.md](I18N.md).
+Embeds: YouTube (nocookie embed), SoundCloud, direct image / `.mp4` URLs. See [FORMS.md](FORMS.md), [VIEW.md](VIEW.md), [SECURITY.md](SECURITY.md), and [I18N.md](I18N.md).

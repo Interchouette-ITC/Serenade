@@ -123,6 +123,67 @@ fn route_collection_rejects_duplicate_and_allows_any_method() {
         .expect_err("duplicate");
     assert!(err.to_string().contains("already registered"));
     assert_eq!(collection.routes().len(), 1);
+    assert!(!collection.is_empty());
+    assert!(RouteCollection::new().is_empty());
+}
+
+#[test]
+fn route_collection_generate_and_get() {
+    let mut collection = RouteCollection::new();
+    collection
+        .add(Route::with_method("home", "/", Method::Get))
+        .expect("home");
+    collection
+        .add(Route::with_method("item", "/items/{id}", Method::Get))
+        .expect("item");
+    collection
+        .add(Route::with_method(
+            "nested",
+            "/posts/{post}/comments/{id}",
+            Method::Get,
+        ))
+        .expect("nested");
+    assert!(collection.get("item").is_some());
+    assert!(collection.get("missing").is_none());
+    assert_eq!(collection.generate("home", &[]).expect("home"), "/");
+    assert_eq!(
+        collection.generate("item", &[("id", "42")]).expect("item"),
+        "/items/42"
+    );
+    assert_eq!(
+        collection
+            .generate("nested", &[("post", "a b"), ("id", "1")])
+            .expect("nested"),
+        "/posts/a%20b/comments/1"
+    );
+    assert_eq!(
+        collection
+            .generate("nope", &[])
+            .expect_err("missing route")
+            .status_code(),
+        404
+    );
+    assert_eq!(
+        collection
+            .generate("item", &[])
+            .expect_err("missing param")
+            .status_code(),
+        400
+    );
+    assert_eq!(
+        collection
+            .generate("item", &[("id", "1"), ("extra", "x")])
+            .expect_err("unused")
+            .status_code(),
+        400
+    );
+    assert_eq!(
+        collection
+            .generate("item", &[("id", "1"), ("id", "2")])
+            .expect_err("duplicate")
+            .status_code(),
+        400
+    );
 }
 
 #[test]
