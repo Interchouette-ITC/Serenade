@@ -1,5 +1,9 @@
 /target/
 coverage/
+fuzz/target/
+fuzz/corpus/
+fuzz/artifacts/
+fuzz/coverage/
 .env
 .env.*
 !.env.example

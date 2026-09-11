@@ -1,7 +1,7 @@
 # CI / quality gates.
 
 .PHONY: check test lint format format-check doc doc-open doc-clean clean ci audit deny \
-	coverage coverage-summary coverage-html tarpaulin machete outdated
+	coverage coverage-summary coverage-html tarpaulin machete outdated fuzz fuzz-build geiger
 
 # Keep in sync with codecov.yml ignore paths and CI coverage.
 COVERAGE_FEATURES := --features serenade-cache/redis,serenade-serializer/toon
@@ -51,6 +51,21 @@ machete:
 ## Outdated crates report. Requires `cargo install cargo-outdated`.
 outdated:
 	cd $(ROOT) && $(CARGO) outdated --workspace
+
+## Default fuzz target: serenade_form::parse_urlencoded.
+## Requires nightly + `cargo install cargo-fuzz`. Override: FUZZ_TARGET=… FUZZ_TIME=…
+FUZZ_TARGET ?= parse-urlencoded
+FUZZ_TIME ?= 10
+
+fuzz-build:
+	cd $(ROOT) && cargo +nightly fuzz build
+
+fuzz:
+	cd $(ROOT) && cargo +nightly fuzz run $(FUZZ_TARGET) -- -max_total_time=$(FUZZ_TIME)
+
+## Unsafe Rust surface in deps + workspace. Requires `cargo install cargo-geiger`.
+geiger:
+	cd $(ROOT) && $(CARGO) geiger --workspace
 
 format:
 	cd $(ROOT) && $(CARGO) fmt

@@ -1,0 +1,19 @@
+[package]
+name = "serenade-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serenade-form = { path = "../crates/serenade-form" }
+
+[[bin]]
+name = "parse-urlencoded"
+path = "fuzz_targets/parse_urlencoded.rs"
+test = false
+doc = false
+bench = false

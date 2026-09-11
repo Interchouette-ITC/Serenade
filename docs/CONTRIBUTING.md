@@ -32,6 +32,8 @@ make ci
 | Tarpaulin (local) | `make tarpaulin` (needs `cargo tarpaulin`; CI stays on llvm-cov) |
 | Unused deps | `make machete` (needs `cargo machete`) |
 | Outdated deps | `make outdated` (needs `cargo outdated`) |
+| Fuzz (local) | `make fuzz` (needs nightly + `cargo fuzz`; default `parse-urlencoded`) |
+| Geiger (local) | `make geiger` (needs `cargo geiger`) |
 | Rustdoc | `make doc` |
 | Full CI slice | `make ci` |
 
