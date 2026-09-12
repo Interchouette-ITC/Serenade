@@ -2,54 +2,13 @@
 
 use std::path::PathBuf;
 
-use serenade_bundle::{
-    BundleError, Extension, FRAMEWORK_BUNDLE, FrameworkBundle, FrameworkExtension, ROUTER_SERVICE,
-    build_container,
-};
-use serenade_config::Config;
-use serenade_di::{ContainerBuilder, ServiceDefinition};
+use serenade_bundle::{BundleError, FRAMEWORK_BUNDLE, FrameworkBundle, ROUTER_SERVICE};
 use serenade_event::DISPATCHER_SERVICE;
-use serenade_http::{Method, Route, RouteCollection, RouteLoader};
-use serenade_kernel::{App, Application, BundleInterface, Environment};
+use serenade_http::{RouteCollection, RouteLoader};
+use serenade_kernel::{App, Application, Environment};
 use serenade_observability::{APP, KERNEL, LoggingConfig, init};
 
-struct DemoBundle;
-
-impl BundleInterface for DemoBundle {
-    fn name(&self) -> &'static str {
-        "demo"
-    }
-
-    fn dependencies(&self) -> &'static [&'static str] {
-        &[FRAMEWORK_BUNDLE]
-    }
-}
-
-impl RouteLoader for DemoBundle {
-    fn load(&self, collection: &mut RouteCollection) -> Result<(), serenade_http::HttpError> {
-        collection.add(Route::with_method("healthz", "/healthz", Method::Get))
-    }
-}
-
-struct DemoExtension;
-
-impl Extension for DemoExtension {
-    fn alias(&self) -> &'static str {
-        "demo"
-    }
-
-    fn load(&self, config: &Config, builder: &mut ContainerBuilder) -> Result<(), BundleError> {
-        config.apply_to(builder.parameters_mut());
-        builder.register(ServiceDefinition::new("demo.greeting"), |container| {
-            let name = container
-                .parameters()
-                .get("name")
-                .map_or_else(|_| "world".to_owned(), str::to_owned);
-            Ok(Box::new(format!("hello {name}")))
-        })?;
-        Ok(())
-    }
-}
+use serenade_demo_app::{DEMO_GREETING_SERVICE, DemoBundle, DemoReady, demo_container};
 
 fn main() -> Result<(), BundleError> {
     let env_name = std::env::var("APP_ENV").unwrap_or_else(|_| "dev".to_owned());
@@ -82,13 +41,9 @@ fn main() -> Result<(), BundleError> {
     app.boot()?;
 
     let packages = root.join("config/packages");
-    let (_config, container) = build_container(
-        Some(packages.as_path()),
-        environment.as_str(),
-        &[&FrameworkExtension, &DemoExtension],
-    )?;
+    let (_config, container) = demo_container(Some(packages.as_path()), environment.as_str())?;
 
-    let greeting = container.get_as::<String>("demo.greeting")?;
+    let greeting = container.get_as::<String>(DEMO_GREETING_SERVICE)?;
     let dispatcher = container.get_as::<serenade_event::EventDispatcher>(DISPATCHER_SERVICE)?;
     let shared_router = container.get_as::<RouteCollection>(ROUTER_SERVICE)?;
 
@@ -100,7 +55,15 @@ fn main() -> Result<(), BundleError> {
             message: error.to_string(),
         })?;
 
+    dispatcher
+        .dispatch(&DemoReady)
+        .map_err(|error| BundleError::Extension {
+            alias: "demo",
+            message: error.to_string(),
+        })?;
+
     println!("bundles: {:?}", app.kernel().bundle_names());
+    println!("depends on: {FRAMEWORK_BUNDLE}");
     println!("greeting: {greeting}");
     println!("event_dispatcher subscribers: {}", dispatcher.len());
     println!("routes: {}", collection.len());
