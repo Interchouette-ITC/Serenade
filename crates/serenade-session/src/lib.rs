@@ -1,9 +1,10 @@
-//! Session bag, [`SessionStore`] contract, in-memory store, and cookie session id.
+//! Session bag, [`SessionStore`] contract, flash bag, in-memory store, and cookie session id.
 //!
-//! Flash bag and HTTP middleware land in follow-up work. See `docs-dev/SESSION.md`.
+//! HTTP middleware lands in follow-up work. See `docs-dev/SESSION.md`.
 
 mod cookie;
 mod error;
+mod flash;
 mod memory;
 mod session;
 mod store;
@@ -13,6 +14,7 @@ pub use cookie::{
     parse_cookie_value,
 };
 pub use error::SessionError;
+pub use flash::{FLASH_SESSION_KEY, FlashBag};
 pub use memory::MemorySessionStore;
 pub use session::Session;
 pub use store::SessionStore;

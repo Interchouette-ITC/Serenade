@@ -1,6 +1,6 @@
 [package]
 name = "serenade-session"
-description = "Session bag, SessionStore contract, memory store, and cookie session id"
+description = "Session bag, flash bag, SessionStore, memory store, and cookie session id"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

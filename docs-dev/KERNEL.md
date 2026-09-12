@@ -205,10 +205,11 @@ Session stickiness lives in **`serenade-session`**. See [SESSION.md](SESSION.md)
 | Piece | Role |
 | --- | --- |
 | `Session` | Attribute bag for one request |
+| `FlashBag` | One-shot messages on the session |
 | `SessionStore` / `MemorySessionStore` | Persist attributes by opaque id |
 | `CookieSession` | Open/commit with session-id cookie |
 
-Flash bag and HTTP middleware are follow-ups. CSRF stays in `serenade-security` (HMAC, no session required).
+HTTP middleware is a follow-up. CSRF stays in `serenade-security` (HMAC, no session required).
 
 ## Search / indexation
 
