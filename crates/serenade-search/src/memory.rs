@@ -148,3 +148,18 @@ impl DocumentIndex for MemorySearchAdapter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod private_path_tests {
+    use super::MemorySearchAdapter;
+
+    #[test]
+    fn score_returns_none_for_empty_tokens() {
+        assert_eq!(MemorySearchAdapter::score("anything", &[]), None);
+    }
+
+    #[test]
+    fn count_occurrences_returns_zero_for_empty_needle() {
+        assert_eq!(MemorySearchAdapter::count_occurrences("abc", ""), 0);
+    }
+}
