@@ -161,3 +161,84 @@ fn has_item_and_batch_defaults() {
     assert!(!items[1].is_hit());
     assert_eq!(pool.delete_items(&["a", "missing"]).expect("batch del"), 1);
 }
+
+#[test]
+fn tag_invalidation_removes_matching_keys() {
+    let pool = ArrayAdapter::new();
+
+    let mut a = ArrayCacheItem::miss("product:1");
+    a.set(Arc::new(String::from("one")));
+    a.tag(&["product", "catalog"]);
+    pool.save(a).expect("save a");
+
+    let mut b = ArrayCacheItem::miss("product:2");
+    b.set(Arc::new(String::from("two")));
+    b.tag(&["product"]);
+    pool.save(b).expect("save b");
+
+    let mut c = ArrayCacheItem::miss("user:1");
+    c.set(Arc::new(String::from("user")));
+    c.tag(&["user"]);
+    pool.save(c).expect("save c");
+
+    let hit = pool.get_item("product:1").expect("get");
+    assert_eq!(hit.tags(), &["product".to_owned(), "catalog".to_owned()]);
+
+    assert_eq!(pool.invalidate_tags(&["product"]).expect("invalidate"), 2);
+    assert!(!pool.get_item("product:1").expect("get").is_hit());
+    assert!(!pool.get_item("product:2").expect("get").is_hit());
+    assert!(pool.get_item("user:1").expect("get").is_hit());
+
+    assert_eq!(pool.invalidate_tags(&["missing"]).expect("noop"), 0);
+    assert_eq!(pool.invalidate_tags(&[""]).expect("empty tag"), 0);
+}
+
+#[test]
+fn expiry_unlinks_last_tag_and_rejects_stale_save() {
+    let pool = ArrayAdapter::new();
+    let mut item = ArrayCacheItem::miss("tmp");
+    item.set(Arc::new(1_u8));
+    item.tag(&["ephemeral"]);
+    item.expires_after(Some(Duration::from_millis(20)));
+    pool.save(item).expect("save");
+    thread::sleep(Duration::from_millis(40));
+    assert!(!pool.get_item("tmp").expect("get").is_hit());
+    assert_eq!(pool.invalidate_tags(&["ephemeral"]).expect("gone"), 0);
+
+    let mut stale = ArrayCacheItem::miss("stale");
+    stale.set(Arc::new(2_u8));
+    stale.expires_after(Some(Duration::ZERO));
+    pool.save(stale).expect("expired save");
+    assert!(!pool.get_item("stale").expect("get").is_hit());
+}
+
+#[test]
+fn tag_dedupes_and_survives_overwrite_without_tags() {
+    let pool = ArrayAdapter::new();
+    let mut item = ArrayCacheItem::miss("k");
+    item.set(Arc::new(1_u8));
+    item.tag(&["a", "a", ""]);
+    item.tag(&["b"]);
+    assert_eq!(item.tags(), &["a".to_owned(), "b".to_owned()]);
+    pool.save(item).expect("save");
+
+    let mut overwrite = ArrayCacheItem::miss("k");
+    overwrite.set(Arc::new(2_u8));
+    pool.save(overwrite).expect("overwrite clears tags");
+    assert_eq!(pool.get_item("k").expect("get").tags(), &[] as &[String]);
+    assert_eq!(pool.invalidate_tags(&["a"]).expect("gone"), 0);
+}
+
+#[test]
+fn filesystem_and_default_reject_tag_invalidation() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let pool = super::FilesystemAdapter::open(
+        super::FilesystemAdapterConfig::new(dir.path()),
+        Arc::new(super::BytesMarshaller),
+    )
+    .expect("open");
+    assert!(matches!(
+        pool.invalidate_tags(&["x"]),
+        Err(CacheError::Pool { .. })
+    ));
+}

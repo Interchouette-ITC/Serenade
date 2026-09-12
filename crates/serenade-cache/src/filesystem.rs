@@ -109,7 +109,7 @@ impl CacheItemPool for FilesystemAdapter {
     }
 
     fn save(&self, item: ArrayCacheItem) -> Result<(), CacheError> {
-        let (key, value, expires_at) = item.into_stored();
+        let (key, value, expires_at, tags) = item.into_stored();
         let path = self.path_for(&key)?;
         let Some(value) = value else {
             let _ = fs::remove_file(&path);
@@ -119,6 +119,8 @@ impl CacheItemPool for FilesystemAdapter {
             let _ = fs::remove_file(&path);
             return Ok(());
         }
+        // Tags are not persisted on the filesystem adapter yet.
+        let _ = tags;
         let payload = self.marshaller.marshal(value.as_ref())?;
         let expires_unix_ms = unix_ms_from_instant(expires_at);
         let record = encode_record(expires_unix_ms, &payload);

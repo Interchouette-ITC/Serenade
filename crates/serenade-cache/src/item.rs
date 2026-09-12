@@ -23,6 +23,12 @@ pub trait CacheItem: Send + Sync {
 
     /// Returns `true` when the item is past its expiry.
     fn is_expired(&self) -> bool;
+
+    /// Associates invalidation tags with this item (Symfony-shaped).
+    fn tag(&mut self, tags: &[&str]);
+
+    /// Tags currently attached to this item.
+    fn tags(&self) -> &[String];
 }
 
 /// In-memory [`CacheItem`] used by [`crate::ArrayAdapter`].
@@ -32,6 +38,7 @@ pub struct ArrayCacheItem {
     hit: bool,
     value: Option<Arc<dyn Any + Send + Sync>>,
     expires_at: Option<Instant>,
+    tags: Vec<String>,
 }
 
 impl ArrayCacheItem {
@@ -43,6 +50,7 @@ impl ArrayCacheItem {
             hit: false,
             value: None,
             expires_at: None,
+            tags: Vec::new(),
         }
     }
 
@@ -54,6 +62,7 @@ impl ArrayCacheItem {
             hit: true,
             value: Some(value),
             expires_at: None,
+            tags: Vec::new(),
         }
     }
 
@@ -62,10 +71,21 @@ impl ArrayCacheItem {
         self
     }
 
+    pub(crate) fn with_tags(mut self, tags: Vec<String>) -> Self {
+        self.tags = tags;
+        self
+    }
+
+    #[allow(clippy::type_complexity)]
     pub(crate) fn into_stored(
         self,
-    ) -> (String, Option<Arc<dyn Any + Send + Sync>>, Option<Instant>) {
-        (self.key, self.value, self.expires_at)
+    ) -> (
+        String,
+        Option<Arc<dyn Any + Send + Sync>>,
+        Option<Instant>,
+        Vec<String>,
+    ) {
+        (self.key, self.value, self.expires_at, self.tags)
     }
 }
 
@@ -97,5 +117,20 @@ impl CacheItem for ArrayCacheItem {
     fn is_expired(&self) -> bool {
         self.expires_at
             .is_some_and(|deadline| Instant::now() >= deadline)
+    }
+
+    fn tag(&mut self, tags: &[&str]) {
+        for tag in tags {
+            if tag.is_empty() {
+                continue;
+            }
+            if !self.tags.iter().any(|existing| existing == tag) {
+                self.tags.push((*tag).to_owned());
+            }
+        }
+    }
+
+    fn tags(&self) -> &[String] {
+        &self.tags
     }
 }

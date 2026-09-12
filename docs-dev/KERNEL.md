@@ -14,7 +14,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Routing** | Route collection, requirements, method constraints |
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
 | **Console** | CLI application (`bin/console` analogue), commands, optional rich TUI |
-| **Cache** | PSR-like cache contracts; in-memory / Redis adapters |
+| **Cache** | PSR-like cache contracts; in-memory / filesystem / Redis adapters; tag invalidation |
 | **Security** | AuthN/Z hooks, firewall, voters, CSRF token manager |
 | **Form** | HTML forms: bind, CSRF by default, XSS-safe render ([FORMS.md](FORMS.md)) |
 | **Translation** | Translator, catalogues, locale negotiation, ICU format helpers ([I18N.md](I18N.md)) |
@@ -188,8 +188,8 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 
 | Piece | Role |
 | --- | --- |
-| `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL |
-| `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear |
+| `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL, optional tags |
+| `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear; `invalidate_tags` |
 | `FilesystemAdapter` | Disk-backed pool; TTL; marshaller for `String` / `Vec<u8>` |
 | `RedisAdapter` (feature `redis`) | redis-rs + r2d2; prefix keys; `SET`/`PX`; SCAN clear |
 | `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` |
