@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MailerError"],"fn":["version"],"struct":["Address","Attachment","Body","Email"]};
