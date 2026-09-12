@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_SESSION_COOKIE"],"enum":["SameSite","SessionError"],"fn":["generate_session_id","parse_cookie_value","version"],"struct":["CookieSession","CookieSessionOptions","MemorySessionStore","Session"],"trait":["SessionStore"]};
