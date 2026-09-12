@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["plain_len","sanitize_post_html"]};
+window.SIDEBAR_ITEMS = {"fn":["plain_len","plain_text","sanitize_post_html"]};
