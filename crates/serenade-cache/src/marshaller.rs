@@ -1,4 +1,4 @@
-//! Encode / decode cache values for Redis.
+//! Encode / decode cache values for durable adapters.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -8,7 +8,7 @@ use crate::CacheError;
 const TAG_BYTES: u8 = 1;
 const TAG_STRING: u8 = 2;
 
-/// Converts typed cache values to Redis bytes and back.
+/// Converts typed cache values to bytes and back.
 pub trait CacheMarshaller: Send + Sync {
     /// Encodes `value` for storage.
     ///
@@ -17,7 +17,7 @@ pub trait CacheMarshaller: Send + Sync {
     /// Returns [`CacheError`] when the value type is unsupported.
     fn marshal(&self, value: &(dyn Any + Send + Sync)) -> Result<Vec<u8>, CacheError>;
 
-    /// Decodes Redis payload into a typed value.
+    /// Decodes a stored payload into a typed value.
     ///
     /// # Errors
     ///
@@ -51,7 +51,7 @@ impl CacheMarshaller for BytesMarshaller {
     fn unmarshal(&self, bytes: &[u8]) -> Result<Arc<dyn Any + Send + Sync>, CacheError> {
         let Some((tag, payload)) = bytes.split_first() else {
             return Err(CacheError::Pool {
-                message: "empty Redis cache payload".to_owned(),
+                message: "empty cache payload".to_owned(),
             });
         };
         match *tag {

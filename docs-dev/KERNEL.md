@@ -190,10 +190,11 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 | --- | --- |
 | `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL |
 | `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear |
+| `FilesystemAdapter` | Disk-backed pool; TTL; marshaller for `String` / `Vec<u8>` |
 | `RedisAdapter` (feature `redis`) | redis-rs + r2d2; prefix keys; `SET`/`PX`; SCAN clear |
 | `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` |
 
-Default DI pool is in-memory. Apps register `RedisAdapter` when they need Redis.
+Default DI pool is in-memory. Apps register `FilesystemAdapter` or `RedisAdapter` when they need persistence beyond process memory.
 
 ## Search / indexation
 
