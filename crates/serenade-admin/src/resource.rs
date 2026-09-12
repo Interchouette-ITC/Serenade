@@ -86,7 +86,12 @@ impl AdminResource {
     /// Show path (`path_prefix/{id}`).
     #[must_use]
     pub fn show_path(&self) -> String {
-        format!("{}/{{id}}", normalize_prefix(&self.path_prefix))
+        let prefix = normalize_prefix(&self.path_prefix);
+        if prefix == "/" {
+            "/{id}".to_owned()
+        } else {
+            format!("{prefix}/{{id}}")
+        }
     }
 }
 
