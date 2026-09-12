@@ -1,0 +1,66 @@
+use serenade_bundle::{BundleInterface, Extension, FrameworkExtension, build_container};
+use serenade_http::RouteCollection;
+
+use super::*;
+
+#[test]
+fn version_is_nonempty() {
+    assert_ne!(version(), "");
+}
+
+#[test]
+fn registry_rejects_duplicate_names() {
+    let mut registry = AdminRegistry::new();
+    registry
+        .register(AdminResource::new("product", "/admin/products"))
+        .expect("first");
+    let err = registry
+        .register(AdminResource::new("product", "/admin/other"))
+        .expect_err("dup");
+    assert!(matches!(err, AdminError::DuplicateResource { .. }));
+}
+
+#[test]
+fn register_routes_list_and_show() {
+    let mut registry = AdminRegistry::new();
+    registry
+        .register(
+            AdminResource::new("product", "/admin/products")
+                .list_fields([AdminField::named("name"), AdminField::new("price", "Price")]),
+        )
+        .expect("register");
+    let mut collection = RouteCollection::new();
+    register_admin_routes(&mut collection, &registry).expect("routes");
+    let list = collection.get("admin_product_list").expect("list");
+    assert_eq!(list.path(), "/admin/products");
+    let show = collection.get("admin_product_show").expect("show");
+    assert_eq!(show.path(), "/admin/products/{id}");
+}
+
+#[test]
+fn render_list_and_show_escape_html() {
+    let resource = AdminResource::new("product", "/admin/products")
+        .list_fields([AdminField::named("name"), AdminField::new("price", "Price")]);
+    let rows = [AdminRow::new("1")
+        .with("name", "<script>")
+        .with("price", "10")];
+    let list = render_list_html(&resource, &rows);
+    assert!(list.contains("&lt;script&gt;"));
+    assert!(!list.contains("<script>"));
+    assert!(list.contains("/admin/products/1"));
+    let show = render_show_html(&resource, &rows[0]);
+    assert!(show.contains("&lt;script&gt;"));
+    assert!(show.contains("back to list"));
+}
+
+#[test]
+fn admin_extension_registers_empty_registry() {
+    let (_config, container) =
+        build_container(None, "test", &[&FrameworkExtension, &AdminExtension]).expect("container");
+    let registry = container
+        .get_as::<AdminRegistry>(ADMIN_REGISTRY_SERVICE)
+        .expect("registry");
+    assert_eq!(registry.resources(), []);
+    assert_eq!(AdminExtension.alias(), ADMIN_BUNDLE);
+    assert_eq!(AdminBundle.name(), ADMIN_BUNDLE);
+}

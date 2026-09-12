@@ -5523,6 +5523,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "serenade-admin"
+version = "0.1.0"
+dependencies = [
+ "serenade-bundle",
+ "serenade-config",
+ "serenade-di",
+ "serenade-form",
+ "serenade-http",
+ "serenade-kernel",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "serenade-bundle"
 version = "0.1.0"
 dependencies = [

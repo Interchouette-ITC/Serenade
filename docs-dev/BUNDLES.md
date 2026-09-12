@@ -62,7 +62,7 @@ SemVer for published Serenade crates: breaking changes to the public rows above 
 
 Symfony’s own features ship as bundles; product features should too, not as loose modules in one crate.
 
-**Admin CRUD is not a core bundle.** There is no admin generator in `FrameworkBundle`. Apps own back-office UIs. An optional EasyAdmin-shaped Admin CRUD bundle may appear later as a **separate** first-party or third-party crate (not auto-wired into FrameworkBundle); parked scope: [ADMIN.md](ADMIN.md) ([#122](https://github.com/Interchouette-ITC/Serenade/issues/122) / [#124](https://github.com/Interchouette-ITC/Serenade/issues/124)).
+**Admin CRUD is not a core bundle.** There is no admin generator in `FrameworkBundle`. Apps own back-office UIs. Optional EasyAdmin-shaped helpers ship in **`serenade-admin`** (opt-in `AdminBundle` / `AdminExtension`, not auto-wired): [ADMIN.md](ADMIN.md) ([#177](https://github.com/Interchouette-ITC/Serenade/issues/177)).
 
 ## Registration
 

@@ -1,72 +1,59 @@
-# Optional Admin CRUD bundle (parked)
+# Admin CRUD (`serenade-admin`)
 
-Scope-only design note for an EasyAdmin-shaped **Admin CRUD** Serenade bundle. **No crate ships from this note.** Implement only after an explicit order ([#124](https://github.com/Interchouette-ITC/Serenade/issues/124)).
+Optional EasyAdmin-shaped Admin CRUD helpers live in **`serenade-admin`** ([#177](https://github.com/Interchouette-ITC/Serenade/issues/177), [#178](https://github.com/Interchouette-ITC/Serenade/issues/178)).
 
-Core stance (admin generator is **not** in the kernel / `FrameworkBundle`): [KERNEL.md](KERNEL.md#admin-back-office), [#122](https://github.com/Interchouette-ITC/Serenade/issues/122), [#123](https://github.com/Interchouette-ITC/Serenade/issues/123).
+**Not** part of the kernel or `FrameworkBundle`. Apps opt in with `AdminBundle` / `AdminExtension`.
 
-## Why parked
+Core stance (no Symfony 1 generator in FrameworkBundle): [KERNEL.md](KERNEL.md#admin-back-office), [#122](https://github.com/Interchouette-ITC/Serenade/issues/122).
 
-Modern Symfony keeps CRUD admin in the **ecosystem** (EasyAdmin, Sonata, Maker stubs), not in FrameworkBundle. Serenade follows the same split: Form, CSRF, security, and session login are framework primitives; a generated admin UI is optional composition.
+## What ships today
 
-Until a crate exists, apps keep hand-authored BO pages (MyFeed `/admin`, product Angular / Leptos admin hosts).
+| Piece | Status |
+| --- | --- |
+| `AdminResource` / `AdminField` / `AdminRow` | Yes |
+| `AdminRegistry` + DI `admin.registry` | Yes |
+| List + show route registration | Yes |
+| List + show HTML helpers (escaped) | Yes |
+| New / edit / delete + Form + CSRF | Next ([#179](https://github.com/Interchouette-ITC/Serenade/issues/179)) |
+| MyFeed / recipe dogfood | Later ([#180](https://github.com/Interchouette-ITC/Serenade/issues/180)) |
 
-## What the bundle would own
+## Ownership
 
-| Piece | Bundle | App / product |
+| Piece | Bundle | App |
 | --- | --- | --- |
-| Config → list / show / new / edit / delete routes | Yes | Declares resources |
-| Field descriptors (label, type, sortable, filterable) | Yes | Resource field map |
-| Filters on list (equality, range, search) | Yes | Which filters are enabled |
-| Forms for create / edit | Reuses `serenade-form` + CSRF | Entity bind / persist |
-| Access checks | Reuses security voters / firewall | Roles / subjects |
-| HTML / SPA chrome | Thin HTML helpers or none | Host UI (templates or SPA) |
-| Persistence | Calls app repositories | `ProductRepository`, etc. |
+| Resource field map + path prefix | Yes | Declares resources |
+| List / show HTML orchestration | Yes | Supplies `AdminRow` data |
+| Persist / query | Calls app hooks (forms slice) | Repositories |
+| Auto-wire into FrameworkBundle | **No** | Opt-in extension |
 
-Suggested package shape when ordered: separate Cargo crate (e.g. `serenade-admin`), own `BundleInterface` + `Extension`, recipe under `config/packages/admin.toml`. **Not** registered by `FrameworkBundle` by default.
+## Example
 
-## Config-driven shape (concepts only)
+```rust
+use serenade_admin::{
+    AdminField, AdminRegistry, AdminResource, AdminRow, register_admin_routes, render_list_html,
+};
+use serenade_http::RouteCollection;
 
-Illustrative TOML (not implemented):
+let mut registry = AdminRegistry::new();
+registry.register(
+    AdminResource::new("product", "/admin/products")
+        .list_fields([AdminField::named("name"), AdminField::new("price", "Price")]),
+)?;
 
-```toml
-# config/packages/admin.toml (future)
-[admin.resources.product]
-path_prefix = "/admin/products"
-entity = "product"
-list_fields = ["id", "name", "price_cents", "active"]
-filter_fields = ["name", "active"]
-form_fields = ["name", "price_cents", "active"]
+let mut routes = RouteCollection::new();
+register_admin_routes(&mut routes, &registry)?;
+
+let html = render_list_html(
+    registry.get("product").expect("resource"),
+    &[AdminRow::new("1").with("name", "Mug").with("price", "12")],
+);
+assert!(html.contains("Mug"));
 ```
 
-Behavior concepts:
+Wire DI with `AdminExtension` next to `FrameworkExtension`, then resolve `admin.registry` and register resources before adding routes.
 
-1. **List** - table of configured fields; optional filters; pagination contract left to the app or a later shared helper.
-2. **Show** - read-only field set for one id.
-3. **New / Edit** - `serenade-form` form built from `form_fields`; CSRF default-on; POST bind → app save.
-4. **Delete** - POST/DELETE with CSRF; app delete; redirect to list.
+## Related
 
-Resource handlers stay app-owned: load by id, save, delete, list query. The bundle would only orchestrate HTTP + forms + config.
-
-## Must reuse
-
-- [FORMS.md](FORMS.md) - bind, validate, render, CSRF
-- [SECURITY.md](SECURITY.md) - firewall and/or `login` / `SessionTokenMiddleware` for HTML admin
-- [BUNDLES.md](BUNDLES.md) - third-party / first-party bundle policy
-
-## Non-goals (until ordered)
-
-- Shipping `serenade-admin` (or any admin crate) in this repository
-- Auto-wiring CRUD admin into `FrameworkBundle`
-- Porting Symfony 1 `sfPropelAdminGenerator` / Doctrine admin generator
-- Replacing product SPA admin hosts with generated HTML
-- Claiming Redis / multi-tenant admin as a v1 product
-
-## When to order implementation
-
-Greg (or product) opens an implementation issue that:
-
-1. Names the crate and recipe
-2. Picks HTML-first vs API-only admin JSON for SPA hosts
-3. Lists the first dogfood app (MyFeed moderation is **not** required to migrate)
-
-Until then this file is the locked scope only.
+- Epic: [#177](https://github.com/Interchouette-ITC/Serenade/issues/177)
+- Forms CRUD: [#179](https://github.com/Interchouette-ITC/Serenade/issues/179)
+- Dogfood: [#180](https://github.com/Interchouette-ITC/Serenade/issues/180)

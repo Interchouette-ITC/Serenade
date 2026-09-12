@@ -158,9 +158,9 @@ Serenade does **not** ship a Symfony 1-style **admin generator** (YAML → full 
 | Hand-written or SPA admin UIs | App / product (e.g. MyFeed `/admin`, product admin hosts) |
 | Form + CSRF + escape on admin pages | Serenade ([FORMS.md](FORMS.md), [SECURITY.md](SECURITY.md)) |
 | Firewall / session login for admin routes | Serenade primitives; apps wire authenticators |
-| Optional EasyAdmin-shaped Admin CRUD **bundle** | Not in FrameworkBundle; parked scope in [ADMIN.md](ADMIN.md) ([#124](https://github.com/Interchouette-ITC/Serenade/issues/124)) |
+| Optional EasyAdmin-shaped Admin CRUD **bundle** | `serenade-admin` (opt-in; not FrameworkBundle) - [ADMIN.md](ADMIN.md), [#177](https://github.com/Interchouette-ITC/Serenade/issues/177) |
 
-Stance and epic: [#122](https://github.com/Interchouette-ITC/Serenade/issues/122). Docs lock: [#123](https://github.com/Interchouette-ITC/Serenade/issues/123). Parked bundle note: [ADMIN.md](ADMIN.md).
+Stance (not in kernel): [#122](https://github.com/Interchouette-ITC/Serenade/issues/122). Implementation: [#177](https://github.com/Interchouette-ITC/Serenade/issues/177).
 
 ## Forms
 

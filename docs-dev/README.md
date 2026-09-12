@@ -24,7 +24,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model; admin CRUD is not FrameworkBundle        |
-| [ADMIN.md](ADMIN.md)         | Parked scope for optional Admin CRUD bundle            |
+| [ADMIN.md](ADMIN.md)         | Optional `serenade-admin` CRUD (list/show; forms next) |
 | [WASM.md](WASM.md)           | Wasm host plumbing (wasmtime CM + Wasmer WASIX)        |
 | [PERSISTENCE.md](PERSISTENCE.md) | Adapter pattern, repository traits, `UnitOfWork` |
 | [RUSTASHOP.md](RUSTASHOP.md) | Illustrative RustaShop crate map (example, not locked) |
@@ -54,7 +54,8 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [#57](https://github.com/Interchouette-ITC/Serenade/issues/57) | Observability / structured logging (Monolog-like) |
 | [#110](https://github.com/Interchouette-ITC/Serenade/issues/110) | Forms, CSRF, HTML escape |
 | [#111](https://github.com/Interchouette-ITC/Serenade/issues/111) | View helpers (`path` / `asset` / partials) |
-| [#122](https://github.com/Interchouette-ITC/Serenade/issues/122) | Admin generator stance (core non-goal; optional bundle parked) |
+| [#122](https://github.com/Interchouette-ITC/Serenade/issues/122) | Admin generator stance (not in kernel / FrameworkBundle) |
+| [#177](https://github.com/Interchouette-ITC/Serenade/issues/177) | Implement optional `serenade-admin` CRUD bundle |
 | [#123](https://github.com/Interchouette-ITC/Serenade/issues/123) | Docs: lock admin generator as core non-goal |
 | [#124](https://github.com/Interchouette-ITC/Serenade/issues/124) | Parked: optional Admin CRUD bundle (EasyAdmin-shaped) |
 

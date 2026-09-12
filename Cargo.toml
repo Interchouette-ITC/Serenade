@@ -16,6 +16,7 @@ members = [
     "crates/serenade-validator",
     "crates/serenade-security",
     "crates/serenade-form",
+    "crates/serenade-admin",
     "crates/serenade-cache",
     "crates/serenade-search",
     "crates/serenade-mailer",
@@ -57,6 +58,7 @@ serenade-serializer = { path = "crates/serenade-serializer", version = "0.1.0" }
 serenade-validator = { path = "crates/serenade-validator", version = "0.1.0" }
 serenade-security = { path = "crates/serenade-security", version = "0.1.0" }
 serenade-form = { path = "crates/serenade-form", version = "0.1.0" }
+serenade-admin = { path = "crates/serenade-admin", version = "0.1.0" }
 serenade-cache = { path = "crates/serenade-cache", version = "0.1.0" }
 serenade-search = { path = "crates/serenade-search", version = "0.1.0" }
 serenade-mailer = { path = "crates/serenade-mailer", version = "0.1.0" }
