@@ -33,12 +33,15 @@ use tracing_subscriber::prelude::*;
 
 use crate::embed::is_allowed_embed;
 use crate::html::{
-    FeedView, admin_login_page, admin_page_with_logout, asset_response, edit_post_page,
-    emoji_picker, feed_page, html_response, redirect, redirect_with_cookie,
+    FeedView, SearchHitView, admin_login_page, admin_page_with_logout, asset_response,
+    edit_post_page, emoji_picker, feed_page, html_response, redirect, redirect_with_cookie,
+    search_page,
 };
 use crate::i18n::Ui;
-use crate::sanitize::{plain_len, sanitize_post_html};
+use crate::sanitize::{plain_len, plain_text, sanitize_post_html};
 use crate::store::{FeedStore, NewPost, Post};
+
+use serenade_search::{DocumentIndex, MemorySearchAdapter, SearchDocument, SearchQuery};
 
 const DEFAULT_BIND: &str = "127.0.0.1:8090";
 const DEFAULT_CSRF: &str = "myfeed-dev-csrf-secret-change-me!!";
@@ -50,6 +53,7 @@ const MAX_BODY_CHARS: usize = 2000;
 
 struct AppState {
     store: FeedStore,
+    index: MemorySearchAdapter,
     csrf: HmacCsrfTokenManager,
     matcher: UrlMatcher,
     admin_token: String,
@@ -61,6 +65,7 @@ struct AppState {
 fn routes() -> Result<RouteCollection, HttpError> {
     let mut collection = RouteCollection::new();
     collection.add(Route::with_method("feed", "/", Method::Get))?;
+    collection.add(Route::with_method("search", "/search", Method::Get))?;
     collection.add(Route::with_method("post_create", "/posts", Method::Post))?;
     collection.add(Route::with_method(
         "comment_create",
@@ -628,6 +633,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
 
     match route {
         "feed" => feed_with_flash(state, request, None, false, false),
+        "search" => Ok(handle_search(state, request)),
         "post_create" => handle_post_create(state, request),
         "comment_create" => handle_comment_create(state, request),
         "post_like" => handle_like(state, request),
@@ -652,6 +658,126 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         "locale_set" => Ok(handle_locale_set(state, request)),
         _ => Err(HttpError::not_found("no handler")),
     }
+}
+
+fn post_search_document(post: &Post) -> SearchDocument {
+    SearchDocument::new(post.id.to_string())
+        .field("body", plain_text(&post.body))
+        .field("category", post.category.clone())
+}
+
+fn index_upsert(state: &AppState, post: &Post) {
+    let _ = state.index.upsert(post_search_document(post));
+}
+
+fn index_delete(state: &AppState, id: u64) {
+    let _ = state.index.delete(&id.to_string());
+}
+
+fn rebuild_search_index(store: &FeedStore, index: &MemorySearchAdapter) {
+    let _ = index.clear();
+    for post in store.posts() {
+        let _ = index.upsert(post_search_document(&post));
+    }
+}
+
+fn query_param(query: Option<&str>, name: &str) -> Option<String> {
+    let query = query?;
+    for part in query.split('&') {
+        let (key, value) = part.split_once('=').unwrap_or((part, ""));
+        if key == name {
+            return Some(percent_decode(value));
+        }
+    }
+    None
+}
+
+fn percent_decode(raw: &str) -> String {
+    let mut out = Vec::with_capacity(raw.len());
+    let bytes = raw.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            b'%' if i + 2 < bytes.len() => {
+                let hi = from_hex(bytes[i + 1]);
+                let lo = from_hex(bytes[i + 2]);
+                if let (Some(h), Some(l)) = (hi, lo) {
+                    out.push((h << 4) | l);
+                    i += 3;
+                } else {
+                    out.push(b'%');
+                    i += 1;
+                }
+            }
+            b => {
+                out.push(b);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+const fn from_hex(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+fn snippet_for(post: &Post) -> String {
+    let plain = plain_text(&post.body);
+    let trimmed: String = plain.chars().take(160).collect();
+    if plain.chars().count() > 160 {
+        format!("{trimmed}…")
+    } else if trimmed.is_empty() {
+        format!("#{}", post.id)
+    } else {
+        trimmed
+    }
+}
+
+fn handle_search(state: &AppState, request: &Request) -> Response {
+    let ui = ui_for(state, request);
+    let q = query_param(request.query(), "q").unwrap_or_default();
+    let mut owned: Vec<(String, String, String)> = Vec::new();
+    if !q.trim().is_empty() {
+        let hits = state
+            .index
+            .query(&SearchQuery::new(q.clone()).with_limit(50))
+            .unwrap_or_default();
+        for hit in hits {
+            let Ok(id) = hit.id().parse::<u64>() else {
+                continue;
+            };
+            let Some(post) = state.store.get_post(id) else {
+                continue;
+            };
+            owned.push((
+                format!("/#post-{id}"),
+                snippet_for(&post),
+                post.category.clone(),
+            ));
+        }
+    }
+    let hit_views: Vec<SearchHitView<'_>> = owned
+        .iter()
+        .map(|(href, snippet, category)| SearchHitView {
+            href,
+            snippet,
+            category,
+        })
+        .collect();
+    html_response(
+        200,
+        search_page(&ui, state.matcher.collection(), &q, &hit_views),
+    )
 }
 
 fn sanitize_image_data(raw: &str) -> Option<String> {
@@ -730,7 +856,8 @@ fn handle_post_create(state: &AppState, request: &Request) -> Result<Response, H
     match form.handle_request(request, &state.csrf) {
         Ok(FormStatus::Bound) if form.is_valid() => match parse_new_post(state, &form) {
             Ok(new) => {
-                state.store.add_post(new);
+                let post = state.store.add_post(new);
+                index_upsert(state, &post);
                 Ok(redirect("/"))
             }
             Err(msg) => feed_with_flash(state, request, Some(msg), true, true),
@@ -1090,6 +1217,9 @@ fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response
         Ok(FormStatus::Bound) if form.is_valid() => match parse_new_post(state, &form) {
             Ok(new) => {
                 let _ = state.store.update_post(id, &new);
+                if let Some(post) = state.store.get_post(id) {
+                    index_upsert(state, &post);
+                }
                 Ok(redirect(&format!("/#post-{id}")))
             }
             Err(msg) => {
@@ -1131,6 +1261,7 @@ fn handle_post_delete(state: &AppState, request: &Request) -> Result<Response, H
         return Ok(redirect("/"));
     }
     let _ = state.store.delete_post(id);
+    index_delete(state, id);
     Ok(redirect("/"))
 }
 
@@ -1156,6 +1287,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_path = std::env::var("MYFEED_DB").unwrap_or_else(|_| ".myfeed.sqlite".to_owned());
     let store = FeedStore::open(db_path);
     seed_if_empty(&store);
+    let index = MemorySearchAdapter::new();
+    rebuild_search_index(&store, &index);
     let translations = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations");
     let mut translator = Translator::new(Locale::new("en").expect("en"))
         .with_fallbacks(vec![Locale::new("en").expect("en")]);
@@ -1180,6 +1313,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = Arc::new(AppState {
         store,
+        index,
         csrf: HmacCsrfTokenManager::new(csrf_secret.as_bytes()),
         matcher: UrlMatcher::new(routes()?),
         admin_token: admin_token.clone(),

@@ -29,6 +29,7 @@ Open <http://127.0.0.1:8090/>.
 - Public likes; comments pending until approved
 - `/admin` cookie login, moderation queue, category manager
 - Admin Edit / Delete on each post (after sign-in); posts show date
+- `GET /search?q=` in-memory search over post body + category
 
 ## Admin
 

@@ -195,6 +195,18 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 
 Default DI pool is in-memory. Apps register `RedisAdapter` when they need Redis.
 
+## Search / indexation
+
+Basic document search lives in **`serenade-search`** ([#129](https://github.com/Interchouette-ITC/Serenade/issues/129)). See [SEARCH.md](SEARCH.md).
+
+| Piece | Role |
+| --- | --- |
+| `SearchDocument` / `SearchQuery` / `SearchHit` | Ids, text fields, ranked hits |
+| `DocumentIndex` | Upsert / delete / query / clear |
+| `MemorySearchAdapter` | Zero-deps in-memory index |
+
+No SaaS engine in core. Apps wire adapters when they need one.
+
 ## Observability (structured logging)
 
 `serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Apps call `init` from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md).
