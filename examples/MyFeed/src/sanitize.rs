@@ -40,15 +40,19 @@ pub fn sanitize_post_html(raw: &str) -> String {
         .to_string()
 }
 
-/// Plain text length for the 2000-char demo cap.
+/// Strips tags for length checks and search indexing.
 #[must_use]
-pub fn plain_len(html: &str) -> usize {
+pub fn plain_text(html: &str) -> String {
     ammonia::Builder::default()
         .tags(HashSet::new())
         .clean(html)
         .to_string()
-        .chars()
-        .count()
+}
+
+/// Plain text length for the 2000-char demo cap.
+#[must_use]
+pub fn plain_len(html: &str) -> usize {
+    plain_text(html).chars().count()
 }
 
 #[cfg(test)]
@@ -60,5 +64,13 @@ mod tests {
         let out = sanitize_post_html(r"<p>hi</p><script>alert(1)</script>");
         assert!(out.contains("hi"));
         assert!(!out.contains("script"));
+    }
+
+    #[test]
+    fn plain_text_strips_tags() {
+        assert_eq!(
+            plain_text("<p>hello <strong>world</strong></p>").trim(),
+            "hello world"
+        );
     }
 }

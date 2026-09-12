@@ -119,6 +119,7 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         )
     });
     let feed_href = path(view.routes, "feed", &[]).unwrap_or_else(|_| "/".into());
+    let search_href = path(view.routes, "search", &[]).unwrap_or_else(|_| "/search".into());
     let admin_href = path(view.routes, "admin", &[]).unwrap_or_else(|_| "/admin".into());
     let body = format!(
         r##"
@@ -131,6 +132,7 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
       {langs}
       <a class="link-secondary" href="{feed_href}">{nav_feed}</a>
+      <a class="link-secondary" href="{search_href}">{nav_search}</a>
       <a class="admin-link btn btn-outline-primary btn-sm" href="{admin_href}">{nav_admin}</a>
     </nav>
   </header>
@@ -167,8 +169,10 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         tagline = escape_html(&ui.t("tagline")),
         langs = locale_switcher(ui, view.routes),
         feed_href = escape_attr(&feed_href),
+        search_href = escape_attr(&search_href),
         admin_href = escape_attr(&admin_href),
         nav_feed = escape_html(&ui.t("nav_feed")),
+        nav_search = escape_html(&ui.t("nav_search")),
         nav_admin = escape_html(&ui.t("nav_admin")),
         composer_title = escape_html(&ui.t("composer_title")),
         composer_help = escape_html(&ui.t("composer_help")),
@@ -186,6 +190,120 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         about = about_modal(ui),
     );
     document("MyFeed", &body, view.composer_open, ui.locale().language())
+}
+
+/// One escaped search hit row (href + snippet already prepared by the caller).
+pub struct SearchHitView<'a> {
+    /// Anchor to the post on the feed.
+    pub href: &'a str,
+    /// Plain-text snippet.
+    pub snippet: &'a str,
+    /// Category label.
+    pub category: &'a str,
+}
+
+/// Public search page (`GET /search?q=`).
+#[must_use]
+pub fn search_page(
+    ui: &Ui<'_>,
+    routes: &RouteCollection,
+    query: &str,
+    hits: &[SearchHitView<'_>],
+) -> String {
+    let feed_href = path(routes, "feed", &[]).unwrap_or_else(|_| "/".into());
+    let search_href = path(routes, "search", &[]).unwrap_or_else(|_| "/search".into());
+    let admin_href = path(routes, "admin", &[]).unwrap_or_else(|_| "/admin".into());
+    let results_html = if query.trim().is_empty() {
+        format!(
+            r#"<p class="text-secondary mb-0">{msg}</p>"#,
+            msg = escape_html(&ui.t("search_empty_query")),
+        )
+    } else if hits.is_empty() {
+        format!(
+            r#"<p class="text-secondary mb-0">{msg}</p>"#,
+            msg = escape_html(&ui.t("search_no_results")),
+        )
+    } else {
+        let mut rows = String::new();
+        let count = i64::try_from(hits.len()).unwrap_or(i64::MAX);
+        let _ = write!(
+            rows,
+            r#"<p class="text-secondary small mb-3">{summary}</p><ul class="list-unstyled d-flex flex-column gap-3">"#,
+            summary = escape_html(&ui.tn("search_results", count)),
+        );
+        for hit in hits {
+            let _ = write!(
+                rows,
+                r#"<li class="card post-card"><div class="card-body p-3">
+  <a class="stretched-link text-decoration-none" href="{href}"><span class="fw-semibold">{snippet}</span></a>
+  <div class="text-secondary small mt-1">{category}</div>
+</div></li>"#,
+                href = escape_attr(hit.href),
+                snippet = escape_html(hit.snippet),
+                category = escape_html(hit.category),
+            );
+        }
+        rows.push_str("</ul>");
+        rows
+    };
+    let body = format!(
+        r#"
+<div class="myfeed-shell">
+  <header class="d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
+    <div class="me-auto">
+      <h1 class="myfeed-brand">MyFeed</h1>
+      <p class="myfeed-tag">{tagline}</p>
+    </div>
+    <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
+      {langs}
+      <a class="link-secondary" href="{feed_href}">{nav_feed}</a>
+      <a class="link-secondary" href="{search_href}">{nav_search}</a>
+      <a class="admin-link btn btn-outline-primary btn-sm" href="{admin_href}">{nav_admin}</a>
+    </nav>
+  </header>
+  <main>
+    <section class="card post-card mb-4">
+      <div class="card-body p-4">
+        <h2 class="h5 mb-2">{search_title}</h2>
+        <p class="text-secondary small mb-3">{search_help}</p>
+        <form class="row g-2 align-items-end" method="get" action="{search_action}">
+          <div class="col-sm">
+            <label class="form-label" for="search-q">{search_title}</label>
+            <input id="search-q" class="form-control form-control-lg" type="search" name="q" value="{query}" placeholder="{search_placeholder}" autocomplete="off" />
+          </div>
+          <div class="col-sm-auto">
+            <button class="btn btn-primary btn-lg w-100" type="submit">{search_submit}</button>
+          </div>
+        </form>
+      </div>
+    </section>
+    <section aria-live="polite">
+      {results_html}
+    </section>
+  </main>
+</div>
+"#,
+        tagline = escape_html(&ui.t("tagline")),
+        langs = locale_switcher(ui, routes),
+        feed_href = escape_attr(&feed_href),
+        search_href = escape_attr(&search_href),
+        admin_href = escape_attr(&admin_href),
+        nav_feed = escape_html(&ui.t("nav_feed")),
+        nav_search = escape_html(&ui.t("nav_search")),
+        nav_admin = escape_html(&ui.t("nav_admin")),
+        search_title = escape_html(&ui.t("search_title")),
+        search_help = escape_html(&ui.t("search_help")),
+        search_action = escape_attr(&search_href),
+        query = escape_attr(query),
+        search_placeholder = escape_attr(&ui.t("search_placeholder")),
+        search_submit = escape_html(&ui.t("search_submit")),
+    );
+    document(
+        &format!("MyFeed · {}", ui.t("nav_search")),
+        &body,
+        false,
+        ui.locale().language(),
+    )
 }
 
 fn render_wall(view: &FeedView<'_>) -> String {

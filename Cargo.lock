@@ -3577,6 +3577,7 @@ dependencies = [
  "serenade-http-actix",
  "serenade-observability",
  "serenade-profiler",
+ "serenade-search",
  "serenade-security",
  "serenade-translation",
  "serenade-validator",
