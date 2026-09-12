@@ -95,6 +95,24 @@ fn register_routes_propagates_name_collision() {
 }
 
 #[test]
+fn register_routes_propagates_show_name_collision() {
+    let mut registry = AdminRegistry::new();
+    registry
+        .register(AdminResource::new("product", "/admin/products"))
+        .expect("register");
+    let mut collection = RouteCollection::new();
+    collection
+        .add(Route::with_method(
+            "admin_product_show",
+            "/collision-show",
+            Method::Get,
+        ))
+        .expect("preexisting show");
+    let err = register_admin_routes(&mut collection, &registry).expect_err("show collision");
+    assert!(err.to_string().contains("admin_product_show"));
+}
+
+#[test]
 fn render_list_and_show_escape_html() {
     let resource = AdminResource::new("product", "/admin/products")
         .list_fields([AdminField::named("name"), AdminField::new("price", "Price")]);
