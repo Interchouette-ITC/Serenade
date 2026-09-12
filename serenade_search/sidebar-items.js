@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SearchError"],"fn":["version"],"struct":["MemorySearchAdapter","SearchDocument","SearchHit","SearchQuery"],"trait":["DocumentIndex"]};
