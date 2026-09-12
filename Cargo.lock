@@ -5437,6 +5437,7 @@ dependencies = [
  "r2d2",
  "redis",
  "serenade-di",
+ "tempfile",
  "thiserror 2.0.20",
 ]
 

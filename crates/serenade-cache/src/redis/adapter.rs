@@ -7,8 +7,9 @@ use r2d2::Pool;
 use redis::{Client, Commands, RedisError};
 
 use super::RedisAdapterConfig;
-use super::keys::{redis_key, validate_logical_key};
-use super::marshaller::CacheMarshaller;
+use super::keys::redis_key;
+use crate::key::validate_logical_key;
+use crate::marshaller::CacheMarshaller;
 use crate::{ArrayCacheItem, CacheError, CacheItemPool};
 
 /// Redis [`CacheItemPool`] using redis-rs sync connections and an r2d2 pool.
