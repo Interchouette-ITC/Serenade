@@ -15,6 +15,7 @@ serenade-di = { workspace = true }
 serenade-event = { workspace = true }
 serenade-http = { workspace = true }
 serenade-kernel = { workspace = true }
+serenade-mailer = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]

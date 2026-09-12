@@ -20,7 +20,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
 | [SESSION.md](SESSION.md)     | Session bag, flash, SessionStore, cookie + HTTP middleware |
 | [SEARCH.md](SEARCH.md)       | Document index contracts, MemorySearchAdapter          |
-| [MAILER.md](MAILER.md)       | Email + Mime lite message types                        |
+| [MAILER.md](MAILER.md)       | Email + Mime lite, Null/File/SMTP transports, DI       |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model; admin CRUD is not FrameworkBundle        |

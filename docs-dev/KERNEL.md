@@ -249,8 +249,11 @@ Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/
 | `Body` | Text and/or HTML parts |
 | `Attachment` | Filename, content type, bytes |
 | `Email` | Builder for From/To/Cc/Bcc/Reply-To, subject, body, attachments |
+| `Transport` | Sync `send` contract |
+| `NullTransport` / `FileTransport` / `SmtpTransport` | Discard / file dump / SMTP (lettre) |
+| `RegisterDefaultMailerPass` | DI: service `mailer` defaults to null |
 
-Transports and DI wiring are a separate slice.
+`FrameworkExtension` installs the default mailer pass. See [MAILER.md](MAILER.md).
 
 ## Observability (structured logging)
 

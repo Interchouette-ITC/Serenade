@@ -105,6 +105,16 @@ fn framework_extension_wires_router_config_and_dispatcher() {
     assert_eq!(about.0.name(), "serenade:about");
     assert_eq!(debug_container.0.name(), "debug:container");
     assert_eq!(debug_config.0.name(), "debug:config");
+    let mailer = container
+        .get_as::<serenade_mailer::MailerService>(serenade_mailer::DEFAULT_MAILER_SERVICE)
+        .expect("mailer");
+    let email = serenade_mailer::Email::new()
+        .from("a@b.test")
+        .expect("from")
+        .to("c@d.test")
+        .expect("to")
+        .subject("hi");
+    mailer.send(&email).expect("null send");
     assert!(Arc::strong_count(&router) >= 1);
 }
 
