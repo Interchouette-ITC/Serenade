@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MailerError"],"fn":["version"],"struct":["Address","Attachment","Body","Email"]};
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_MAILER_SERVICE","MAILER_TRANSPORT_TAG"],"enum":["MailerError"],"fn":["version"],"struct":["Address","Attachment","Body","Email","FileTransport","MailerService","NullTransport","RegisterDefaultMailerPass","SmtpTransport","SmtpTransportBuilder"],"trait":["Transport"]};
