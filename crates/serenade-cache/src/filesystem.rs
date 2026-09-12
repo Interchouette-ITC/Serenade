@@ -280,7 +280,6 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CacheError> {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use std::thread;
     use std::time::Duration;
 
     use tempfile::TempDir;
@@ -346,6 +345,8 @@ mod tests {
 
     #[test]
     fn expiry_turns_hit_into_miss_and_deletes_file() {
+        use super::{encode_record, parse_record};
+
         let dir = tempfile::tempdir().expect("tempdir");
         let pool = FilesystemAdapter::open(
             FilesystemAdapterConfig::new(dir.path()).with_prefix("ttl"),
@@ -354,16 +355,20 @@ mod tests {
         .expect("open");
         let mut item = ArrayCacheItem::miss("tmp");
         item.set(Arc::new(String::from("gone")));
-        // Generous TTL: short values flake when CI scheduling delays save past Instant expiry.
-        item.expires_after(Some(Duration::from_millis(200)));
+        // Long TTL: avoid Instant races under llvm-cov between expires_after and save/get.
+        item.expires_after(Some(Duration::from_secs(3600)));
         pool.save(item).expect("save");
         assert!(pool.get_item("tmp").expect("get").is_hit());
-        thread::sleep(Duration::from_millis(350));
-        assert!(!pool.get_item("tmp").expect("get").is_hit());
+
         let path = dir
             .path()
             .join("ttl")
             .join(format!("{}.cache", hex_key("tmp")));
+        let bytes = std::fs::read(&path).expect("read");
+        let (_expires, payload) = parse_record(&bytes).expect("parse");
+        // Force a past unix expiry on disk (no sleep / no CI scheduling flake).
+        std::fs::write(&path, encode_record(1, payload)).expect("rewrite expired");
+        assert!(!pool.get_item("tmp").expect("get").is_hit());
         assert!(!path.exists());
     }
 
