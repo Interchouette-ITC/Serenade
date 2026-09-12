@@ -96,7 +96,10 @@ Both can coexist in product apps; Serenade bundles are the **in-process** story.
 
 ```text
 crates/serenade-bundle/     FrameworkBundle, Extension, build_container
-examples/demo-app/
-├── config/packages/*.toml
-└── src/main.rs             DemoBundle + FrameworkBundle
+examples/demo-app/          Canonical sample (DemoBundle)
+├── config/packages/*.toml  Package config for alias `demo`
+├── src/lib.rs + bundle.rs  BundleInterface, Extension, RouteLoader,
+│                           demo:hello command, demo.ready subscriber
+├── src/main.rs             Boot + dispatch demo.ready
+└── src/bin/console.rs      Console entry with DemoBundle wired
 ```

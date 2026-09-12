@@ -4,10 +4,9 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use serenade_bundle::{
-    CONSOLE_APPLICATION_SERVICE, FrameworkBundle, FrameworkExtension, build_container,
-};
+use serenade_bundle::{CONSOLE_APPLICATION_SERVICE, FrameworkBundle};
 use serenade_console::Application;
+use serenade_demo_app::{DemoBundle, demo_container};
 use serenade_kernel::{App, Application as KernelApp, Environment};
 
 fn main() -> ExitCode {
@@ -27,15 +26,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     serenade_config::load_dotenv(&root, environment.as_str())?;
 
     let mut app = App::new(environment.clone());
+    app.register_bundle(DemoBundle)?;
     app.register_bundle(FrameworkBundle)?;
     app.boot()?;
 
     let packages = root.join("config/packages");
-    let (_config, container) = build_container(
-        Some(packages.as_path()),
-        environment.as_str(),
-        &[&FrameworkExtension],
-    )?;
+    let (_config, container) = demo_container(Some(packages.as_path()), environment.as_str())?;
     let container = Arc::new(container);
     let console = container.get_as::<Application>(CONSOLE_APPLICATION_SERVICE)?;
     let argv: Vec<String> = std::env::args().collect();
