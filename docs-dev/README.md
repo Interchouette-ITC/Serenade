@@ -18,6 +18,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [SERIALIZER.md](SERIALIZER.md) | JSON + optional TOON (agent context export)  |
 | [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/MyFeed`) |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
+| [SESSION.md](SESSION.md)     | Session bag, SessionStore, cookie session id           |
 | [SEARCH.md](SEARCH.md)       | Document index contracts, MemorySearchAdapter          |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
