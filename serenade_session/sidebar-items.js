@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["DEFAULT_SESSION_COOKIE"],"enum":["SameSite","SessionError"],"fn":["generate_session_id","parse_cookie_value","version"],"struct":["CookieSession","CookieSessionOptions","MemorySessionStore","Session"],"trait":["SessionStore"]};
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_SESSION_COOKIE","FLASH_SESSION_KEY"],"enum":["SameSite","SessionError"],"fn":["generate_session_id","parse_cookie_value","version"],"struct":["CookieSession","CookieSessionOptions","FlashBag","MemorySessionStore","Session"],"trait":["SessionStore"]};
