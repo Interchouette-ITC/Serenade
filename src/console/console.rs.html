@@ -4,43 +4,39 @@
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::process::ExitCode;
 <a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span>std::sync::Arc;
 <a href=#6 id=6 data-nosnippet>6</a>
-<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>serenade_bundle::{
-<a href=#8 id=8 data-nosnippet>8</a>    CONSOLE_APPLICATION_SERVICE, FrameworkBundle, FrameworkExtension, build_container,
-<a href=#9 id=9 data-nosnippet>9</a>};
-<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>serenade_console::Application;
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>serenade_kernel::{App, Application <span class="kw">as </span>KernelApp, Environment};
-<a href=#12 id=12 data-nosnippet>12</a>
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">fn </span>main() -&gt; ExitCode {
-<a href=#14 id=14 data-nosnippet>14</a>    <span class="kw">match </span>run() {
-<a href=#15 id=15 data-nosnippet>15</a>        <span class="prelude-val">Ok</span>(()) =&gt; ExitCode::SUCCESS,
-<a href=#16 id=16 data-nosnippet>16</a>        <span class="prelude-val">Err</span>(error) =&gt; {
-<a href=#17 id=17 data-nosnippet>17</a>            <span class="macro">eprintln!</span>(<span class="string">"{error}"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>            ExitCode::FAILURE
-<a href=#19 id=19 data-nosnippet>19</a>        }
-<a href=#20 id=20 data-nosnippet>20</a>    }
-<a href=#21 id=21 data-nosnippet>21</a>}
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a><span class="kw">fn </span>run() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-<a href=#24 id=24 data-nosnippet>24</a>    <span class="kw">let </span>env_name = std::env::var(<span class="string">"APP_ENV"</span>).unwrap_or_else(|<span class="kw">_</span>| <span class="string">"dev"</span>.to_owned());
-<a href=#25 id=25 data-nosnippet>25</a>    <span class="kw">let </span>environment = Environment::from_name(<span class="kw-2">&amp;</span>env_name)<span class="question-mark">?</span>;
-<a href=#26 id=26 data-nosnippet>26</a>    <span class="kw">let </span>root = PathBuf::from(<span class="macro">env!</span>(<span class="string">"CARGO_MANIFEST_DIR"</span>));
-<a href=#27 id=27 data-nosnippet>27</a>    serenade_config::load_dotenv(<span class="kw-2">&amp;</span>root, environment.as_str())<span class="question-mark">?</span>;
-<a href=#28 id=28 data-nosnippet>28</a>
-<a href=#29 id=29 data-nosnippet>29</a>    <span class="kw">let </span><span class="kw-2">mut </span>app = App::new(environment.clone());
+<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>serenade_bundle::{CONSOLE_APPLICATION_SERVICE, FrameworkBundle};
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>serenade_console::Application;
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>serenade_demo_app::{DemoBundle, demo_container};
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>serenade_kernel::{App, Application <span class="kw">as </span>KernelApp, Environment};
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">fn </span>main() -&gt; ExitCode {
+<a href=#13 id=13 data-nosnippet>13</a>    <span class="kw">match </span>run() {
+<a href=#14 id=14 data-nosnippet>14</a>        <span class="prelude-val">Ok</span>(()) =&gt; ExitCode::SUCCESS,
+<a href=#15 id=15 data-nosnippet>15</a>        <span class="prelude-val">Err</span>(error) =&gt; {
+<a href=#16 id=16 data-nosnippet>16</a>            <span class="macro">eprintln!</span>(<span class="string">"{error}"</span>);
+<a href=#17 id=17 data-nosnippet>17</a>            ExitCode::FAILURE
+<a href=#18 id=18 data-nosnippet>18</a>        }
+<a href=#19 id=19 data-nosnippet>19</a>    }
+<a href=#20 id=20 data-nosnippet>20</a>}
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a><span class="kw">fn </span>run() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">let </span>env_name = std::env::var(<span class="string">"APP_ENV"</span>).unwrap_or_else(|<span class="kw">_</span>| <span class="string">"dev"</span>.to_owned());
+<a href=#24 id=24 data-nosnippet>24</a>    <span class="kw">let </span>environment = Environment::from_name(<span class="kw-2">&amp;</span>env_name)<span class="question-mark">?</span>;
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="kw">let </span>root = PathBuf::from(<span class="macro">env!</span>(<span class="string">"CARGO_MANIFEST_DIR"</span>));
+<a href=#26 id=26 data-nosnippet>26</a>    serenade_config::load_dotenv(<span class="kw-2">&amp;</span>root, environment.as_str())<span class="question-mark">?</span>;
+<a href=#27 id=27 data-nosnippet>27</a>
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="kw">let </span><span class="kw-2">mut </span>app = App::new(environment.clone());
+<a href=#29 id=29 data-nosnippet>29</a>    app.register_bundle(DemoBundle)<span class="question-mark">?</span>;
 <a href=#30 id=30 data-nosnippet>30</a>    app.register_bundle(FrameworkBundle)<span class="question-mark">?</span>;
 <a href=#31 id=31 data-nosnippet>31</a>    app.boot()<span class="question-mark">?</span>;
 <a href=#32 id=32 data-nosnippet>32</a>
 <a href=#33 id=33 data-nosnippet>33</a>    <span class="kw">let </span>packages = root.join(<span class="string">"config/packages"</span>);
-<a href=#34 id=34 data-nosnippet>34</a>    <span class="kw">let </span>(_config, container) = build_container(
-<a href=#35 id=35 data-nosnippet>35</a>        <span class="prelude-val">Some</span>(packages.as_path()),
-<a href=#36 id=36 data-nosnippet>36</a>        environment.as_str(),
-<a href=#37 id=37 data-nosnippet>37</a>        <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>FrameworkExtension],
-<a href=#38 id=38 data-nosnippet>38</a>    )<span class="question-mark">?</span>;
-<a href=#39 id=39 data-nosnippet>39</a>    <span class="kw">let </span>container = Arc::new(container);
-<a href=#40 id=40 data-nosnippet>40</a>    <span class="kw">let </span>console = container.get_as::&lt;Application&gt;(CONSOLE_APPLICATION_SERVICE)<span class="question-mark">?</span>;
-<a href=#41 id=41 data-nosnippet>41</a>    <span class="kw">let </span>argv: Vec&lt;String&gt; = std::env::args().collect();
-<a href=#42 id=42 data-nosnippet>42</a>    console.run_with(argv, <span class="prelude-val">Some</span>(Arc::clone(<span class="kw-2">&amp;</span>container)))<span class="question-mark">?</span>;
-<a href=#43 id=43 data-nosnippet>43</a>    app.shutdown()<span class="question-mark">?</span>;
-<a href=#44 id=44 data-nosnippet>44</a>    <span class="prelude-val">Ok</span>(())
-<a href=#45 id=45 data-nosnippet>45</a>}
+<a href=#34 id=34 data-nosnippet>34</a>    <span class="kw">let </span>(_config, container) = demo_container(<span class="prelude-val">Some</span>(packages.as_path()), environment.as_str())<span class="question-mark">?</span>;
+<a href=#35 id=35 data-nosnippet>35</a>    <span class="kw">let </span>container = Arc::new(container);
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="kw">let </span>console = container.get_as::&lt;Application&gt;(CONSOLE_APPLICATION_SERVICE)<span class="question-mark">?</span>;
+<a href=#37 id=37 data-nosnippet>37</a>    <span class="kw">let </span>argv: Vec&lt;String&gt; = std::env::args().collect();
+<a href=#38 id=38 data-nosnippet>38</a>    console.run_with(argv, <span class="prelude-val">Some</span>(Arc::clone(<span class="kw-2">&amp;</span>container)))<span class="question-mark">?</span>;
+<a href=#39 id=39 data-nosnippet>39</a>    app.shutdown()<span class="question-mark">?</span>;
+<a href=#40 id=40 data-nosnippet>40</a>    <span class="prelude-val">Ok</span>(())
+<a href=#41 id=41 data-nosnippet>41</a>}
 </code></pre></div></section></main></body></html>
