@@ -1,7 +1,7 @@
 //! Cache item pool trait and in-memory adapter.
 
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
@@ -69,17 +69,39 @@ pub trait CacheItemPool: Send + Sync {
         }
         Ok(removed)
     }
+
+    /// Deletes every item tagged with any of `tags`. Returns how many keys were removed.
+    ///
+    /// Default: not supported (returns [`CacheError::Pool`]). [`ArrayAdapter`] implements tags.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CacheError`] when the pool does not support tags or delete fails.
+    fn invalidate_tags(&self, tags: &[&str]) -> Result<usize, CacheError> {
+        let _ = tags;
+        Err(CacheError::Pool {
+            message: "tag invalidation is not supported by this pool".to_owned(),
+        })
+    }
 }
 
 struct Stored {
-    value: Option<Arc<dyn Any + Send + Sync>>,
+    value: Arc<dyn Any + Send + Sync>,
     expires_at: Option<Instant>,
+    tags: Vec<String>,
+}
+
+#[derive(Default)]
+struct Inner {
+    items: HashMap<String, Stored>,
+    /// Tag → keys currently associated with that tag.
+    by_tag: HashMap<String, HashSet<String>>,
 }
 
 /// In-memory [`CacheItemPool`] (`ArrayAdapter`).
 #[derive(Default)]
 pub struct ArrayAdapter {
-    inner: Mutex<HashMap<String, Stored>>,
+    inner: Mutex<Inner>,
 }
 
 impl ArrayAdapter {
@@ -99,53 +121,135 @@ impl ArrayAdapter {
         Ok(())
     }
 
-    fn lock_map(&self) -> MutexGuard<'_, HashMap<String, Stored>> {
+    fn lock(&self) -> MutexGuard<'_, Inner> {
         self.inner
             .lock()
             .expect("serenade-cache ArrayAdapter mutex poisoned")
     }
 }
 
+fn unlink_key_tags(inner: &mut Inner, key: &str, tags: &[String]) {
+    for tag in tags {
+        if let Some(keys) = inner.by_tag.get_mut(tag) {
+            keys.remove(key);
+            if keys.is_empty() {
+                inner.by_tag.remove(tag);
+            }
+        }
+    }
+}
+
+fn link_key_tags(inner: &mut Inner, key: &str, tags: &[String]) {
+    for tag in tags {
+        inner
+            .by_tag
+            .entry(tag.clone())
+            .or_default()
+            .insert(key.to_owned());
+    }
+}
+
 impl CacheItemPool for ArrayAdapter {
     fn get_item(&self, key: &str) -> Result<ArrayCacheItem, CacheError> {
         Self::validate_key(key)?;
-        let mut map = self.lock_map();
-        if map
+        let mut inner = self.lock();
+        if inner
+            .items
             .get(key)
             .is_some_and(|stored| stored.expires_at.is_some_and(|at| Instant::now() >= at))
         {
-            map.remove(key);
+            let stored = inner
+                .items
+                .remove(key)
+                .expect("expired key was present before remove");
+            unlink_key_tags(&mut inner, key, &stored.tags);
             return Ok(ArrayCacheItem::miss(key));
         }
-        let item = map.get(key).map_or_else(
+        let item = inner.items.get(key).map_or_else(
             || ArrayCacheItem::miss(key),
             |stored| {
-                stored.value.as_ref().map_or_else(
-                    || ArrayCacheItem::miss(key),
-                    |value| {
-                        ArrayCacheItem::hit(key, Arc::clone(value)).with_expiry(stored.expires_at)
-                    },
-                )
+                ArrayCacheItem::hit(key, Arc::clone(&stored.value))
+                    .with_expiry(stored.expires_at)
+                    .with_tags(stored.tags.clone())
             },
         );
-        drop(map);
+        drop(inner);
         Ok(item)
     }
 
     fn save(&self, item: ArrayCacheItem) -> Result<(), CacheError> {
-        let (key, value, expires_at) = item.into_stored();
+        let (key, value, expires_at, tags) = item.into_stored();
         Self::validate_key(&key)?;
-        self.lock_map().insert(key, Stored { value, expires_at });
+        let mut inner = self.lock();
+        if let Some(previous) = inner.items.remove(&key) {
+            unlink_key_tags(&mut inner, &key, &previous.tags);
+        }
+        let Some(value) = value else {
+            drop(inner);
+            return Ok(());
+        };
+        if expires_at.is_some_and(|at| Instant::now() >= at) {
+            drop(inner);
+            return Ok(());
+        }
+        link_key_tags(&mut inner, &key, &tags);
+        inner.items.insert(
+            key,
+            Stored {
+                value,
+                expires_at,
+                tags,
+            },
+        );
+        drop(inner);
         Ok(())
     }
 
     fn delete_item(&self, key: &str) -> Result<bool, CacheError> {
         Self::validate_key(key)?;
-        Ok(self.lock_map().remove(key).is_some())
+        let mut inner = self.lock();
+        let Some(stored) = inner.items.remove(key) else {
+            drop(inner);
+            return Ok(false);
+        };
+        unlink_key_tags(&mut inner, key, &stored.tags);
+        drop(inner);
+        Ok(true)
     }
 
     fn clear(&self) -> Result<(), CacheError> {
-        self.lock_map().clear();
+        let mut inner = self.lock();
+        inner.items.clear();
+        inner.by_tag.clear();
+        drop(inner);
         Ok(())
+    }
+
+    fn invalidate_tags(&self, tags: &[&str]) -> Result<usize, CacheError> {
+        let mut inner = self.lock();
+        let mut keys_to_remove = HashSet::new();
+        for tag in tags {
+            if tag.is_empty() {
+                continue;
+            }
+            if let Some(keys) = inner.by_tag.remove(*tag) {
+                keys_to_remove.extend(keys);
+            }
+        }
+        let mut removed = 0;
+        let keys: Vec<String> = keys_to_remove
+            .into_iter()
+            .filter(|key| inner.items.contains_key(key))
+            .collect();
+        for key in keys {
+            let stored = inner
+                .items
+                .remove(&key)
+                .expect("key was present before remove");
+            unlink_key_tags(&mut inner, &key, &stored.tags);
+            removed += 1;
+        }
+        drop(inner);
+        Ok(removed)
     }
 }

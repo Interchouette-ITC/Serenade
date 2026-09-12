@@ -4,12 +4,33 @@ PSR-like cache pools live in **`serenade-cache`**.
 
 | Piece | Role |
 | --- | --- |
-| `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL |
-| `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear |
+| `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL, optional tags |
+| `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear; **tag invalidation** |
 | `FilesystemAdapter` | Disk-backed pool (directory + prefix); TTL in file header |
 | `CacheMarshaller` / `BytesMarshaller` | Wire encoding (`Vec<u8>`, `String`) for durable adapters |
 | `RedisAdapter` (feature `redis`) | Redis via [redis-rs](https://github.com/redis-rs/redis-rs) + r2d2 |
 | `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` with `ArrayAdapter` |
+
+## Tag invalidation
+
+Symfony-shaped tags on items, invalidation on the pool:
+
+```rust
+use std::sync::Arc;
+use serenade_cache::{ArrayAdapter, ArrayCacheItem, CacheItem, CacheItemPool};
+
+let pool = ArrayAdapter::new();
+let mut item = ArrayCacheItem::miss("product:42");
+item.set(Arc::new(String::from("payload")));
+item.tag(&["product", "catalog"]);
+pool.save(item)?;
+
+pool.invalidate_tags(&["product"])?; // removes every item tagged `product`
+```
+
+- Empty tag names are ignored when tagging or invalidating
+- Re-saving an item **without** tags clears its previous tag links on `ArrayAdapter`
+- `FilesystemAdapter` and `RedisAdapter` do not persist tags yet; `invalidate_tags` returns a pool error on those adapters
 
 ## Filesystem adapter
 

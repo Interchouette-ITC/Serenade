@@ -74,7 +74,7 @@ impl CacheItemPool for RedisAdapter {
     }
 
     fn save(&self, item: ArrayCacheItem) -> Result<(), CacheError> {
-        let (key, value, expires_at) = item.into_stored();
+        let (key, value, expires_at, tags) = item.into_stored();
         let redis_key = self.prefixed(&key)?;
         let mut conn = self.connection()?;
         let Some(value) = value else {
@@ -86,6 +86,8 @@ impl CacheItemPool for RedisAdapter {
             return Ok(());
         }
         let bytes = self.marshaller.marshal(value.as_ref())?;
+        // Tags are not persisted on the Redis adapter yet.
+        let _ = tags;
         match remaining_px_ms(expires_at) {
             Some(px) => {
                 redis::cmd("SET")
