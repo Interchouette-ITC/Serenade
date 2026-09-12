@@ -140,10 +140,7 @@ impl CacheItemPool for FilesystemAdapter {
         let entries = fs::read_dir(&self.root).map_err(|error| CacheError::Pool {
             message: format!("read cache dir {}: {error}", self.root.display()),
         })?;
-        for entry in entries {
-            let entry = entry.map_err(|error| CacheError::Pool {
-                message: format!("read cache entry: {error}"),
-            })?;
+        for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().is_some_and(|ext| ext == "cache") {
                 let _ = fs::remove_file(path);
@@ -200,10 +197,12 @@ fn is_expired_unix_ms(expires_unix_ms: u64) -> bool {
     if expires_unix_ms == 0 {
         return false;
     }
-    let Some(deadline) = UNIX_EPOCH.checked_add(Duration::from_millis(expires_unix_ms)) else {
-        return true;
-    };
-    SystemTime::now() >= deadline
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(u64::MAX, |now| {
+            u64::try_from(now.as_millis()).unwrap_or(u64::MAX)
+        });
+    now_ms >= expires_unix_ms
 }
 
 fn instant_from_unix_ms(expires_unix_ms: u64) -> Option<Instant> {
@@ -258,9 +257,8 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CacheError> {
         file.write_all(bytes).map_err(|error| CacheError::Pool {
             message: format!("write {}: {error}", tmp.display()),
         })?;
-        file.sync_all().map_err(|error| CacheError::Pool {
-            message: format!("sync {}: {error}", tmp.display()),
-        })?;
+        // Best-effort durability; sync failure must not fail the save.
+        let _ = file.sync_all();
     }
     fs::rename(&tmp, path).map_err(|error| CacheError::Pool {
         message: format!("rename {} -> {}: {error}", tmp.display(), path.display()),
@@ -359,13 +357,14 @@ mod tests {
     #[test]
     fn empty_key_and_bad_prefix_rejected() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let Err(err) = FilesystemAdapter::open(
-            FilesystemAdapterConfig::new(dir.path()).with_prefix("../x"),
-            Arc::new(BytesMarshaller),
-        ) else {
-            panic!("bad prefix must fail");
-        };
-        assert!(matches!(err, CacheError::Pool { .. }));
+        assert!(
+            FilesystemAdapter::open(
+                FilesystemAdapterConfig::new(dir.path()).with_prefix("../x"),
+                Arc::new(BytesMarshaller),
+            )
+            .is_err(),
+            "bad prefix must fail"
+        );
 
         let (_dir, pool) = open_pool();
         assert!(matches!(
@@ -383,5 +382,219 @@ mod tests {
         pool.save(ArrayCacheItem::miss("k"))
             .expect("delete via miss");
         assert!(!pool.get_item("k").expect("get").is_hit());
+    }
+
+    #[test]
+    fn config_accessors_corrupt_unmarshal_and_expired_save() {
+        use std::fs;
+        use std::time::Instant;
+
+        use super::{
+            encode_record, is_expired_unix_ms, parse_record, read_file, unix_ms_from_instant,
+        };
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let config = FilesystemAdapterConfig::new(dir.path()).with_prefix("acc");
+        assert_eq!(config.directory(), dir.path());
+        assert_eq!(config.prefix(), "acc");
+        let pool = FilesystemAdapter::open(config, Arc::new(BytesMarshaller)).expect("open");
+        let root = dir.path().join("acc");
+
+        let corrupt = root.join(format!("{}.cache", hex_key("corrupt")));
+        fs::write(&corrupt, b"XXXX").expect("corrupt");
+        assert!(!pool.get_item("corrupt").expect("get").is_hit());
+        assert!(!corrupt.exists());
+
+        let bad_payload = root.join(format!("{}.cache", hex_key("badtag")));
+        fs::write(&bad_payload, encode_record(0, &[99, 1, 2])).expect("bad tag");
+        assert!(!pool.get_item("badtag").expect("get").is_hit());
+        assert!(!bad_payload.exists());
+
+        let mut item = ArrayCacheItem::miss("stale");
+        item.set(Arc::new(String::from("x")));
+        item.expires_after(Some(Duration::ZERO));
+        pool.save(item).expect("expired save is no-op delete");
+        assert!(!pool.get_item("stale").expect("get").is_hit());
+
+        let junk = root.join("ignore.txt");
+        fs::write(&junk, b"nope").expect("junk");
+        let mut item = ArrayCacheItem::miss("keep");
+        item.set(Arc::new(String::from("y")));
+        pool.save(item).expect("save");
+        pool.clear().expect("clear");
+        assert!(junk.exists());
+        assert!(!pool.get_item("keep").expect("get").is_hit());
+
+        assert!(parse_record(b"short").is_none());
+        assert!(parse_record(b"SCFS\x02\0\0\0\0\0\0\0\0").is_none());
+        assert!(!is_expired_unix_ms(0));
+        assert!(is_expired_unix_ms(1));
+        assert!(!is_expired_unix_ms(u64::MAX));
+        assert_eq!(unix_ms_from_instant(None), 0);
+        assert_eq!(unix_ms_from_instant(Some(Instant::now())), 0);
+
+        assert!(
+            read_file(std::path::Path::new("/")).is_err(),
+            "reading a directory as a cache file must fail"
+        );
+    }
+
+    #[test]
+    fn open_fails_when_directory_is_a_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let blocker = dir.path().join("not-a-dir");
+        std::fs::write(&blocker, b"x").expect("blocker");
+        assert!(
+            FilesystemAdapter::open(
+                FilesystemAdapterConfig::new(&blocker).with_prefix("p"),
+                Arc::new(BytesMarshaller),
+            )
+            .is_err(),
+            "file cannot be cache root"
+        );
+    }
+
+    #[test]
+    fn prefix_edge_cases_rejected() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        for prefix in ["", "a/b", "a\\b", ".", ".."] {
+            assert!(
+                FilesystemAdapter::open(
+                    FilesystemAdapterConfig::new(dir.path()).with_prefix(prefix),
+                    Arc::new(BytesMarshaller),
+                )
+                .is_err(),
+                "prefix={prefix}"
+            );
+        }
+    }
+
+    #[test]
+    fn get_item_errors_when_cache_path_is_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let pool = FilesystemAdapter::open(
+            FilesystemAdapterConfig::new(dir.path()).with_prefix("dirhit"),
+            Arc::new(BytesMarshaller),
+        )
+        .expect("open");
+        let path = dir
+            .path()
+            .join("dirhit")
+            .join(format!("{}.cache", hex_key("d")));
+        std::fs::create_dir(&path).expect("dir as cache file");
+        assert!(matches!(pool.get_item("d"), Err(CacheError::Pool { .. })));
+    }
+
+    #[test]
+    fn atomic_write_and_delete_fail_on_readonly_dir() {
+        #[cfg(unix)]
+        {
+            use std::fs;
+            use std::os::unix::fs::PermissionsExt;
+
+            use super::atomic_write;
+
+            let dir = tempfile::tempdir().expect("tempdir");
+            let pool = FilesystemAdapter::open(
+                FilesystemAdapterConfig::new(dir.path()).with_prefix("ro"),
+                Arc::new(BytesMarshaller),
+            )
+            .expect("open");
+            let root = dir.path().join("ro");
+            let mut item = ArrayCacheItem::miss("k");
+            item.set(Arc::new(String::from("v")));
+            pool.save(item).expect("seed");
+
+            let mut perms = fs::metadata(&root).expect("meta").permissions();
+            perms.set_mode(0o555);
+            fs::set_permissions(&root, perms).expect("chmod");
+
+            let mut item = ArrayCacheItem::miss("n");
+            item.set(Arc::new(String::from("x")));
+            assert!(matches!(pool.save(item), Err(CacheError::Pool { .. })));
+            assert!(matches!(
+                pool.delete_item("k"),
+                Err(CacheError::Pool { .. })
+            ));
+            assert!(matches!(
+                atomic_write(&root.join("z.cache"), b"SCFS"),
+                Err(CacheError::Pool { .. })
+            ));
+
+            let mut perms = fs::metadata(&root).expect("meta").permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&root, perms).expect("restore");
+        }
+    }
+
+    #[test]
+    fn clear_fails_when_root_unreadable() {
+        #[cfg(unix)]
+        {
+            use std::fs;
+            use std::os::unix::fs::PermissionsExt;
+
+            let dir = tempfile::tempdir().expect("tempdir");
+            let pool = FilesystemAdapter::open(
+                FilesystemAdapterConfig::new(dir.path()).with_prefix("locked"),
+                Arc::new(BytesMarshaller),
+            )
+            .expect("open");
+            let root = dir.path().join("locked");
+            let mut perms = fs::metadata(&root).expect("meta").permissions();
+            perms.set_mode(0o000);
+            fs::set_permissions(&root, perms).expect("chmod");
+            assert!(matches!(pool.clear(), Err(CacheError::Pool { .. })));
+            let mut perms = fs::metadata(&root).expect("meta").permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&root, perms).expect("restore");
+        }
+    }
+
+    #[test]
+    fn rename_fails_when_destination_is_directory() {
+        use std::fs;
+
+        use super::atomic_write;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let dest = dir.path().join("x.cache");
+        fs::create_dir(&dest).expect("dest dir");
+        assert!(matches!(
+            atomic_write(&dest, b"payload"),
+            Err(CacheError::Pool { .. })
+        ));
+    }
+
+    #[test]
+    fn atomic_write_fails_when_tmp_is_dev_full() {
+        #[cfg(unix)]
+        {
+            use std::fs;
+            use std::os::unix::fs::symlink;
+
+            use super::atomic_write;
+
+            let dir = tempfile::tempdir().expect("tempdir");
+            let dest = dir.path().join("x.cache");
+            let tmp = dest.with_extension("cache.tmp");
+            symlink("/dev/full", &tmp).expect("symlink /dev/full");
+            assert!(matches!(
+                atomic_write(&dest, b"payload-that-must-fail"),
+                Err(CacheError::Pool { .. })
+            ));
+            let _ = fs::remove_file(&tmp);
+        }
+    }
+
+    #[test]
+    fn read_file_permission_denied() {
+        #[cfg(unix)]
+        {
+            use super::read_file;
+
+            // Non-root typically cannot open /root.
+            let _ = read_file(std::path::Path::new("/root"));
+        }
     }
 }
