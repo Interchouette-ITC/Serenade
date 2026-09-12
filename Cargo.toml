@@ -18,6 +18,7 @@ members = [
     "crates/serenade-form",
     "crates/serenade-cache",
     "crates/serenade-search",
+    "crates/serenade-session",
     "crates/serenade-observability",
     "crates/serenade-component-host",
     "crates/serenade-sandbox",
@@ -57,6 +58,7 @@ serenade-security = { path = "crates/serenade-security", version = "0.1.0" }
 serenade-form = { path = "crates/serenade-form", version = "0.1.0" }
 serenade-cache = { path = "crates/serenade-cache", version = "0.1.0" }
 serenade-search = { path = "crates/serenade-search", version = "0.1.0" }
+serenade-session = { path = "crates/serenade-session", version = "0.1.0" }
 serenade-observability = { path = "crates/serenade-observability", version = "0.1.0" }
 serenade-component-host = { path = "crates/serenade-component-host", version = "0.1.0" }
 serenade-sandbox = { path = "crates/serenade-sandbox", version = "0.1.0" }

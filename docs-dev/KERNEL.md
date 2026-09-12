@@ -15,6 +15,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
 | **Console** | CLI application (`bin/console` analogue), commands, optional rich TUI |
 | **Cache** | PSR-like pools (memory / filesystem / Redis, tags) plus HTTP response cache headers in `serenade-http` |
+| **Session** | Session bag, `SessionStore`, cookie session id (`serenade-session`) |
 | **Security** | AuthN/Z hooks, firewall, voters, CSRF token manager |
 | **Form** | HTML forms: bind, CSRF by default, XSS-safe render ([FORMS.md](FORMS.md)) |
 | **Translation** | Translator, catalogues, locale negotiation, ICU format helpers ([I18N.md](I18N.md)) |
@@ -196,6 +197,18 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 | HTTP headers | `HttpCacheHeaders` / `maybe_not_modified` in `serenade-http` (see [CACHE.md](CACHE.md)) |
 
 Default DI pool is in-memory. Apps register `FilesystemAdapter` or `RedisAdapter` when they need persistence beyond process memory.
+
+## Session
+
+Session stickiness lives in **`serenade-session`**. See [SESSION.md](SESSION.md).
+
+| Piece | Role |
+| --- | --- |
+| `Session` | Attribute bag for one request |
+| `SessionStore` / `MemorySessionStore` | Persist attributes by opaque id |
+| `CookieSession` | Open/commit with session-id cookie |
+
+Flash bag and HTTP middleware are follow-ups. CSRF stays in `serenade-security` (HMAC, no session required).
 
 ## Search / indexation
 

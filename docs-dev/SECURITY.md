@@ -43,4 +43,4 @@ Default HTML escaping for form render lives in **`serenade-form`** (`escape_html
 
 - OAuth2 / OIDC providers
 - Built-in user persistence
-- Full session framework (CSRF v0 is HMAC-stateless; session store can come later)
+- Full session framework (CSRF v0 is HMAC-stateless; session store is `serenade-session`, see [SESSION.md](SESSION.md))
