@@ -82,3 +82,31 @@ Compose file: `docker/compose.yml` (`redis:7-alpine` on port `6379`). Override w
 ### Values
 
 `BytesMarshaller` stores tagged `Vec<u8>` and `String` payloads. Other types: serialize in the app, then `CacheItem::set(Arc::new(bytes))`.
+
+## HTTP cache headers (wire)
+
+Application **item pools** (`serenade-cache`) are not the same as **HTTP** caching. Helpers live in **`serenade-http`**:
+
+| Piece | Role |
+| --- | --- |
+| `HttpCacheHeaders` | Build `Cache-Control`, `ETag`, `Last-Modified`, `Vary` on a `Response` |
+| `etag` / `weak_etag` | Quote strong / weak validators |
+| `maybe_not_modified` | Conditional GET/HEAD → **304** when validators match |
+
+```rust
+use serenade_http::{
+    HttpCacheHeaders, Method, Request, Response, etag, maybe_not_modified,
+};
+
+let response = HttpCacheHeaders::public_max_age(60)
+    .with_etag(etag("v1"))
+    .with_vary("Accept-Encoding")
+    .apply(Response::text(200, "body"));
+
+let request = Request::new(Method::Get, "/page").with_header("If-None-Match", "\"v1\"");
+let response = maybe_not_modified(&request, response); // 304, empty body
+```
+
+- `If-None-Match` takes precedence over `If-Modified-Since` when both are sent
+- 304 keeps `cache-control`, `etag`, `last-modified`, `vary`, and `expires` from the full response
+- Does not configure Varnish, ESI, or CDN products

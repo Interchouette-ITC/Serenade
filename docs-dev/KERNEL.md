@@ -14,7 +14,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Routing** | Route collection, requirements, method constraints |
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
 | **Console** | CLI application (`bin/console` analogue), commands, optional rich TUI |
-| **Cache** | PSR-like cache contracts; in-memory / filesystem / Redis adapters; tag invalidation |
+| **Cache** | PSR-like pools (memory / filesystem / Redis, tags) plus HTTP response cache headers in `serenade-http` |
 | **Security** | AuthN/Z hooks, firewall, voters, CSRF token manager |
 | **Form** | HTML forms: bind, CSRF by default, XSS-safe render ([FORMS.md](FORMS.md)) |
 | **Translation** | Translator, catalogues, locale negotiation, ICU format helpers ([I18N.md](I18N.md)) |
@@ -193,6 +193,7 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 | `FilesystemAdapter` | Disk-backed pool; TTL; marshaller for `String` / `Vec<u8>` |
 | `RedisAdapter` (feature `redis`) | redis-rs + r2d2; prefix keys; `SET`/`PX`; SCAN clear |
 | `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` |
+| HTTP headers | `HttpCacheHeaders` / `maybe_not_modified` in `serenade-http` (see [CACHE.md](CACHE.md)) |
 
 Default DI pool is in-memory. Apps register `FilesystemAdapter` or `RedisAdapter` when they need persistence beyond process memory.
 
