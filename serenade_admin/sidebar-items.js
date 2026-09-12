@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ADMIN_BUNDLE","ADMIN_REGISTRY_SERVICE"],"enum":["AdminError"],"fn":["register_admin_routes","render_list_html","render_show_html","version"],"struct":["AdminBundle","AdminExtension","AdminField","AdminRegistry","AdminResource","AdminRow"]};
