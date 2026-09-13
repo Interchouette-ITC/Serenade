@@ -220,17 +220,11 @@ fn unix_ms_from_ttl(ttl: Option<Duration>) -> u64 {
     let now_ms = now.duration_since(UNIX_EPOCH).map_or(0, |duration| {
         u64::try_from(duration.as_millis()).unwrap_or(0)
     });
-    let expires = now
-        .checked_add(ttl)
+    now.checked_add(ttl)
         .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
-        .map_or(0, |duration| {
+        .map_or(now_ms, |duration| {
             u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
-        });
-    if expires <= now_ms {
-        now_ms.saturating_add(1)
-    } else {
-        expires
-    }
+        })
 }
 
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), LockError> {
