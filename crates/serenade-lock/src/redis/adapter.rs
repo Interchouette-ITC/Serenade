@@ -47,6 +47,11 @@ impl RedisLockStore {
     fn redis_key(&self, resource: &str) -> String {
         format!("{}{resource}", self.prefix)
     }
+
+    #[cfg(test)]
+    pub(crate) const fn pool_for_test(&self) -> &Pool<Client> {
+        &self.pool
+    }
 }
 
 impl LockStore for RedisLockStore {

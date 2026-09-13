@@ -36,4 +36,25 @@ impl RedisLockStoreConfig {
         self.prefix = prefix.into();
         self
     }
+
+    /// Sets the r2d2 max pool size (minimum 1).
+    #[must_use]
+    pub fn with_pool_max_size(mut self, pool_max_size: u32) -> Self {
+        self.pool_max_size = pool_max_size.max(1);
+        self
+    }
+
+    /// Sets how long to wait when checking out a connection.
+    #[must_use]
+    pub const fn with_connection_timeout(mut self, connection_timeout: Duration) -> Self {
+        self.connection_timeout = connection_timeout;
+        self
+    }
+
+    /// Warms the pool with one idle connection at build time.
+    #[must_use]
+    pub const fn with_warm_pool(mut self, warm_pool: bool) -> Self {
+        self.warm_pool = warm_pool;
+        self
+    }
 }
