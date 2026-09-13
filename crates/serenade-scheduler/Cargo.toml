@@ -1,0 +1,17 @@
+[package]
+name = "serenade-scheduler"
+description = "Symfony-shaped schedule definitions and a testable tick runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+cron = "0.15"
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
