@@ -82,14 +82,17 @@ impl CompilePass for RegisterDefaultHttpClientPass {
         }
 
         #[cfg(feature = "reqwest")]
-        builder.register(
-            ServiceDefinition::new(DEFAULT_HTTP_CLIENT_SERVICE).with_tag(HTTP_CLIENT_TAG),
-            |_container| {
-                Ok(Box::new(HttpClientService(
-                    Arc::new(crate::ReqwestHttpClient::new()) as Arc<dyn DynHttpClient>,
-                )))
-            },
-        )?;
+        // `expect`: default id cannot collide after the has_default guard above.
+        builder
+            .register(
+                ServiceDefinition::new(DEFAULT_HTTP_CLIENT_SERVICE).with_tag(HTTP_CLIENT_TAG),
+                |_container| {
+                    Ok(Box::new(HttpClientService(
+                        Arc::new(crate::ReqwestHttpClient::new()) as Arc<dyn DynHttpClient>,
+                    )))
+                },
+            )
+            .expect("default http_client id is unique");
 
         Ok(())
     }
