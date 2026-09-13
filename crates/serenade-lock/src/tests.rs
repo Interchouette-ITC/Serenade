@@ -315,9 +315,13 @@ fn filesystem_forever_refresh_expiry_and_corrupt() {
     store
         .put_off_expiration("forever", "tok", None)
         .expect("refresh forever");
+    assert!(store.exists("forever", "tok").expect("still forever"));
+    // Zero TTL matches in-memory Instant semantics: expire at "now" (already due).
     store
         .put_off_expiration("forever", "tok", Some(Duration::ZERO))
         .expect("zero ttl refresh");
+    assert!(!store.exists("forever", "tok").expect("zero ttl expired"));
+    store.save("forever", "tok", None).expect("re-save forever");
     store.delete("forever", "other").expect("wrong token noop");
     assert!(store.exists("forever", "tok").expect("still"));
     assert!(matches!(
