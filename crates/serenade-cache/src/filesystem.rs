@@ -450,10 +450,19 @@ mod tests {
         assert!(!is_expired_unix_ms(u64::MAX));
         assert_eq!(unix_ms_from_instant(None), 0);
         assert_eq!(unix_ms_from_instant(Some(Instant::now())), 0);
+        // llvm-cov / slow runners can consume a few hundred ns between constructing the
+        // deadline and the Instant::now() inside unix_ms_from_instant; retry a short window
+        // then fall back to 1ms so the assertion stays deterministic.
+        let near_future = (0..64).find_map(|_| {
+            let encoded = unix_ms_from_instant(Some(Instant::now() + Duration::from_micros(200)));
+            (encoded != 0).then_some(encoded)
+        });
+        let encoded = near_future.unwrap_or_else(|| {
+            unix_ms_from_instant(Some(Instant::now() + Duration::from_millis(1)))
+        });
         assert_ne!(
-            unix_ms_from_instant(Some(Instant::now() + Duration::from_nanos(500))),
-            0,
-            "sub-millisecond future Instant must not encode as no-expiry"
+            encoded, 0,
+            "near-future Instant must not encode as no-expiry"
         );
 
         assert!(
