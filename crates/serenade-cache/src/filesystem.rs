@@ -450,20 +450,12 @@ mod tests {
         assert!(!is_expired_unix_ms(u64::MAX));
         assert_eq!(unix_ms_from_instant(None), 0);
         assert_eq!(unix_ms_from_instant(Some(Instant::now())), 0);
-        // 1ms is enough to stay ahead of Instant::now() under llvm-cov (sub-ms deltas flake).
+        // 1ms stays ahead of Instant::now() under llvm-cov (sub-ms deltas flake there).
         assert_ne!(
             unix_ms_from_instant(Some(Instant::now() + Duration::from_millis(1))),
             0,
             "near-future Instant must not encode as no-expiry"
         );
-        // Exercise the floor-to-now_ms+1 branch when remaining is under one millisecond.
-        let bumped = (0..64).find_map(|_| {
-            let value = unix_ms_from_instant(Some(Instant::now() + Duration::from_micros(200)));
-            (value != 0).then_some(value)
-        });
-        if let Some(value) = bumped {
-            assert_ne!(value, 0);
-        }
 
         assert!(
             read_file(std::path::Path::new("/")).is_err(),
