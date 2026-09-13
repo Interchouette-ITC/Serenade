@@ -22,6 +22,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [SEARCH.md](SEARCH.md)       | Document index contracts, MemorySearchAdapter          |
 | [MAILER.md](MAILER.md)       | Email + Mime lite, Null/File/SMTP transports, DI       |
 | [HTTP_CLIENT.md](HTTP_CLIENT.md) | Outbound HttpClient, mock + reqwest, DI            |
+| [LOCK.md](LOCK.md)               | Named locks, in-memory / filesystem / Redis, DI    |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model; admin CRUD is not FrameworkBundle        |

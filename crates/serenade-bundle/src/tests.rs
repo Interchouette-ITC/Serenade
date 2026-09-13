@@ -120,6 +120,9 @@ fn framework_extension_wires_router_config_and_dispatcher() {
             serenade_http_client::DEFAULT_HTTP_CLIENT_SERVICE,
         )
         .expect("http_client");
+    let _lock = container
+        .get_as::<serenade_lock::LockStoreService>(serenade_lock::DEFAULT_LOCK_STORE_SERVICE)
+        .expect("lock.store");
     assert!(Arc::strong_count(&router) >= 1);
 }
 

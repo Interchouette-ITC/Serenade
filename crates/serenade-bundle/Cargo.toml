@@ -16,6 +16,7 @@ serenade-event = { workspace = true }
 serenade-http = { workspace = true }
 serenade-http-client = { workspace = true }
 serenade-kernel = { workspace = true }
+serenade-lock = { workspace = true }
 serenade-mailer = { workspace = true }
 thiserror = { workspace = true }
 

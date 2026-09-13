@@ -11,6 +11,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Event dispatcher** | Sync domain and infrastructure events; subscriber tags |
 | **HTTP foundation** | Request/response types, attributes, lifecycle (framework-agnostic core) |
 | **HTTP client** | Outbound HttpClient (`serenade-http-client`); see [HTTP_CLIENT.md](HTTP_CLIENT.md) |
+| **Lock** | Named locks (`serenade-lock`); see [LOCK.md](LOCK.md) |
 | **HTTP kernel** | Middleware pipeline, controller/action resolution |
 | **Routing** | Route collection, requirements, method constraints |
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
@@ -268,6 +269,19 @@ Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Int
 | `RegisterDefaultHttpClientPass` | DI: service `http_client` defaults to reqwest |
 
 `FrameworkExtension` installs the default HTTP client pass. See [HTTP_CLIENT.md](HTTP_CLIENT.md).
+
+## Lock
+
+Named locks live in **`serenade-lock`** ([#185](https://github.com/Interchouette-ITC/Serenade/issues/185)). See [LOCK.md](LOCK.md).
+
+| Piece | Role |
+| --- | --- |
+| `LockStore` / `LockFactory` / `Lock` | Persist + acquire / release / refresh |
+| `InMemoryLockStore` | Process-local (DI default) |
+| `FilesystemLockStore` / `RedisLockStore` | Disk / Redis (feature `redis`) |
+| `RegisterDefaultLockPass` | DI: service `lock.store` defaults to in-memory |
+
+`FrameworkExtension` installs the default lock pass. See [LOCK.md](LOCK.md).
 
 ## Observability (structured logging)
 

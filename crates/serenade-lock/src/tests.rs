@@ -246,3 +246,62 @@ fn acquire_propagates_non_conflict_store_errors() {
         Err(LockError::Store { message }) if message == "boom"
     ));
 }
+
+#[test]
+fn filesystem_lock_store_contention_and_ttl() {
+    use crate::{FilesystemLockStore, FilesystemLockStoreConfig};
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store =
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix("locks"))
+            .expect("open");
+    let factory = LockFactory::new(Arc::new(store) as Arc<dyn LockStore>);
+    let first = factory
+        .create_lock("job:fs", Some(Duration::from_secs(30)), false)
+        .expect("first");
+    let second = factory
+        .create_lock("job:fs", Some(Duration::from_secs(30)), false)
+        .expect("second");
+    assert!(first.acquire().expect("acquire"));
+    assert!(!second.acquire().expect("conflict"));
+    first.release().expect("release");
+    assert!(second.acquire().expect("after release"));
+    second.release().expect("release2");
+}
+
+#[test]
+fn filesystem_config_accessors_and_bad_prefix() {
+    use crate::{FilesystemLockStore, FilesystemLockStoreConfig};
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let config = FilesystemLockStoreConfig::new(dir.path()).with_prefix("acc");
+    assert_eq!(config.directory(), dir.path());
+    assert_eq!(config.prefix(), "acc");
+    assert!(FilesystemLockStore::open(config).is_ok());
+    assert!(
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix("../x"))
+            .is_err()
+    );
+}
+
+#[test]
+fn compile_pass_registers_in_memory_store() {
+    use serenade_di::{CompilePass, ContainerBuilder};
+
+    use crate::{DEFAULT_LOCK_STORE_SERVICE, LockStoreService, RegisterDefaultLockPass};
+
+    let pass = RegisterDefaultLockPass;
+    assert_eq!(pass.name(), "register_default_lock_store");
+    let mut builder = ContainerBuilder::new();
+    builder.add_compile_pass(RegisterDefaultLockPass);
+    let container = builder.compile().expect("compile");
+    let service = container
+        .get_as::<LockStoreService>(DEFAULT_LOCK_STORE_SERVICE)
+        .expect("lock.store");
+    let lock = service
+        .factory()
+        .create_lock_forever("job:di", false)
+        .expect("lock");
+    assert!(lock.acquire().expect("acquire"));
+    lock.release().expect("release");
+}
