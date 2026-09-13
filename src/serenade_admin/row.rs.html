@@ -37,5 +37,11 @@
 <a href=#37 id=37 data-nosnippet>37</a>    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, field: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span>str {
 <a href=#38 id=38 data-nosnippet>38</a>        <span class="self">self</span>.values.get(field).map_or(<span class="string">""</span>, String::as_str)
 <a href=#39 id=39 data-nosnippet>39</a>    }
-<a href=#40 id=40 data-nosnippet>40</a>}
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="doccomment">/// All field values (for form prefill).
+<a href=#42 id=42 data-nosnippet>42</a>    </span><span class="attr">#[must_use]
+<a href=#43 id=43 data-nosnippet>43</a>    </span><span class="kw">pub const fn </span>values(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>BTreeMap&lt;String, String&gt; {
+<a href=#44 id=44 data-nosnippet>44</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.values
+<a href=#45 id=45 data-nosnippet>45</a>    }
+<a href=#46 id=46 data-nosnippet>46</a>}
 </code></pre></div></section></main></body></html>
