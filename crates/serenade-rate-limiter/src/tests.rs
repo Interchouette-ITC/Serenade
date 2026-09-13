@@ -199,3 +199,91 @@ fn storage_ttl_expiry_clears_state() {
         .expect("after ttl");
     assert!(again.is_accepted());
 }
+
+#[test]
+fn consume_or_exceed_and_http_429() {
+    use crate::{ConsumeOrExceedError, consume_or_exceed, require_accepted, too_many_requests};
+
+    let storage = Arc::new(InMemoryRateLimiterStorage::new());
+    let factory = RateLimiterFactory::new(
+        "http",
+        Policy::fixed_window(1, Duration::from_secs(30)).expect("policy"),
+        storage as Arc<dyn RateLimiterStorage>,
+    )
+    .expect("factory");
+    let limiter = factory.create("client").expect("limiter");
+    let ok = consume_or_exceed(&limiter, 1).expect("ok");
+    assert!(ok.is_accepted());
+    match consume_or_exceed(&limiter, 1) {
+        Err(ConsumeOrExceedError::Exceeded(exceeded)) => {
+            assert!(!exceeded.rate_limit.is_accepted());
+            let response = too_many_requests(&exceeded.rate_limit);
+            assert_eq!(response.status(), 429);
+            assert_eq!(response.headers().get("x-ratelimit-limit"), Some("1"));
+            assert_eq!(response.headers().get("x-ratelimit-remaining"), Some("0"));
+            assert!(response.headers().get("retry-after").is_some());
+            assert_eq!(exceeded.retry_after(), exceeded.rate_limit.retry_after());
+        }
+        other => panic!("expected exceeded, got {other:?}"),
+    }
+    let accepted = require_accepted(
+        limiter
+            .reset()
+            .and_then(|()| limiter.consume(1))
+            .expect("reset consume"),
+    )
+    .expect("accepted");
+    assert!(accepted.is_accepted());
+}
+
+#[test]
+fn compile_pass_registers_storage_and_skips_when_present() {
+    use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
+
+    use crate::{
+        DEFAULT_RATE_LIMITER_STORAGE_SERVICE, RATE_LIMITER_STORAGE_TAG, RateLimiterStorageService,
+        RegisterDefaultRateLimiterPass,
+    };
+
+    let pass = RegisterDefaultRateLimiterPass;
+    assert_eq!(pass.name(), "register_default_rate_limiter_storage");
+    let mut builder = ContainerBuilder::new();
+    builder.add_compile_pass(RegisterDefaultRateLimiterPass);
+    let container = builder.compile().expect("compile");
+    let service = container
+        .get_as::<RateLimiterStorageService>(DEFAULT_RATE_LIMITER_STORAGE_SERVICE)
+        .expect("storage");
+    let factory = service
+        .token_bucket_factory("api", 2, Duration::from_secs(1))
+        .expect("factory");
+    let limiter = factory.create("k").expect("limiter");
+    assert!(limiter.consume(1).expect("ok").is_accepted());
+    let fixed = service
+        .fixed_window_factory("login", 3, Duration::from_secs(60))
+        .expect("fixed")
+        .create("u")
+        .expect("limiter2");
+    assert!(fixed.consume(1).expect("ok2").is_accepted());
+    let via_factory = service
+        .factory(
+            "custom",
+            Policy::fixed_window(1, Duration::from_secs(1)).expect("policy"),
+        )
+        .expect("custom factory");
+    assert_eq!(via_factory.name(), "custom");
+
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(
+            ServiceDefinition::new(DEFAULT_RATE_LIMITER_STORAGE_SERVICE)
+                .with_tag(RATE_LIMITER_STORAGE_TAG),
+            |_container| {
+                Ok(Box::new(RateLimiterStorageService(
+                    Arc::new(InMemoryRateLimiterStorage::new()) as Arc<dyn RateLimiterStorage>,
+                )))
+            },
+        )
+        .expect("pre-register");
+    builder.add_compile_pass(RegisterDefaultRateLimiterPass);
+    builder.compile().expect("compile with existing");
+}
