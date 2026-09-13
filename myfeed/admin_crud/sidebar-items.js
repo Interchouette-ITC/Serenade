@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CATEGORY_RESOURCE"],"fn":["categories_panel_html","category_resource","crud_page","handle_create","handle_delete","handle_edit","handle_list","handle_new","handle_show","handle_update","login_denied","path_id","register_category_admin_routes","try_handle"],"struct":["CategoryAdminCtx","CategoryHandler"]};
