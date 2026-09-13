@@ -220,51 +220,45 @@
 <a href=#220 id=220 data-nosnippet>220</a>    <span class="kw">let </span>now_ms = now.duration_since(UNIX_EPOCH).map_or(<span class="number">0</span>, |duration| {
 <a href=#221 id=221 data-nosnippet>221</a>        u64::try_from(duration.as_millis()).unwrap_or(<span class="number">0</span>)
 <a href=#222 id=222 data-nosnippet>222</a>    });
-<a href=#223 id=223 data-nosnippet>223</a>    <span class="kw">let </span>expires = now
-<a href=#224 id=224 data-nosnippet>224</a>        .checked_add(ttl)
-<a href=#225 id=225 data-nosnippet>225</a>        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
-<a href=#226 id=226 data-nosnippet>226</a>        .map_or(<span class="number">0</span>, |duration| {
-<a href=#227 id=227 data-nosnippet>227</a>            u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
-<a href=#228 id=228 data-nosnippet>228</a>        });
-<a href=#229 id=229 data-nosnippet>229</a>    <span class="kw">if </span>expires &lt;= now_ms {
-<a href=#230 id=230 data-nosnippet>230</a>        now_ms.saturating_add(<span class="number">1</span>)
-<a href=#231 id=231 data-nosnippet>231</a>    } <span class="kw">else </span>{
-<a href=#232 id=232 data-nosnippet>232</a>        expires
-<a href=#233 id=233 data-nosnippet>233</a>    }
-<a href=#234 id=234 data-nosnippet>234</a>}
-<a href=#235 id=235 data-nosnippet>235</a>
-<a href=#236 id=236 data-nosnippet>236</a><span class="kw">fn </span>atomic_write(path: <span class="kw-2">&amp;</span>Path, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), LockError&gt; {
-<a href=#237 id=237 data-nosnippet>237</a>    <span class="kw">let </span>tmp = path.with_extension(<span class="string">"lock.tmp"</span>);
-<a href=#238 id=238 data-nosnippet>238</a>    fs::write(<span class="kw-2">&amp;</span>tmp, bytes).map_err(|error| LockError::Store {
-<a href=#239 id=239 data-nosnippet>239</a>        message: <span class="macro">format!</span>(<span class="string">"write {}: {error}"</span>, tmp.display()),
-<a href=#240 id=240 data-nosnippet>240</a>    })<span class="question-mark">?</span>;
-<a href=#241 id=241 data-nosnippet>241</a>    <span class="kw">match </span>fs::rename(<span class="kw-2">&amp;</span>tmp, path) {
-<a href=#242 id=242 data-nosnippet>242</a>        <span class="prelude-val">Ok</span>(()) =&gt; <span class="prelude-val">Ok</span>(()),
-<a href=#243 id=243 data-nosnippet>243</a>        <span class="prelude-val">Err</span>(error) =&gt; {
-<a href=#244 id=244 data-nosnippet>244</a>            <span class="kw">let _ </span>= fs::remove_file(<span class="kw-2">&amp;</span>tmp);
-<a href=#245 id=245 data-nosnippet>245</a>            <span class="prelude-val">Err</span>(LockError::Store {
-<a href=#246 id=246 data-nosnippet>246</a>                message: <span class="macro">format!</span>(<span class="string">"rename {} -&gt; {}: {error}"</span>, tmp.display(), path.display()),
-<a href=#247 id=247 data-nosnippet>247</a>            })
-<a href=#248 id=248 data-nosnippet>248</a>        }
-<a href=#249 id=249 data-nosnippet>249</a>    }
-<a href=#250 id=250 data-nosnippet>250</a>}
+<a href=#223 id=223 data-nosnippet>223</a>    now.checked_add(ttl)
+<a href=#224 id=224 data-nosnippet>224</a>        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+<a href=#225 id=225 data-nosnippet>225</a>        .map_or(now_ms, |duration| {
+<a href=#226 id=226 data-nosnippet>226</a>            u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
+<a href=#227 id=227 data-nosnippet>227</a>        })
+<a href=#228 id=228 data-nosnippet>228</a>}
+<a href=#229 id=229 data-nosnippet>229</a>
+<a href=#230 id=230 data-nosnippet>230</a><span class="kw">fn </span>atomic_write(path: <span class="kw-2">&amp;</span>Path, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), LockError&gt; {
+<a href=#231 id=231 data-nosnippet>231</a>    <span class="kw">let </span>tmp = path.with_extension(<span class="string">"lock.tmp"</span>);
+<a href=#232 id=232 data-nosnippet>232</a>    fs::write(<span class="kw-2">&amp;</span>tmp, bytes).map_err(|error| LockError::Store {
+<a href=#233 id=233 data-nosnippet>233</a>        message: <span class="macro">format!</span>(<span class="string">"write {}: {error}"</span>, tmp.display()),
+<a href=#234 id=234 data-nosnippet>234</a>    })<span class="question-mark">?</span>;
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="kw">match </span>fs::rename(<span class="kw-2">&amp;</span>tmp, path) {
+<a href=#236 id=236 data-nosnippet>236</a>        <span class="prelude-val">Ok</span>(()) =&gt; <span class="prelude-val">Ok</span>(()),
+<a href=#237 id=237 data-nosnippet>237</a>        <span class="prelude-val">Err</span>(error) =&gt; {
+<a href=#238 id=238 data-nosnippet>238</a>            <span class="kw">let _ </span>= fs::remove_file(<span class="kw-2">&amp;</span>tmp);
+<a href=#239 id=239 data-nosnippet>239</a>            <span class="prelude-val">Err</span>(LockError::Store {
+<a href=#240 id=240 data-nosnippet>240</a>                message: <span class="macro">format!</span>(<span class="string">"rename {} -&gt; {}: {error}"</span>, tmp.display(), path.display()),
+<a href=#241 id=241 data-nosnippet>241</a>            })
+<a href=#242 id=242 data-nosnippet>242</a>        }
+<a href=#243 id=243 data-nosnippet>243</a>    }
+<a href=#244 id=244 data-nosnippet>244</a>}
+<a href=#245 id=245 data-nosnippet>245</a>
+<a href=#246 id=246 data-nosnippet>246</a><span class="attr">#[cfg(test)]
+<a href=#247 id=247 data-nosnippet>247</a></span><span class="kw">mod </span>atomic_write_tests {
+<a href=#248 id=248 data-nosnippet>248</a>    <span class="kw">use </span><span class="kw">super</span>::atomic_write;
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="kw">use </span><span class="kw">crate</span>::LockError;
+<a href=#250 id=250 data-nosnippet>250</a>    <span class="kw">use </span>std::fs;
 <a href=#251 id=251 data-nosnippet>251</a>
-<a href=#252 id=252 data-nosnippet>252</a><span class="attr">#[cfg(test)]
-<a href=#253 id=253 data-nosnippet>253</a></span><span class="kw">mod </span>atomic_write_tests {
-<a href=#254 id=254 data-nosnippet>254</a>    <span class="kw">use </span><span class="kw">super</span>::atomic_write;
-<a href=#255 id=255 data-nosnippet>255</a>    <span class="kw">use </span><span class="kw">crate</span>::LockError;
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="kw">use </span>std::fs;
-<a href=#257 id=257 data-nosnippet>257</a>
-<a href=#258 id=258 data-nosnippet>258</a>    <span class="attr">#[test]
-<a href=#259 id=259 data-nosnippet>259</a>    </span><span class="kw">fn </span>rename_fails_when_destination_is_directory() {
-<a href=#260 id=260 data-nosnippet>260</a>        <span class="kw">let </span>dir = tempfile::tempdir().expect(<span class="string">"tempdir"</span>);
-<a href=#261 id=261 data-nosnippet>261</a>        <span class="kw">let </span>path = dir.path().join(<span class="string">"dest.lock"</span>);
-<a href=#262 id=262 data-nosnippet>262</a>        fs::create_dir(<span class="kw-2">&amp;</span>path).expect(<span class="string">"dest is a directory"</span>);
-<a href=#263 id=263 data-nosnippet>263</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(
-<a href=#264 id=264 data-nosnippet>264</a>            atomic_write(<span class="kw-2">&amp;</span>path, <span class="string">b"SLCK"</span>),
-<a href=#265 id=265 data-nosnippet>265</a>            <span class="prelude-val">Err</span>(LockError::Store { message }) <span class="kw">if </span>message.contains(<span class="string">"rename"</span>)
-<a href=#266 id=266 data-nosnippet>266</a>        ));
-<a href=#267 id=267 data-nosnippet>267</a>        <span class="macro">assert!</span>(!dir.path().join(<span class="string">"dest.lock.tmp"</span>).exists());
-<a href=#268 id=268 data-nosnippet>268</a>    }
-<a href=#269 id=269 data-nosnippet>269</a>}
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="attr">#[test]
+<a href=#253 id=253 data-nosnippet>253</a>    </span><span class="kw">fn </span>rename_fails_when_destination_is_directory() {
+<a href=#254 id=254 data-nosnippet>254</a>        <span class="kw">let </span>dir = tempfile::tempdir().expect(<span class="string">"tempdir"</span>);
+<a href=#255 id=255 data-nosnippet>255</a>        <span class="kw">let </span>path = dir.path().join(<span class="string">"dest.lock"</span>);
+<a href=#256 id=256 data-nosnippet>256</a>        fs::create_dir(<span class="kw-2">&amp;</span>path).expect(<span class="string">"dest is a directory"</span>);
+<a href=#257 id=257 data-nosnippet>257</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(
+<a href=#258 id=258 data-nosnippet>258</a>            atomic_write(<span class="kw-2">&amp;</span>path, <span class="string">b"SLCK"</span>),
+<a href=#259 id=259 data-nosnippet>259</a>            <span class="prelude-val">Err</span>(LockError::Store { message }) <span class="kw">if </span>message.contains(<span class="string">"rename"</span>)
+<a href=#260 id=260 data-nosnippet>260</a>        ));
+<a href=#261 id=261 data-nosnippet>261</a>        <span class="macro">assert!</span>(!dir.path().join(<span class="string">"dest.lock.tmp"</span>).exists());
+<a href=#262 id=262 data-nosnippet>262</a>    }
+<a href=#263 id=263 data-nosnippet>263</a>}
 </code></pre></div></section></main></body></html>
