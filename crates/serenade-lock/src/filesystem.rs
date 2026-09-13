@@ -1,7 +1,6 @@
 //! Disk-backed [`LockStore`].
 
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -236,16 +235,35 @@ fn unix_ms_from_ttl(ttl: Option<Duration>) -> u64 {
 
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), LockError> {
     let tmp = path.with_extension("lock.tmp");
-    {
-        let mut file = fs::File::create(&tmp).map_err(|error| LockError::Store {
-            message: format!("create {}: {error}", tmp.display()),
-        })?;
-        file.write_all(bytes).map_err(|error| LockError::Store {
-            message: format!("write {}: {error}", tmp.display()),
-        })?;
-        let _ = file.sync_all();
+    fs::write(&tmp, bytes).map_err(|error| LockError::Store {
+        message: format!("write {}: {error}", tmp.display()),
+    })?;
+    match fs::rename(&tmp, path) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            let _ = fs::remove_file(&tmp);
+            Err(LockError::Store {
+                message: format!("rename {} -> {}: {error}", tmp.display(), path.display()),
+            })
+        }
     }
-    fs::rename(&tmp, path).map_err(|error| LockError::Store {
-        message: format!("rename {} -> {}: {error}", tmp.display(), path.display()),
-    })
+}
+
+#[cfg(test)]
+mod atomic_write_tests {
+    use super::atomic_write;
+    use crate::LockError;
+    use std::fs;
+
+    #[test]
+    fn rename_fails_when_destination_is_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("dest.lock");
+        fs::create_dir(&path).expect("dest is a directory");
+        assert!(matches!(
+            atomic_write(&path, b"SLCK"),
+            Err(LockError::Store { message }) if message.contains("rename")
+        ));
+        assert!(!dir.path().join("dest.lock.tmp").exists());
+    }
 }
