@@ -2,9 +2,14 @@
 
 use std::time::Duration;
 
+use std::sync::Arc;
+
+use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
+
 use crate::{
-    ClientMethod, ClientRequest, ClientResponse, HttpClient, HttpClientError, MockHttpClient,
-    version,
+    ClientMethod, ClientRequest, ClientResponse, DEFAULT_HTTP_CLIENT_SERVICE, DynHttpClient,
+    HTTP_CLIENT_TAG, HttpClient, HttpClientError, HttpClientService, MockHttpClient,
+    RegisterDefaultHttpClientPass, version,
 };
 
 #[test]
@@ -275,5 +280,80 @@ fn http_client_error_display() {
         }
         .to_string()
         .contains("transport")
+    );
+}
+
+#[tokio::test]
+async fn http_client_service_wraps_mock() {
+    let mock = MockHttpClient::new();
+    mock.expect(
+        ClientMethod::Get,
+        "https://example.test/svc",
+        ClientResponse::new(200).body_text("svc"),
+        Some(1),
+    );
+    mock.expect(
+        ClientMethod::Post,
+        "https://example.test/svc",
+        ClientResponse::new(201).body_text("created"),
+        Some(1),
+    );
+    let service = HttpClientService(Arc::new(mock) as Arc<dyn DynHttpClient>);
+    let response = service.get("https://example.test/svc").await.expect("get");
+    assert_eq!(response.body_text_lossy(), "svc");
+    let posted = service
+        .post("https://example.test/svc", b"{}".to_vec())
+        .await
+        .expect("post");
+    assert_eq!(posted.status(), 201);
+    let sent = service
+        .send(ClientRequest::get("https://example.test/missing"))
+        .await;
+    assert!(matches!(sent, Err(HttpClientError::MockMiss { .. })));
+}
+
+#[test]
+fn compile_pass_name() {
+    assert_eq!(
+        RegisterDefaultHttpClientPass.name(),
+        "register_default_http_client"
+    );
+}
+
+#[cfg(feature = "reqwest")]
+#[tokio::test]
+async fn compile_pass_registers_reqwest_client() {
+    let mut builder = ContainerBuilder::new();
+    builder.add_compile_pass(RegisterDefaultHttpClientPass);
+    let container = builder.compile().expect("compile");
+    let client = container
+        .get_as::<HttpClientService>(DEFAULT_HTTP_CLIENT_SERVICE)
+        .expect("http_client");
+    let err = client
+        .get("http://127.0.0.1:1/")
+        .await
+        .expect_err("transport");
+    assert!(matches!(err, HttpClientError::Transport { .. }));
+}
+
+#[test]
+fn compile_pass_skips_when_default_already_registered() {
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(
+            ServiceDefinition::new(DEFAULT_HTTP_CLIENT_SERVICE).with_tag(HTTP_CLIENT_TAG),
+            |_| {
+                Ok(Box::new(HttpClientService(
+                    Arc::new(MockHttpClient::new()) as Arc<dyn DynHttpClient>
+                )))
+            },
+        )
+        .expect("register");
+    builder.add_compile_pass(RegisterDefaultHttpClientPass);
+    let container = builder.compile().expect("compile");
+    assert!(
+        container
+            .get_as::<HttpClientService>(DEFAULT_HTTP_CLIENT_SERVICE)
+            .is_ok()
     );
 }

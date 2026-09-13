@@ -115,6 +115,11 @@ fn framework_extension_wires_router_config_and_dispatcher() {
         .expect("to")
         .subject("hi");
     mailer.send(&email).expect("null send");
+    let _http = container
+        .get_as::<serenade_http_client::HttpClientService>(
+            serenade_http_client::DEFAULT_HTTP_CLIENT_SERVICE,
+        )
+        .expect("http_client");
     assert!(Arc::strong_count(&router) >= 1);
 }
 
