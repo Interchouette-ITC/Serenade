@@ -18,35 +18,43 @@ pub struct ReqwestHttpClient {
 impl ReqwestHttpClient {
     /// Builds a client with a 30s default timeout.
     ///
-    /// # Errors
+    /// # Panics
     ///
-    /// Returns [`HttpClientError::Request`] when the underlying client cannot be built.
-    pub fn new() -> Result<Self, HttpClientError> {
+    /// Panics when the underlying reqwest client cannot be built (should not happen
+    /// for a timeout-only builder).
+    #[must_use]
+    pub fn new() -> Self {
         Self::with_timeout(DEFAULT_TIMEOUT)
     }
 
     /// Builds a client with `default_timeout` applied when a request has no timeout.
     ///
-    /// # Errors
+    /// # Panics
     ///
-    /// Returns [`HttpClientError::Request`] when the underlying client cannot be built.
-    pub fn with_timeout(default_timeout: Duration) -> Result<Self, HttpClientError> {
+    /// Panics when the underlying reqwest client cannot be built (should not happen
+    /// for a timeout-only builder).
+    #[must_use]
+    pub fn with_timeout(default_timeout: Duration) -> Self {
         let client = Client::builder()
             .timeout(default_timeout)
             .build()
-            .map_err(|err| HttpClientError::Request {
-                message: err.to_string(),
-            })?;
-        Ok(Self {
+            .expect("reqwest client");
+        Self {
             client,
             default_timeout,
-        })
+        }
     }
 
     /// Default timeout used when [`ClientRequest::timeout_duration`] is unset.
     #[must_use]
     pub const fn default_timeout(&self) -> Duration {
         self.default_timeout
+    }
+}
+
+impl Default for ReqwestHttpClient {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -76,12 +84,7 @@ impl HttpClient for ReqwestHttpClient {
                 headers.insert(name.as_str().to_ascii_lowercase(), text.to_owned());
             }
         }
-        let body = response
-            .bytes()
-            .await
-            .map_err(|err| HttpClientError::Transport {
-                message: err.to_string(),
-            })?;
+        let body = response.bytes().await.expect("response body");
         let mut out = ClientResponse::new(status).body(body.to_vec());
         for (name, value) in headers {
             out = out.header(name, value);

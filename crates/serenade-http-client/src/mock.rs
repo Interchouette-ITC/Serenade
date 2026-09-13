@@ -75,12 +75,7 @@ impl MockHttpClient {
     }
 
     fn resolve(&self, request: &ClientRequest) -> Result<ClientResponse, HttpClientError> {
-        let mut expectations =
-            self.expectations
-                .lock()
-                .map_err(|_| HttpClientError::Transport {
-                    message: "mock mutex poisoned".to_owned(),
-                })?;
+        let mut expectations = self.expectations.lock().expect("mock lock");
         let position = expectations.iter().position(|item| (item.matcher)(request));
         let Some(index) = position else {
             return Err(HttpClientError::MockMiss {

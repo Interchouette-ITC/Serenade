@@ -169,7 +169,7 @@ mod reqwest_tests {
             .mount(&server)
             .await;
 
-        let client = ReqwestHttpClient::with_timeout(Duration::from_secs(5)).expect("client");
+        let client = ReqwestHttpClient::with_timeout(Duration::from_secs(5));
         assert_eq!(client.default_timeout(), Duration::from_secs(5));
         let url = format!("{}/hello", server.uri());
         let response = client.get(url).await.expect("send");
@@ -186,7 +186,7 @@ mod reqwest_tests {
             .mount(&server)
             .await;
 
-        let client = ReqwestHttpClient::new().expect("client");
+        let client = ReqwestHttpClient::new();
         let response = client
             .send(
                 ClientRequest::post(format!("{}/echo", server.uri()))
@@ -216,7 +216,7 @@ mod reqwest_tests {
                 .await;
         }
 
-        let client = ReqwestHttpClient::new().expect("client");
+        let client = ReqwestHttpClient::new();
         let base = server.uri();
         assert_eq!(
             client
@@ -251,11 +251,29 @@ mod reqwest_tests {
 
     #[tokio::test]
     async fn reqwest_client_transport_error() {
-        let client = ReqwestHttpClient::with_timeout(Duration::from_millis(50)).expect("client");
+        let client = ReqwestHttpClient::with_timeout(Duration::from_millis(50));
         let err = client
             .get("http://127.0.0.1:1/")
             .await
             .expect_err("should fail");
         assert!(matches!(err, HttpClientError::Transport { .. }));
     }
+}
+
+#[test]
+fn http_client_error_display() {
+    assert!(
+        HttpClientError::Request {
+            message: "bad".to_owned()
+        }
+        .to_string()
+        .contains("request")
+    );
+    assert!(
+        HttpClientError::Transport {
+            message: "down".to_owned()
+        }
+        .to_string()
+        .contains("transport")
+    );
 }
