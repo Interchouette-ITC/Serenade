@@ -37,4 +37,10 @@ impl AdminRow {
     pub fn get(&self, field: &str) -> &str {
         self.values.get(field).map_or("", String::as_str)
     }
+
+    /// All field values (for form prefill).
+    #[must_use]
+    pub const fn values(&self) -> &BTreeMap<String, String> {
+        &self.values
+    }
 }

@@ -92,8 +92,11 @@ fn form_csrf_and_validate_roundtrip() {
     assert!(form.is_valid());
     assert!(form.violations().is_empty());
     assert_eq!(form.get("body"), Some("hello"));
+    assert!(form.set("body", "updated"));
+    assert_eq!(form.get("body"), Some("updated"));
+    assert!(!form.set("missing", "x"));
     assert_eq!(form.get("missing"), None);
-    assert_eq!(form.data().get("body").map(String::as_str), Some("hello"));
+    assert_eq!(form.data().get("body").map(String::as_str), Some("updated"));
 }
 
 #[test]

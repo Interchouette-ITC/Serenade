@@ -1,6 +1,6 @@
 # Admin CRUD (`serenade-admin`)
 
-Optional EasyAdmin-shaped Admin CRUD helpers live in **`serenade-admin`** ([#177](https://github.com/Interchouette-ITC/Serenade/issues/177), [#178](https://github.com/Interchouette-ITC/Serenade/issues/178)).
+Optional EasyAdmin-shaped Admin CRUD helpers live in **`serenade-admin`** ([#177](https://github.com/Interchouette-ITC/Serenade/issues/177)).
 
 **Not** part of the kernel or `FrameworkBundle`. Apps opt in with `AdminBundle` / `AdminExtension`.
 
@@ -12,9 +12,10 @@ Core stance (no Symfony 1 generator in FrameworkBundle): [KERNEL.md](KERNEL.md#a
 | --- | --- |
 | `AdminResource` / `AdminField` / `AdminRow` | Yes |
 | `AdminRegistry` + DI `admin.registry` | Yes |
-| List + show route registration | Yes |
-| List + show HTML helpers (escaped) | Yes |
-| New / edit / delete + Form + CSRF | Next ([#179](https://github.com/Interchouette-ITC/Serenade/issues/179)) |
+| List / show / new / create / edit / update / delete routes | Yes ([#178](https://github.com/Interchouette-ITC/Serenade/issues/178), [#179](https://github.com/Interchouette-ITC/Serenade/issues/179)) |
+| List + show HTML helpers | Yes |
+| New / edit / delete forms + CSRF (`serenade-form`) | Yes ([#179](https://github.com/Interchouette-ITC/Serenade/issues/179)) |
+| `AdminResourceHandler` persist hooks | Yes (app-owned) |
 | MyFeed / recipe dogfood | Later ([#180](https://github.com/Interchouette-ITC/Serenade/issues/180)) |
 
 ## Ownership
@@ -22,38 +23,35 @@ Core stance (no Symfony 1 generator in FrameworkBundle): [KERNEL.md](KERNEL.md#a
 | Piece | Bundle | App |
 | --- | --- | --- |
 | Resource field map + path prefix | Yes | Declares resources |
-| List / show HTML orchestration | Yes | Supplies `AdminRow` data |
-| Persist / query | Calls app hooks (forms slice) | Repositories |
+| List / show / form HTML | Yes | Supplies `AdminRow` / calls handlers |
+| Persist / query | [`AdminResourceHandler`](https://docs.rs/serenade-admin) | Repositories |
 | Auto-wire into FrameworkBundle | **No** | Opt-in extension |
 
-## Example
+## Forms
 
 ```rust
 use serenade_admin::{
-    AdminField, AdminRegistry, AdminResource, AdminRow, register_admin_routes, render_list_html,
+    AdminField, AdminResource, AdminRow, render_edit_form_html, render_new_form_html,
 };
-use serenade_http::RouteCollection;
+use serenade_security::HmacCsrfTokenManager;
 
-let mut registry = AdminRegistry::new();
-registry.register(
-    AdminResource::new("product", "/admin/products")
-        .list_fields([AdminField::named("name"), AdminField::new("price", "Price")]),
+let resource = AdminResource::new("product", "/admin/products")
+    .list_fields([AdminField::named("name")])
+    .form_fields([AdminField::named("name")]);
+let mgr = HmacCsrfTokenManager::new(b"app-secret-at-least-32-bytes-long!!");
+
+let new_html = render_new_form_html(&resource, &mgr)?;
+let edit_html = render_edit_form_html(
+    &resource,
+    &AdminRow::new("1").with("name", "Mug"),
+    &mgr,
 )?;
-
-let mut routes = RouteCollection::new();
-register_admin_routes(&mut routes, &registry)?;
-
-let html = render_list_html(
-    registry.get("product").expect("resource"),
-    &[AdminRow::new("1").with("name", "Mug").with("price", "12")],
-);
-assert!(html.contains("Mug"));
 ```
 
-Wire DI with `AdminExtension` next to `FrameworkExtension`, then resolve `admin.registry` and register resources before adding routes.
+Bind POSTs with `Form::handle_request` + CSRF manager, then call `AdminResourceHandler::create` / `update` / `delete`.
 
 ## Related
 
 - Epic: [#177](https://github.com/Interchouette-ITC/Serenade/issues/177)
-- Forms CRUD: [#179](https://github.com/Interchouette-ITC/Serenade/issues/179)
 - Dogfood: [#180](https://github.com/Interchouette-ITC/Serenade/issues/180)
+- Forms primitives: [FORMS.md](FORMS.md)

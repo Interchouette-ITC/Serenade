@@ -1,6 +1,6 @@
 [package]
 name = "serenade-admin"
-description = "Optional EasyAdmin-shaped Admin CRUD bundle (HTML list/show first)"
+description = "Optional EasyAdmin-shaped Admin CRUD bundle (HTML + Form/CSRF)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -15,6 +15,7 @@ serenade-di = { workspace = true }
 serenade-form = { workspace = true }
 serenade-http = { workspace = true }
 serenade-kernel = { workspace = true }
+serenade-security = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]

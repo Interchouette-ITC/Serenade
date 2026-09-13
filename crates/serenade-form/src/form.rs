@@ -90,6 +90,18 @@ impl Form {
             .map(Field::value)
     }
 
+    /// Sets a field value when the field exists (for example edit prefill).
+    ///
+    /// Returns `true` when `name` matched a field.
+    pub fn set(&mut self, name: &str, value: impl Into<String>) -> bool {
+        if let Some(field) = self.fields.iter_mut().find(|f| f.name == name) {
+            field.value = value.into();
+            true
+        } else {
+            false
+        }
+    }
+
     /// Constraint violations from the last [`Self::validate`] call.
     #[must_use]
     pub const fn violations(&self) -> &ConstraintViolationList {

@@ -1,10 +1,12 @@
-//! Register list/show routes for a registry.
+//! Register CRUD routes for a registry.
 
 use serenade_http::{HttpError, Method, Route, RouteCollection};
 
 use crate::AdminRegistry;
 
-/// Adds GET list + show routes for every resource in `registry`.
+/// Adds list / show / new / create / edit / update / delete routes for every resource.
+///
+/// Static `…/new` routes are registered before `{id}` so path matching stays correct.
 ///
 /// # Errors
 ///
@@ -20,9 +22,34 @@ pub fn register_admin_routes(
             Method::Get,
         ))?;
         collection.add(Route::with_method(
+            resource.new_route_name(),
+            resource.new_path(),
+            Method::Get,
+        ))?;
+        collection.add(Route::with_method(
+            resource.create_route_name(),
+            resource.new_path(),
+            Method::Post,
+        ))?;
+        collection.add(Route::with_method(
             resource.show_route_name(),
             resource.show_path(),
             Method::Get,
+        ))?;
+        collection.add(Route::with_method(
+            resource.edit_route_name(),
+            resource.edit_path(),
+            Method::Get,
+        ))?;
+        collection.add(Route::with_method(
+            resource.update_route_name(),
+            resource.edit_path(),
+            Method::Post,
+        ))?;
+        collection.add(Route::with_method(
+            resource.delete_route_name(),
+            resource.delete_path(),
+            Method::Post,
         ))?;
     }
     Ok(())
