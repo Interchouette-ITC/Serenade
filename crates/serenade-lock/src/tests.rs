@@ -162,3 +162,87 @@ fn put_off_expiration_clears_ttl() {
     thread::sleep(Duration::from_millis(40));
     assert!(store.exists("r", "a").expect("still held"));
 }
+
+#[test]
+fn delete_expired_entry_and_put_off_guards() {
+    let store = InMemoryLockStore::new();
+    store
+        .save("exp", "a", Some(Duration::from_millis(25)))
+        .expect("save");
+    thread::sleep(Duration::from_millis(40));
+    store.delete("exp", "a").expect("delete expired");
+    assert!(!store.exists("exp", "a").expect("gone"));
+
+    store
+        .save("exp2", "a", Some(Duration::from_millis(25)))
+        .expect("save2");
+    thread::sleep(Duration::from_millis(40));
+    assert!(matches!(
+        store.put_off_expiration("exp2", "a", Some(Duration::from_secs(1))),
+        Err(LockError::NotHeld { .. })
+    ));
+
+    store
+        .save("held", "owner", Some(Duration::from_secs(30)))
+        .expect("save3");
+    assert!(matches!(
+        store.put_off_expiration("held", "other", None),
+        Err(LockError::NotHeld { .. })
+    ));
+}
+
+#[test]
+fn auto_release_noop_when_never_acquired() {
+    let factory = LockFactory::new(Arc::new(InMemoryLockStore::new()) as Arc<dyn LockStore>);
+    let lock = factory.create_lock_forever("job:idle", true).expect("lock");
+    drop(lock);
+    let next = factory
+        .create_lock_forever("job:idle", false)
+        .expect("next");
+    assert!(next.acquire().expect("free"));
+    next.release().expect("release");
+}
+
+#[test]
+fn acquire_propagates_non_conflict_store_errors() {
+    struct BoomStore;
+
+    impl LockStore for BoomStore {
+        fn save(
+            &self,
+            _resource: &str,
+            _token: &str,
+            _ttl: Option<Duration>,
+        ) -> Result<(), LockError> {
+            Err(LockError::Store {
+                message: "boom".to_owned(),
+            })
+        }
+
+        fn delete(&self, _resource: &str, _token: &str) -> Result<(), LockError> {
+            Ok(())
+        }
+
+        fn exists(&self, _resource: &str, _token: &str) -> Result<bool, LockError> {
+            Ok(false)
+        }
+
+        fn put_off_expiration(
+            &self,
+            _resource: &str,
+            _token: &str,
+            _ttl: Option<Duration>,
+        ) -> Result<(), LockError> {
+            Ok(())
+        }
+    }
+
+    let factory = LockFactory::new(Arc::new(BoomStore) as Arc<dyn LockStore>);
+    let lock = factory
+        .create_lock_forever("job:boom", false)
+        .expect("lock");
+    assert!(matches!(
+        lock.acquire(),
+        Err(LockError::Store { message }) if message == "boom"
+    ));
+}

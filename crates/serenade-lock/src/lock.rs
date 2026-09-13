@@ -129,9 +129,10 @@ impl Drop for Lock {
         if !self.auto_release {
             return;
         }
-        let Ok(mut acquired) = self.acquired.lock() else {
-            return;
-        };
+        let mut acquired = self
+            .acquired
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if !*acquired {
             return;
         }
