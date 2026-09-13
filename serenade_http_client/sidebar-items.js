@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ClientMethod","HttpClientError"],"fn":["version"],"struct":["ClientRequest","ClientResponse","MockHttpClient","ReqwestHttpClient"],"trait":["HttpClient"]};
