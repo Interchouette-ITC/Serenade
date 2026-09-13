@@ -10,6 +10,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Dependency injection** | Service container, autowiring-style resolution, scoped services |
 | **Event dispatcher** | Sync domain and infrastructure events; subscriber tags |
 | **HTTP foundation** | Request/response types, attributes, lifecycle (framework-agnostic core) |
+| **HTTP client** | Outbound HttpClient (`serenade-http-client`); see [HTTP_CLIENT.md](HTTP_CLIENT.md) |
 | **HTTP kernel** | Middleware pipeline, controller/action resolution |
 | **Routing** | Route collection, requirements, method constraints |
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
@@ -254,6 +255,19 @@ Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/
 | `RegisterDefaultMailerPass` | DI: service `mailer` defaults to null |
 
 `FrameworkExtension` installs the default mailer pass. See [MAILER.md](MAILER.md).
+
+## HttpClient (outbound)
+
+Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Interchouette-ITC/Serenade/issues/184)). See [HTTP_CLIENT.md](HTTP_CLIENT.md).
+
+| Piece | Role |
+| --- | --- |
+| `HttpClient` / `DynHttpClient` | Async send contract (+ object-safe DI form) |
+| `ClientRequest` / `ClientResponse` | Outbound request and response |
+| `MockHttpClient` / `ReqwestHttpClient` | Tests / production (reqwest + rustls) |
+| `RegisterDefaultHttpClientPass` | DI: service `http_client` defaults to reqwest |
+
+`FrameworkExtension` installs the default HTTP client pass. See [HTTP_CLIENT.md](HTTP_CLIENT.md).
 
 ## Observability (structured logging)
 

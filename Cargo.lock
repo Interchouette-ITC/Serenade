@@ -5595,6 +5595,7 @@ dependencies = [
  "serenade-di",
  "serenade-event",
  "serenade-http",
+ "serenade-http-client",
  "serenade-kernel",
  "serenade-mailer",
  "thiserror 2.0.20",
@@ -5740,6 +5741,7 @@ name = "serenade-http-client"
 version = "0.1.0"
 dependencies = [
  "reqwest 0.12.28",
+ "serenade-di",
  "thiserror 2.0.20",
  "tokio",
  "wiremock",

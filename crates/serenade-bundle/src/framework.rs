@@ -8,6 +8,7 @@ use serenade_console::{
 };
 use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_http::RouteCollection;
+use serenade_http_client::RegisterDefaultHttpClientPass;
 use serenade_kernel::{BundleInterface, KernelError};
 use serenade_mailer::RegisterDefaultMailerPass;
 
@@ -40,9 +41,10 @@ impl BundleInterface for FrameworkBundle {
 ///
 /// Applies framework package parameters, registers an empty [`RouteCollection`]
 /// as [`ROUTER_SERVICE`], registers built-in console commands, and adds
-/// [`RegisterDefaultMailerPass`] so apps resolve `mailer` as a null transport
-/// unless they replace it. The root config, event dispatcher, and console
-/// application are registered by [`crate::build_container`].
+/// [`RegisterDefaultMailerPass`] / [`RegisterDefaultHttpClientPass`] so apps
+/// resolve `mailer` and `http_client` unless they replace them. The root config,
+/// event dispatcher, and console application are registered by
+/// [`crate::build_container`].
 ///
 /// # Panics
 ///
@@ -62,6 +64,7 @@ impl Extension for FrameworkExtension {
             Ok(Box::new(RouteCollection::new()))
         })?;
         builder.add_compile_pass(RegisterDefaultMailerPass);
+        builder.add_compile_pass(RegisterDefaultHttpClientPass);
         // `expect`: hardcoded framework ids cannot collide; avoids Codecov-only `?` Err arms.
         builder
             .register(
