@@ -6,6 +6,7 @@ members = [
     "crates/serenade-http",
     "crates/serenade-http-actix",
     "crates/serenade-http-client",
+    "crates/serenade-lock",
     "crates/serenade-config",
     "crates/serenade-contracts",
     "crates/serenade-bundle",
@@ -49,6 +50,7 @@ serenade-event = { path = "crates/serenade-event", version = "0.1.0" }
 serenade-http = { path = "crates/serenade-http", version = "0.1.0" }
 serenade-http-actix = { path = "crates/serenade-http-actix", version = "0.1.0" }
 serenade-http-client = { path = "crates/serenade-http-client", version = "0.1.0" }
+serenade-lock = { path = "crates/serenade-lock", version = "0.1.0" }
 serenade-config = { path = "crates/serenade-config", version = "0.1.0" }
 serenade-contracts = { path = "crates/serenade-contracts", version = "0.1.0" }
 serenade-bundle = { path = "crates/serenade-bundle", version = "0.1.0" }
