@@ -3650,6 +3650,7 @@ dependencies = [
  "ammonia",
  "emojis",
  "rusqlite",
+ "serenade-admin",
  "serenade-form",
  "serenade-http",
  "serenade-http-actix",

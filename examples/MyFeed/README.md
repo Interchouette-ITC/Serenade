@@ -27,13 +27,14 @@ Open <http://127.0.0.1:8090/>.
 - Quill WYSIWYG (bold / lists / links) + emoji toolbar icon
 - Optional image upload / YouTube / SoundCloud / `.mp4` / image URL
 - Public likes; comments pending until approved
-- `/admin` cookie login, moderation queue, category manager
+- `/admin` cookie login, moderation queue
+- Category CRUD via `serenade-admin` (`/admin/categories`)
 - Admin Edit / Delete on each post (after sign-in); posts show date
 - `GET /search?q=` in-memory search over post body + category
 
 ## Admin
 
-Open `/admin`, enter the token (default `myfeed-dev-admin`). Manage categories, approve comments, edit or delete posts. Bearer still works for scripts.
+Open `/admin`, enter the token (default `myfeed-dev-admin`). Approve comments, manage categories under `/admin/categories` (list / new / edit / delete with CSRF), edit or delete posts. Bearer still works for scripts.
 
 ## Stack
 

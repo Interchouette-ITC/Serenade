@@ -1,0 +1,4 @@
+[admin]
+# Optional Admin CRUD package. Not part of FrameworkBundle.
+# Register AdminBundle + AdminExtension, then add AdminResource entries in code.
+enabled = true

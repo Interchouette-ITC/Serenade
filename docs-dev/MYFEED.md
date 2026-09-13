@@ -18,7 +18,7 @@ Path: [`examples/MyFeed`](../examples/MyFeed). Epic [#112](https://github.com/In
 | i18n      | `serenade-translation` catalogues `en` + `fr`; `/locale/{code}` cookie       |
 | Profiler  | `serenade-profiler` toolbar + `/_profiler` (disable with `MYFEED_PROFILER=0`) |
 | Rich text | Quill HTML sanitized with ammonia before store/render                        |
-| Admin     | Cookie login on `/admin` (Bearer still accepted); category manager           |
+| Admin     | Cookie login on `/admin`; categories via `serenade-admin` CRUD          |
 | Data      | SQLite file (default `.myfeed.sqlite`) so restarts keep posts                |
 
 ## Surfaces
@@ -29,7 +29,7 @@ Path: [`examples/MyFeed`](../examples/MyFeed). Epic [#112](https://github.com/In
 - `POST /posts` create post (optional allowlisted media)
 - `POST /posts/{id}/like` public like
 - `POST /posts/{id}/comments` pending comment
-- `/admin` login + pending queue + categories; approve / reject
+- `/admin` login + pending queue; categories use `serenade-admin` list panel + CRUD under `/admin/categories`
 - `/_profiler` request list and `/_profiler/{token}` detail (toolbar on HTML pages)
 
 ## Run
@@ -39,4 +39,4 @@ make myfeed
 # http://127.0.0.1:8090/
 ```
 
-Embeds: YouTube (nocookie embed), SoundCloud, direct image / `.mp4` URLs. See [FORMS.md](FORMS.md), [VIEW.md](VIEW.md), [SECURITY.md](SECURITY.md), [I18N.md](I18N.md), and [SEARCH.md](SEARCH.md).
+Embeds: YouTube (nocookie embed), SoundCloud, direct image / `.mp4` URLs. See [FORMS.md](FORMS.md), [VIEW.md](VIEW.md), [SECURITY.md](SECURITY.md), [I18N.md](I18N.md), [SEARCH.md](SEARCH.md), and [ADMIN.md](ADMIN.md).
