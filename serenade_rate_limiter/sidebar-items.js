@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Policy","RateLimiterError","WindowState"],"fn":["validate_key","version"],"struct":["InMemoryRateLimiterStorage","RateLimit","RateLimiter","RateLimiterFactory"],"trait":["RateLimiterStorage"]};
