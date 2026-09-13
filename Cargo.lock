@@ -5599,6 +5599,7 @@ dependencies = [
  "serenade-kernel",
  "serenade-lock",
  "serenade-mailer",
+ "serenade-rate-limiter",
  "thiserror 2.0.20",
 ]
 
@@ -5815,6 +5816,8 @@ dependencies = [
 name = "serenade-rate-limiter"
 version = "0.1.0"
 dependencies = [
+ "serenade-di",
+ "serenade-http",
  "thiserror 2.0.20",
 ]
 

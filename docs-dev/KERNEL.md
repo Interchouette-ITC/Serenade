@@ -12,6 +12,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **HTTP foundation** | Request/response types, attributes, lifecycle (framework-agnostic core) |
 | **HTTP client** | Outbound HttpClient (`serenade-http-client`); see [HTTP_CLIENT.md](HTTP_CLIENT.md) |
 | **Lock** | Named locks (`serenade-lock`); see [LOCK.md](LOCK.md) |
+| **RateLimiter** | Policies + storage (`serenade-rate-limiter`); see [RATE_LIMITER.md](RATE_LIMITER.md) |
 | **HTTP kernel** | Middleware pipeline, controller/action resolution |
 | **Routing** | Route collection, requirements, method constraints |
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
@@ -282,6 +283,19 @@ Named locks live in **`serenade-lock`** ([#185](https://github.com/Interchouette
 | `RegisterDefaultLockPass` | DI: service `lock.store` defaults to in-memory |
 
 `FrameworkExtension` installs the default lock pass. See [LOCK.md](LOCK.md).
+
+## RateLimiter
+
+Rate limiting lives in **`serenade-rate-limiter`** ([#186](https://github.com/Interchouette-ITC/Serenade/issues/186)). See [RATE_LIMITER.md](RATE_LIMITER.md).
+
+| Piece | Role |
+| --- | --- |
+| `Policy` / `RateLimiterFactory` / `RateLimiter` | Token bucket or fixed window; consume / reset |
+| `InMemoryRateLimiterStorage` | Process-local (DI default) |
+| `consume_or_exceed` / `too_many_requests` | App helper + HTTP 429 bridge |
+| `RegisterDefaultRateLimiterPass` | DI: service `rate_limiter.storage` defaults to in-memory |
+
+`FrameworkExtension` installs the default rate-limiter pass. See [RATE_LIMITER.md](RATE_LIMITER.md).
 
 ## Observability (structured logging)
 

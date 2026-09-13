@@ -123,6 +123,17 @@ fn framework_extension_wires_router_config_and_dispatcher() {
     let _lock = container
         .get_as::<serenade_lock::LockStoreService>(serenade_lock::DEFAULT_LOCK_STORE_SERVICE)
         .expect("lock.store");
+    let rate_storage = container
+        .get_as::<serenade_rate_limiter::RateLimiterStorageService>(
+            serenade_rate_limiter::DEFAULT_RATE_LIMITER_STORAGE_SERVICE,
+        )
+        .expect("rate_limiter.storage");
+    let login = rate_storage
+        .fixed_window_factory("login", 5, std::time::Duration::from_secs(60))
+        .expect("factory")
+        .create("user")
+        .expect("limiter");
+    assert!(login.consume(1).expect("consume").is_accepted());
     assert!(Arc::strong_count(&router) >= 1);
 }
 

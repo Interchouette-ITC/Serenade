@@ -9,6 +9,8 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+serenade-di = { workspace = true }
+serenade-http = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]
