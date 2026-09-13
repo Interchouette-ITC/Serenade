@@ -24,7 +24,7 @@ impl ReqwestHttpClient {
     /// for a timeout-only builder).
     #[must_use]
     pub fn new() -> Self {
-        Self::with_timeout(DEFAULT_TIMEOUT)
+        Self::default()
     }
 
     /// Builds a client with `default_timeout` applied when a request has no timeout.
@@ -54,7 +54,7 @@ impl ReqwestHttpClient {
 
 impl Default for ReqwestHttpClient {
     fn default() -> Self {
-        Self::new()
+        Self::with_timeout(DEFAULT_TIMEOUT)
     }
 }
 
