@@ -17,6 +17,7 @@ path = "src/main.rs"
 emojis = "0.9"
 ammonia = "4"
 rusqlite = { version = "0.32", features = ["bundled"] }
+serenade-admin = { workspace = true }
 serenade-form = { workspace = true }
 serenade-http = { workspace = true }
 serenade-http-actix = { workspace = true }

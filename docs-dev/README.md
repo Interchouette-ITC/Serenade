@@ -24,7 +24,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model; admin CRUD is not FrameworkBundle        |
-| [ADMIN.md](ADMIN.md)         | Optional `serenade-admin` CRUD (list/show; forms next) |
+| [ADMIN.md](ADMIN.md)         | Optional `serenade-admin` CRUD (MyFeed categories dogfood) |
 | [WASM.md](WASM.md)           | Wasm host plumbing (wasmtime CM + Wasmer WASIX)        |
 | [PERSISTENCE.md](PERSISTENCE.md) | Adapter pattern, repository traits, `UnitOfWork` |
 | [RUSTASHOP.md](RUSTASHOP.md) | Illustrative RustaShop crate map (example, not locked) |

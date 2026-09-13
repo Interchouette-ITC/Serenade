@@ -243,6 +243,7 @@ mod tests {
         let ids: Vec<_> = list_recipes().into_iter().map(|(id, _)| id).collect();
         assert!(ids.contains(&"framework".to_owned()));
         assert!(ids.contains(&"security".to_owned()));
+        assert!(ids.contains(&"admin".to_owned()));
     }
 
     #[test]
@@ -273,6 +274,16 @@ mod tests {
             ..options
         };
         apply_recipe("security", &forced).expect("force");
+        apply_recipe(
+            "admin",
+            &ApplyOptions {
+                root: dir.path().to_path_buf(),
+                force: false,
+                no_cargo: true,
+            },
+        )
+        .expect("admin apply");
+        assert!(dir.path().join("config/packages/admin.toml").is_file());
     }
 
     #[test]

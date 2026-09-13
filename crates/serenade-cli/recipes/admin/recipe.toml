@@ -1,0 +1,15 @@
+id = "admin"
+description = "Optional Admin CRUD package config (AdminBundle / AdminExtension)"
+
+[cargo]
+dependencies = [
+  { crate = "serenade-admin", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+]
+
+[[files]]
+src = "files/config/packages/admin.toml"
+dest = "config/packages/admin.toml"
+
+[hints]
+bundles = ["AdminBundle"]
+note = "Register AdminBundle and load AdminExtension. Declare AdminResource entries in app code against admin.registry (see docs-dev/ADMIN.md)."

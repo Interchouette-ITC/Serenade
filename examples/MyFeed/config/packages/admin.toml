@@ -1,0 +1,4 @@
+[admin]
+# Sample package config for serenade-admin (Flex recipe `admin`).
+# MyFeed registers the category resource in code; this file documents the package key.
+enabled = true

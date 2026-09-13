@@ -3,6 +3,7 @@
 //! Bootstrap + Quill for UI; Clitorine (`assets/clitorine.js`) wires composer helpers.
 //! Run: `cargo run -p my_feed`
 
+mod admin_crud;
 mod embed;
 mod emoji;
 mod html;
@@ -98,16 +99,7 @@ fn routes() -> Result<RouteCollection, HttpError> {
         "/admin/comments/{id}/reject",
         Method::Post,
     ))?;
-    collection.add(Route::with_method(
-        "admin_category_add",
-        "/admin/categories",
-        Method::Post,
-    ))?;
-    collection.add(Route::with_method(
-        "admin_category_delete",
-        "/admin/categories/delete",
-        Method::Post,
-    ))?;
+    admin_crud::register_category_admin_routes(&mut collection)?;
     collection.add(Route::with_method(
         "admin_post_edit_get",
         "/admin/posts/{id}/edit",
@@ -443,72 +435,6 @@ fn build_logout_form(
     ))
 }
 
-fn build_categories_admin(
-    csrf: &HmacCsrfTokenManager,
-    routes: &RouteCollection,
-    categories: &[String],
-) -> Result<String, HttpError> {
-    let add_action = path(routes, "admin_category_add", &[])?;
-    let delete_action = path(routes, "admin_category_delete", &[])?;
-    let mut add = Form::builder("category-add")
-        .action(add_action.clone())
-        .field("name", not_blank())
-        .build();
-    add.prepare_csrf(csrf)
-        .map_err(|err| HttpError::failed(err.to_string()))?;
-    let add_csrf = extract_csrf_hidden(
-        add.render()
-            .map_err(|err| HttpError::failed(err.to_string()))?
-            .as_html(),
-    );
-    let mut rows = String::new();
-    for name in categories {
-        let mut delete = Form::builder("category-delete")
-            .action(delete_action.clone())
-            .field("name", not_blank())
-            .build();
-        delete
-            .prepare_csrf(csrf)
-            .map_err(|err| HttpError::failed(err.to_string()))?;
-        let del_csrf = extract_csrf_hidden(
-            delete
-                .render()
-                .map_err(|err| HttpError::failed(err.to_string()))?
-                .as_html(),
-        );
-        let _ = write!(
-            rows,
-            r#"
-<li class="list-group-item d-flex justify-content-between align-items-center">
-  <span>{label}</span>
-<form method="POST" action="{delete_action}" class="d-inline">
-{del_csrf}
-<input type="hidden" name="name" value="{value}" />
-<button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-</form>
-</li>"#,
-            label = escape_html(name),
-            value = escape_html(name),
-            delete_action = escape_attr(&delete_action),
-        );
-    }
-    Ok(format!(
-        r#"
-<ul class="list-group mb-3">{rows}</ul>
-<form method="POST" action="{add_action}" class="row g-2 align-items-end">
-{add_csrf}
-<div class="col">
-  <label class="form-label" for="cat-name">New category</label>
-  <input class="form-control" id="cat-name" name="name" required maxlength="40" />
-</div>
-<div class="col-auto">
-  <button type="submit" class="btn btn-primary">Add</button>
-</div>
-</form>"#,
-        add_action = escape_attr(&add_action),
-    ))
-}
-
 fn cookie_value(request: &Request, name: &str) -> Option<String> {
     let header = request.headers().get("cookie")?;
     for part in header.split(';') {
@@ -642,8 +568,6 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         "admin_logout" => Ok(handle_admin_logout(state, request)),
         "admin_approve" => handle_admin_moderation(state, request, true),
         "admin_reject" => handle_admin_moderation(state, request, false),
-        "admin_category_add" => handle_category_add(state, request),
-        "admin_category_delete" => handle_category_delete(state, request),
         "admin_post_edit_get" => handle_post_edit_get(state, request),
         "admin_post_edit_post" => handle_post_edit_post(state, request),
         "admin_post_delete" => handle_post_delete(state, request),
@@ -656,7 +580,22 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
             include_bytes!("../assets/clitorine.js"),
         )),
         "locale_set" => Ok(handle_locale_set(state, request)),
-        _ => Err(HttpError::not_found("no handler")),
+        _ => {
+            let ui = ui_for(state, request);
+            admin_crud::try_handle(
+                route,
+                &admin_crud::CategoryAdminCtx {
+                    store: &state.store,
+                    csrf: &state.csrf,
+                    routes: state.matcher.collection(),
+                    request,
+                    ui: &ui,
+                    is_admin: is_admin(request, &state.admin_token),
+                },
+                build_login_form,
+            )?
+            .map_or_else(|| Err(HttpError::not_found("no handler")), Ok)
+        }
     }
 }
 
@@ -1040,9 +979,8 @@ fn render_admin(
         forms.push((comment.id, approve, reject));
     }
     let logout = build_logout_form(&state.csrf, state.matcher.collection())?;
-    let categories = state.store.categories();
     let categories_html =
-        build_categories_admin(&state.csrf, state.matcher.collection(), &categories)?;
+        admin_crud::categories_panel_html(&state.store, state.matcher.collection())?;
     Ok(html_response(
         200,
         admin_page_with_logout(
@@ -1094,60 +1032,6 @@ fn handle_admin_moderation(
         let _ = state.store.remove_comment(id);
     }
     Ok(redirect("/admin"))
-}
-
-fn handle_category_add(state: &AppState, request: &Request) -> Result<Response, HttpError> {
-    if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf, state.matcher.collection())?;
-        return Ok(html_response(
-            401,
-            admin_login_page(
-                &ui_for(state, request),
-                state.matcher.collection(),
-                &login,
-                Some("Sign in first."),
-            ),
-        ));
-    }
-    let mut form = Form::builder("category-add")
-        .field("name", not_blank())
-        .build();
-    match form.handle_request(request, &state.csrf) {
-        Ok(FormStatus::Bound) if form.is_valid() => {
-            let name = form.get("name").unwrap_or("").trim();
-            match state.store.add_category(name) {
-                Ok(()) => Ok(redirect("/admin")),
-                Err(msg) => render_admin(state, request, Some(msg)),
-            }
-        }
-        _ => Ok(redirect("/admin")),
-    }
-}
-
-fn handle_category_delete(state: &AppState, request: &Request) -> Result<Response, HttpError> {
-    if !is_admin(request, &state.admin_token) {
-        let login = build_login_form(&state.csrf, state.matcher.collection())?;
-        return Ok(html_response(
-            401,
-            admin_login_page(
-                &ui_for(state, request),
-                state.matcher.collection(),
-                &login,
-                Some("Sign in first."),
-            ),
-        ));
-    }
-    let mut form = Form::builder("category-delete")
-        .field("name", not_blank())
-        .build();
-    match form.handle_request(request, &state.csrf) {
-        Ok(FormStatus::Bound) if form.is_valid() => {
-            let name = form.get("name").unwrap_or("").trim();
-            let _ = state.store.remove_category(name);
-            Ok(redirect("/admin"))
-        }
-        _ => Ok(redirect("/admin")),
-    }
 }
 
 fn route_post_id(request: &Request) -> Result<u64, HttpError> {
