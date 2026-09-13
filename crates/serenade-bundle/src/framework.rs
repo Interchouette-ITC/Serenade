@@ -10,6 +10,7 @@ use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_http::RouteCollection;
 use serenade_http_client::RegisterDefaultHttpClientPass;
 use serenade_kernel::{BundleInterface, KernelError};
+use serenade_lock::RegisterDefaultLockPass;
 use serenade_mailer::RegisterDefaultMailerPass;
 
 use crate::{BundleError, Extension};
@@ -41,10 +42,10 @@ impl BundleInterface for FrameworkBundle {
 ///
 /// Applies framework package parameters, registers an empty [`RouteCollection`]
 /// as [`ROUTER_SERVICE`], registers built-in console commands, and adds
-/// [`RegisterDefaultMailerPass`] / [`RegisterDefaultHttpClientPass`] so apps
-/// resolve `mailer` and `http_client` unless they replace them. The root config,
-/// event dispatcher, and console application are registered by
-/// [`crate::build_container`].
+/// [`RegisterDefaultMailerPass`] / [`RegisterDefaultHttpClientPass`] /
+/// [`RegisterDefaultLockPass`] so apps resolve `mailer`, `http_client`, and
+/// `lock.store` unless they replace them. The root config, event dispatcher,
+/// and console application are registered by [`crate::build_container`].
 ///
 /// # Panics
 ///
@@ -65,6 +66,7 @@ impl Extension for FrameworkExtension {
         })?;
         builder.add_compile_pass(RegisterDefaultMailerPass);
         builder.add_compile_pass(RegisterDefaultHttpClientPass);
+        builder.add_compile_pass(RegisterDefaultLockPass);
         // `expect`: hardcoded framework ids cannot collide; avoids Codecov-only `?` Err arms.
         builder
             .register(

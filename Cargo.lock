@@ -5597,6 +5597,7 @@ dependencies = [
  "serenade-http",
  "serenade-http-client",
  "serenade-kernel",
+ "serenade-lock",
  "serenade-mailer",
  "thiserror 2.0.20",
 ]
@@ -5761,6 +5762,10 @@ name = "serenade-lock"
 version = "0.1.0"
 dependencies = [
  "getrandom 0.3.4",
+ "r2d2",
+ "redis",
+ "serenade-di",
+ "tempfile",
  "thiserror 2.0.20",
 ]
 

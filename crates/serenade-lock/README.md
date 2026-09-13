@@ -1,6 +1,8 @@
 # serenade-lock
 
-Symfony-shaped named locks: `LockStore`, `LockFactory` / `Lock`, and
-`InMemoryLockStore` (process-local, optional TTL).
+Symfony-shaped named locks: `LockStore`, `LockFactory` / `Lock`,
+`InMemoryLockStore`, `FilesystemLockStore`, optional `RedisLockStore`
+(Cargo feature `redis`), and DI via `RegisterDefaultLockPass`
+(service id `lock.store`).
 
-Filesystem / Redis adapters and DI land in a follow-up slice.
+See `docs-dev/LOCK.md`.

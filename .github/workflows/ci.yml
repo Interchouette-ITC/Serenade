@@ -59,6 +59,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-cache --all-targets --features redis
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-lock redis feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-lock --all-targets --features redis
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-serializer toon feature
         if: needs.changes.outputs.code == 'true'
         run: >-
@@ -112,6 +117,11 @@ jobs:
         env:
           REDIS_URL: redis://127.0.0.1:6379/0
         run: cargo test -p serenade-cache --features redis
+      - name: Test serenade-lock with redis
+        if: needs.changes.outputs.code == 'true'
+        env:
+          REDIS_URL: redis://127.0.0.1:6379/0
+        run: cargo test -p serenade-lock --features redis
 
   serializer-toon:
     name: serializer toon

@@ -246,3 +246,223 @@ fn acquire_propagates_non_conflict_store_errors() {
         Err(LockError::Store { message }) if message == "boom"
     ));
 }
+
+#[test]
+fn filesystem_lock_store_contention_and_ttl() {
+    use crate::{FilesystemLockStore, FilesystemLockStoreConfig};
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store =
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix("locks"))
+            .expect("open");
+    let factory = LockFactory::new(Arc::new(store) as Arc<dyn LockStore>);
+    let first = factory
+        .create_lock("job:fs", Some(Duration::from_secs(30)), false)
+        .expect("first");
+    let second = factory
+        .create_lock("job:fs", Some(Duration::from_secs(30)), false)
+        .expect("second");
+    assert!(first.acquire().expect("acquire"));
+    assert!(first.acquire().expect("reacquire"));
+    assert!(first.is_acquired().expect("held"));
+    assert!(!second.acquire().expect("conflict"));
+    first
+        .refresh(Some(Duration::from_secs(60)))
+        .expect("refresh");
+    first.release().expect("release");
+    assert!(!first.is_acquired().expect("gone"));
+    assert!(second.acquire().expect("after release"));
+    second.release().expect("release2");
+}
+
+#[test]
+fn filesystem_config_accessors_and_bad_prefix() {
+    use crate::{FilesystemLockStore, FilesystemLockStoreConfig};
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let config = FilesystemLockStoreConfig::new(dir.path()).with_prefix("acc");
+    assert_eq!(config.directory(), dir.path());
+    assert_eq!(config.prefix(), "acc");
+    assert!(FilesystemLockStore::open(config).is_ok());
+    assert!(
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix("../x"))
+            .is_err()
+    );
+    assert!(
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix(""))
+            .is_err()
+    );
+    assert!(
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix("."))
+            .is_err()
+    );
+}
+
+#[test]
+fn filesystem_forever_refresh_expiry_and_corrupt() {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+
+    use crate::{FilesystemLockStore, FilesystemLockStoreConfig};
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store =
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix("life"))
+            .expect("open");
+
+    store.save("forever", "tok", None).expect("forever save");
+    assert!(store.exists("forever", "tok").expect("exists"));
+    store
+        .put_off_expiration("forever", "tok", None)
+        .expect("refresh forever");
+    store
+        .put_off_expiration("forever", "tok", Some(Duration::ZERO))
+        .expect("zero ttl refresh");
+    store.delete("forever", "other").expect("wrong token noop");
+    assert!(store.exists("forever", "tok").expect("still"));
+    assert!(matches!(
+        store.put_off_expiration("missing", "tok", None),
+        Err(LockError::NotHeld { .. })
+    ));
+
+    store
+        .save("short", "a", Some(Duration::from_millis(25)))
+        .expect("short");
+    thread::sleep(Duration::from_millis(40));
+    assert!(!store.exists("short", "a").expect("expired"));
+
+    store
+        .save("corrupt", "x", Some(Duration::from_secs(30)))
+        .expect("seed");
+    let lock_path = lock_file_path(&dir.path().join("life"), "corrupt");
+    fs::write(&lock_path, b"not-a-lock").expect("corrupt write");
+    assert!(!store.exists("corrupt", "x").expect("corrupt is miss"));
+
+    store
+        .save("perm", "owner", Some(Duration::from_secs(30)))
+        .expect("perm save");
+    let perm_path = lock_file_path(&dir.path().join("life"), "perm");
+    let mut perms = fs::metadata(&perm_path).expect("meta").permissions();
+    perms.set_mode(0o000);
+    fs::set_permissions(&perm_path, perms).expect("chmod");
+    assert!(store.exists("perm", "owner").is_err());
+    let mut perms = fs::metadata(&perm_path).expect("meta2").permissions();
+    perms.set_mode(0o644);
+    fs::set_permissions(&perm_path, perms).expect("chmod restore");
+    store.delete("perm", "owner").expect("cleanup");
+}
+
+#[cfg(feature = "redis")]
+#[test]
+fn redis_exhausted_pool_maps_to_store_error() {
+    use crate::{RedisLockStore, RedisLockStoreConfig};
+
+    let store = RedisLockStore::connect(
+        RedisLockStoreConfig::new(
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/0".to_owned()),
+        )
+        .with_prefix("serenade:test-lock-pool:")
+        .with_pool_max_size(1)
+        .with_connection_timeout(Duration::from_millis(100)),
+    )
+    .expect("redis");
+    let _held = store.pool_for_test().get().expect("hold only connection");
+    assert!(matches!(
+        store.save("k", "t", Some(Duration::from_secs(1))),
+        Err(LockError::Store { .. })
+    ));
+}
+
+fn lock_file_path(root: &std::path::Path, resource: &str) -> std::path::PathBuf {
+    let hex = resource.as_bytes().iter().fold(
+        String::with_capacity(resource.len() * 2),
+        |mut out, byte| {
+            out.push(char::from_digit(u32::from(*byte >> 4), 16).unwrap_or('0'));
+            out.push(char::from_digit(u32::from(*byte & 0x0f), 16).unwrap_or('0'));
+            out
+        },
+    );
+    root.join(format!("{hex}.lock"))
+}
+
+#[test]
+fn filesystem_open_fails_when_root_is_a_file() {
+    use crate::{FilesystemLockStore, FilesystemLockStoreConfig};
+
+    let file = tempfile::NamedTempFile::new().expect("file");
+    let result =
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(file.path()).with_prefix("x"));
+    assert!(matches!(result, Err(LockError::Store { .. })));
+}
+
+#[test]
+fn filesystem_delete_and_rename_error_paths() {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+
+    use crate::{FilesystemLockStore, FilesystemLockStoreConfig};
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store =
+        FilesystemLockStore::open(FilesystemLockStoreConfig::new(dir.path()).with_prefix("err"))
+            .expect("open");
+    store
+        .save("del", "tok", Some(Duration::from_secs(30)))
+        .expect("save");
+    let root = dir.path().join("err");
+    let mut perms = fs::metadata(&root).expect("meta").permissions();
+    perms.set_mode(0o555);
+    fs::set_permissions(&root, perms).expect("chmod");
+    let delete_err = store.delete("del", "tok");
+    let write_err = store.save("blocked", "tok", Some(Duration::from_secs(1)));
+    let mut perms = fs::metadata(&root).expect("meta2").permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&root, perms).expect("chmod restore");
+    assert!(matches!(delete_err, Err(LockError::Store { .. })));
+    assert!(matches!(write_err, Err(LockError::Store { .. })));
+
+    let clash = lock_file_path(&root, "clash");
+    fs::create_dir_all(&clash).expect("dir where lock file should be");
+    assert!(matches!(
+        store.save("clash", "tok", Some(Duration::from_secs(1))),
+        Err(LockError::Store { .. })
+    ));
+}
+
+#[test]
+fn compile_pass_registers_in_memory_store() {
+    use serenade_di::{CompilePass, ContainerBuilder, ServiceDefinition};
+
+    use crate::{
+        DEFAULT_LOCK_STORE_SERVICE, LOCK_STORE_TAG, LockStoreService, RegisterDefaultLockPass,
+    };
+
+    let pass = RegisterDefaultLockPass;
+    assert_eq!(pass.name(), "register_default_lock_store");
+    let mut builder = ContainerBuilder::new();
+    builder.add_compile_pass(RegisterDefaultLockPass);
+    let container = builder.compile().expect("compile");
+    let service = container
+        .get_as::<LockStoreService>(DEFAULT_LOCK_STORE_SERVICE)
+        .expect("lock.store");
+    let lock = service
+        .factory()
+        .create_lock_forever("job:di", false)
+        .expect("lock");
+    assert!(lock.acquire().expect("acquire"));
+    lock.release().expect("release");
+
+    let mut builder = ContainerBuilder::new();
+    builder
+        .register(
+            ServiceDefinition::new(DEFAULT_LOCK_STORE_SERVICE).with_tag(LOCK_STORE_TAG),
+            |_container| {
+                Ok(Box::new(LockStoreService(
+                    Arc::new(InMemoryLockStore::new()) as Arc<dyn LockStore>,
+                )))
+            },
+        )
+        .expect("pre-register");
+    builder.add_compile_pass(RegisterDefaultLockPass);
+    builder.compile().expect("compile with existing");
+}
