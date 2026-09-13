@@ -30,6 +30,65 @@ fn client_request_builders() {
         request.headers().get("content-type").map(String::as_str),
         Some("text/plain; charset=utf-8")
     );
+
+    assert_eq!(ClientRequest::get("u").method(), ClientMethod::Get);
+    assert_eq!(ClientRequest::put("u").method(), ClientMethod::Put);
+    assert_eq!(ClientRequest::patch("u").method(), ClientMethod::Patch);
+    assert_eq!(ClientRequest::delete("u").method(), ClientMethod::Delete);
+    assert_eq!(ClientRequest::head("u").method(), ClientMethod::Head);
+    assert_eq!(ClientMethod::Get.as_str(), "GET");
+    assert_eq!(ClientMethod::Post.as_str(), "POST");
+    assert_eq!(ClientMethod::Put.as_str(), "PUT");
+    assert_eq!(ClientMethod::Patch.to_string(), "PATCH");
+    assert_eq!(ClientMethod::Head.as_str(), "HEAD");
+    assert_eq!(ClientMethod::Delete.as_str(), "DELETE");
+    assert_eq!(ClientMethod::Get.to_string(), "GET");
+
+    let keep_type = ClientRequest::post("u")
+        .header("content-type", "application/json")
+        .body_text("{}");
+    assert_eq!(
+        keep_type.headers().get("content-type").map(String::as_str),
+        Some("application/json")
+    );
+}
+
+#[test]
+fn client_response_accessors() {
+    let response = ClientResponse::new(404)
+        .header("X-Trace", "abc")
+        .body(vec![0xff, 0xfe])
+        .body_text("nope");
+    assert_eq!(response.status(), 404);
+    assert!(!response.is_success());
+    assert_eq!(response.header_value("x-trace"), Some("abc"));
+    assert!(response.headers().contains_key("x-trace"));
+    assert_eq!(response.body_bytes(), b"nope");
+    assert_eq!(response.body_text_lossy(), "nope");
+    assert!(ClientResponse::new(204).is_success());
+}
+
+#[tokio::test]
+async fn mock_unlimited_expectation() {
+    let mock = MockHttpClient::new();
+    mock.expect(
+        ClientMethod::Get,
+        "https://example.test/loop",
+        ClientResponse::new(200),
+        None,
+    );
+    assert!(
+        mock.get("https://example.test/loop")
+            .await
+            .expect("1")
+            .is_success()
+    );
+    assert!(
+        mock.get("https://example.test/loop")
+            .await
+            .expect("2")
+            .is_success()
+    );
 }
 
 #[tokio::test]
@@ -132,11 +191,71 @@ mod reqwest_tests {
             .send(
                 ClientRequest::post(format!("{}/echo", server.uri()))
                     .header("content-type", "application/json")
-                    .body(br#"{"a":1}"#.to_vec()),
+                    .body(br#"{"a":1}"#.to_vec())
+                    .timeout(Duration::from_secs(3)),
             )
             .await
             .expect("post");
         assert_eq!(response.status(), 202);
         assert_eq!(response.body_text_lossy(), "accepted");
+    }
+
+    #[tokio::test]
+    async fn reqwest_client_maps_other_methods() {
+        let server = MockServer::start().await;
+        for (verb, path_suffix) in [
+            ("PUT", "/put"),
+            ("PATCH", "/patch"),
+            ("DELETE", "/delete"),
+            ("HEAD", "/head"),
+        ] {
+            Mock::given(method(verb))
+                .and(path(path_suffix))
+                .respond_with(ResponseTemplate::new(200).set_body_string(verb))
+                .mount(&server)
+                .await;
+        }
+
+        let client = ReqwestHttpClient::new().expect("client");
+        let base = server.uri();
+        assert_eq!(
+            client
+                .send(ClientRequest::put(format!("{base}/put")))
+                .await
+                .expect("put")
+                .body_text_lossy(),
+            "PUT"
+        );
+        assert_eq!(
+            client
+                .send(ClientRequest::patch(format!("{base}/patch")))
+                .await
+                .expect("patch")
+                .body_text_lossy(),
+            "PATCH"
+        );
+        assert_eq!(
+            client
+                .send(ClientRequest::delete(format!("{base}/delete")))
+                .await
+                .expect("delete")
+                .body_text_lossy(),
+            "DELETE"
+        );
+        let head = client
+            .send(ClientRequest::head(format!("{base}/head")))
+            .await
+            .expect("head");
+        assert_eq!(head.status(), 200);
+    }
+
+    #[tokio::test]
+    async fn reqwest_client_transport_error() {
+        let client = ReqwestHttpClient::with_timeout(Duration::from_millis(50)).expect("client");
+        let err = client
+            .get("http://127.0.0.1:1/")
+            .await
+            .expect_err("should fail");
+        assert!(matches!(err, HttpClientError::Transport { .. }));
     }
 }
