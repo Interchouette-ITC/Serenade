@@ -1,0 +1,28 @@
+[package]
+name = "serenade-http-client"
+description = "Outbound HttpClient contract, MockHttpClient, and optional reqwest adapter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["reqwest"]
+## Enable [`crate::ReqwestHttpClient`] via the reqwest crate.
+reqwest = ["dep:reqwest"]
+
+[dependencies]
+thiserror = { workspace = true }
+reqwest = { version = "0.12", optional = true, default-features = false, features = [
+    "rustls-tls",
+    "json",
+] }
+
+[dev-dependencies]
+tokio = { workspace = true }
+wiremock = "0.6"
+
+[lints]
+workspace = true
