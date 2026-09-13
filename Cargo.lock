@@ -5812,6 +5812,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "serenade-rate-limiter"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "serenade-sandbox"
 version = "0.1.0"
 dependencies = [
