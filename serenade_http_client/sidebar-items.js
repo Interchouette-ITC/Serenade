@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ClientMethod","HttpClientError"],"fn":["version"],"struct":["ClientRequest","ClientResponse","MockHttpClient","ReqwestHttpClient"],"trait":["HttpClient"]};
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_HTTP_CLIENT_SERVICE","HTTP_CLIENT_TAG"],"enum":["ClientMethod","HttpClientError"],"fn":["version"],"struct":["ClientRequest","ClientResponse","HttpClientService","MockHttpClient","RegisterDefaultHttpClientPass","ReqwestHttpClient"],"trait":["DynHttpClient","HttpClient"]};
