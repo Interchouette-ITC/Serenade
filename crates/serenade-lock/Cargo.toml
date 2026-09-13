@@ -1,0 +1,16 @@
+[package]
+name = "serenade-lock"
+description = "Symfony-shaped lock contracts, LockFactory, and InMemoryLockStore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+getrandom = { workspace = true }
+
+[lints]
+workspace = true

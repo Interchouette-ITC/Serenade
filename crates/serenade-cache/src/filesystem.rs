@@ -450,10 +450,11 @@ mod tests {
         assert!(!is_expired_unix_ms(u64::MAX));
         assert_eq!(unix_ms_from_instant(None), 0);
         assert_eq!(unix_ms_from_instant(Some(Instant::now())), 0);
+        // 1ms stays ahead of Instant::now() under llvm-cov (sub-ms deltas flake there).
         assert_ne!(
-            unix_ms_from_instant(Some(Instant::now() + Duration::from_nanos(500))),
+            unix_ms_from_instant(Some(Instant::now() + Duration::from_millis(1))),
             0,
-            "sub-millisecond future Instant must not encode as no-expiry"
+            "near-future Instant must not encode as no-expiry"
         );
 
         assert!(
