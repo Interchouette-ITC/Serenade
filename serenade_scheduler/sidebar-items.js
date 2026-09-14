@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["SchedulerError","Trigger"],"fn":["validate_id","version"],"struct":["DueJob","ManualClock","Schedule","Scheduler","SystemClock"],"trait":["Clock"]};
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_SCHEDULER_SERVICE","SCHEDULER_TAG"],"enum":["SchedulerError","Trigger"],"fn":["validate_id","version"],"struct":["CommandOnDue","DueJob","FnScheduleHandler","HandlerMap","ManualClock","RegisterDefaultSchedulerPass","RunSchedulerCommand","Schedule","Scheduler","SchedulerService","SystemClock"],"trait":["Clock","ScheduleHandler"]};
