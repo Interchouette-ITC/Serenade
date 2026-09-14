@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SchedulerError","Trigger"],"fn":["validate_id","version"],"struct":["DueJob","ManualClock","Schedule","Scheduler","SystemClock"],"trait":["Clock"]};
