@@ -37,7 +37,10 @@ impl Command for RunSchedulerCommand {
 #[derive(Debug, PartialEq, Eq)]
 pub enum LoopStep {
     /// Sleep then tick again.
-    Continue { sleep: Duration },
+    Continue {
+        /// How long to sleep before the next tick.
+        sleep: Duration,
+    },
     /// Stop the loop.
     Done,
 }
@@ -104,16 +107,11 @@ pub fn run_scheduler_loop_limited(
     once: bool,
     max_steps: Option<usize>,
 ) -> Result<(), ConsoleError> {
-    let mut steps = 0usize;
-    loop {
+    let limit = max_steps.unwrap_or(usize::MAX);
+    for _ in 0..limit {
         match scheduler_loop_step(service, clock, once)? {
-            LoopStep::Done => break,
-            LoopStep::Continue { sleep } if sleep.is_zero() => {}
+            LoopStep::Done => return Ok(()),
             LoopStep::Continue { sleep } => thread::sleep(sleep),
-        }
-        steps = steps.saturating_add(1);
-        if max_steps.is_some_and(|max| steps >= max) {
-            break;
         }
     }
     Ok(())

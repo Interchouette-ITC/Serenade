@@ -315,6 +315,46 @@ fn run_command_once_with_empty_scheduler() {
 }
 
 #[test]
+fn run_command_metadata_and_empty_without_once() {
+    use std::sync::Arc;
+
+    use serenade_console::{Command, Input};
+    use serenade_di::ContainerBuilder;
+    use serenade_kernel::Environment;
+
+    use crate::{RegisterDefaultSchedulerPass, RunSchedulerCommand};
+
+    assert_eq!(RunSchedulerCommand.name(), "serenade:scheduler:run");
+    assert_ne!(RunSchedulerCommand.description(), "");
+
+    let mut builder = ContainerBuilder::new();
+    builder.add_compile_pass(RegisterDefaultSchedulerPass);
+    let container = Arc::new(builder.compile().expect("compile"));
+    let input = Input::new(Environment::Test, true, Vec::new(), Some(container));
+    RunSchedulerCommand
+        .execute(&input)
+        .expect("empty scheduler exits without --once");
+}
+
+#[test]
+fn run_command_maps_missing_scheduler_service() {
+    use std::sync::Arc;
+
+    use serenade_console::{Command, ConsoleError, Input};
+    use serenade_di::ContainerBuilder;
+    use serenade_kernel::Environment;
+
+    use crate::RunSchedulerCommand;
+
+    let container = Arc::new(ContainerBuilder::new().compile().expect("empty container"));
+    let input = Input::new(Environment::Test, true, Vec::new(), Some(container));
+    assert!(matches!(
+        RunSchedulerCommand.execute(&input),
+        Err(ConsoleError::Failed(_))
+    ));
+}
+
+#[test]
 fn run_command_requires_container() {
     use serenade_console::{Command, ConsoleError, Input};
     use serenade_kernel::Environment;
