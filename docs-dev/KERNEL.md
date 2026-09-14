@@ -13,6 +13,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **HTTP client** | Outbound HttpClient (`serenade-http-client`); see [HTTP_CLIENT.md](HTTP_CLIENT.md) |
 | **Lock** | Named locks (`serenade-lock`); see [LOCK.md](LOCK.md) |
 | **RateLimiter** | Policies + storage (`serenade-rate-limiter`); see [RATE_LIMITER.md](RATE_LIMITER.md) |
+| **Scheduler** | Cron / interval runner (`serenade-scheduler`); see [SCHEDULER.md](SCHEDULER.md) |
 | **HTTP kernel** | Middleware pipeline, controller/action resolution |
 | **Routing** | Route collection, requirements, method constraints |
 | **Configuration** | Layered config (defaults, env, TOML package files; YAML still accepted) |
@@ -296,6 +297,20 @@ Rate limiting lives in **`serenade-rate-limiter`** ([#186](https://github.com/In
 | `RegisterDefaultRateLimiterPass` | DI: service `rate_limiter.storage` defaults to in-memory |
 
 `FrameworkExtension` installs the default rate-limiter pass. See [RATE_LIMITER.md](RATE_LIMITER.md).
+
+## Scheduler
+
+Scheduling lives in **`serenade-scheduler`** ([#187](https://github.com/Interchouette-ITC/Serenade/issues/187)). See [SCHEDULER.md](SCHEDULER.md).
+
+| Piece | Role |
+| --- | --- |
+| `Trigger` / `Schedule` / `Scheduler` | Interval or cron; `tick` without sleeping |
+| `ScheduleHandler` / `HandlerMap` | Sync dispatch for due jobs |
+| `CommandOnDue` | Optional Messenger bridge (feature `messenger`) |
+| `RegisterDefaultSchedulerPass` | DI: service `scheduler` defaults to empty |
+| `serenade:scheduler:run` | Console tick loop (`--once` for a single tick) |
+
+`FrameworkExtension` installs the default scheduler pass and console command. See [SCHEDULER.md](SCHEDULER.md).
 
 ## Observability (structured logging)
 

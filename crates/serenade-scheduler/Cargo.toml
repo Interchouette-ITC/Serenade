@@ -8,9 +8,18 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = []
+## Dispatch due jobs through [`serenade_messenger::MessageBus`].
+messenger = ["dep:serenade-messenger"]
+
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 cron = "0.15"
+serenade-console = { workspace = true }
+serenade-di = { workspace = true }
+serenade-kernel = { workspace = true }
+serenade-messenger = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
 [lints]
