@@ -144,3 +144,28 @@ fn long_pause_does_not_storm_interval_catch_up() {
     assert_eq!(due.len(), 1, "one fire per tick even after a long pause");
     assert_eq!(scheduler.next_wake(), Some(epoch_plus(101)));
 }
+
+fn expected_far_future() -> SystemTime {
+    UNIX_EPOCH + Duration::from_secs(u64::from(u32::MAX) * 86_400)
+}
+
+#[test]
+fn interval_overflow_arms_far_future() {
+    let trigger = Trigger::interval(Duration::from_secs(10)).expect("trigger");
+    let near_end = UNIX_EPOCH
+        .checked_add(Duration::from_secs(i64::MAX as u64))
+        .expect("platform supports near-max SystemTime");
+    assert_eq!(trigger.first_due(near_end), expected_far_future());
+    assert_eq!(
+        trigger.next_after(near_end, near_end),
+        expected_far_future()
+    );
+}
+
+#[test]
+fn cron_before_unix_epoch_arms_far_future() {
+    let trigger = Trigger::cron("0 * * * * *").expect("cron");
+    let before = UNIX_EPOCH - Duration::from_secs(1);
+    assert_eq!(trigger.first_due(before), expected_far_future());
+    assert_eq!(trigger.next_after(before, before), expected_far_future());
+}
