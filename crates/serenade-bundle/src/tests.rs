@@ -93,6 +93,7 @@ fn framework_extension_wires_router_config_and_dispatcher() {
     assert!(console.find("serenade:about").is_some());
     assert!(console.find("debug:container").is_some());
     assert!(console.find("debug:config").is_some());
+    assert!(console.find("serenade:scheduler:run").is_some());
     let about = container
         .get_as::<serenade_console::CommandService>("console.command.about")
         .expect("about command service");
@@ -102,9 +103,13 @@ fn framework_extension_wires_router_config_and_dispatcher() {
     let debug_config = container
         .get_as::<serenade_console::CommandService>("console.command.debug_config")
         .expect("debug config command");
+    let scheduler_run = container
+        .get_as::<serenade_console::CommandService>("console.command.scheduler_run")
+        .expect("scheduler run command");
     assert_eq!(about.0.name(), "serenade:about");
     assert_eq!(debug_container.0.name(), "debug:container");
     assert_eq!(debug_config.0.name(), "debug:config");
+    assert_eq!(scheduler_run.0.name(), "serenade:scheduler:run");
     let mailer = container
         .get_as::<serenade_mailer::MailerService>(serenade_mailer::DEFAULT_MAILER_SERVICE)
         .expect("mailer");
@@ -134,6 +139,12 @@ fn framework_extension_wires_router_config_and_dispatcher() {
         .create("user")
         .expect("limiter");
     assert!(login.consume(1).expect("consume").is_accepted());
+    let scheduler = container
+        .get_as::<serenade_scheduler::SchedulerService>(
+            serenade_scheduler::DEFAULT_SCHEDULER_SERVICE,
+        )
+        .expect("scheduler");
+    assert!(scheduler.is_empty());
     assert!(Arc::strong_count(&router) >= 1);
 }
 

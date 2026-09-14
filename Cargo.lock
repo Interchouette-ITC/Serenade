@@ -5646,6 +5646,7 @@ dependencies = [
  "serenade-lock",
  "serenade-mailer",
  "serenade-rate-limiter",
+ "serenade-scheduler",
  "thiserror 2.0.20",
 ]
 
@@ -5892,6 +5893,10 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "cron",
+ "serenade-console",
+ "serenade-di",
+ "serenade-kernel",
+ "serenade-messenger",
  "thiserror 2.0.20",
 ]
 

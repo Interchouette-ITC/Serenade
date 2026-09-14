@@ -69,6 +69,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-serializer --all-targets --features toon
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-scheduler messenger feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-scheduler --all-targets --features messenger
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -87,6 +92,9 @@ jobs:
       - name: Test
         if: needs.changes.outputs.code == 'true'
         run: make test
+      - name: Test serenade-scheduler with messenger
+        if: needs.changes.outputs.code == 'true'
+        run: cargo test -p serenade-scheduler --features messenger
 
   cache-redis:
     name: cache redis

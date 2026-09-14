@@ -17,4 +17,18 @@ pub enum SchedulerError {
         /// Reason text.
         message: String,
     },
+    /// No [`crate::ScheduleHandler`] is registered for a due schedule id.
+    #[error("no schedule handler registered for `{id}`")]
+    MissingHandler {
+        /// Schedule id that fired without a handler.
+        id: String,
+    },
+    /// A registered handler failed while processing a due job.
+    #[error("schedule handler `{id}` failed: {message}")]
+    Handler {
+        /// Schedule id being handled.
+        id: String,
+        /// Reason text.
+        message: String,
+    },
 }

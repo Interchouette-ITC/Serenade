@@ -21,9 +21,10 @@ With no command (or `list`), the application prints registered commands. Interac
 
 ## Built-in commands (FrameworkExtension)
 
-| Command           | Role                                                                           |
+| Command | Role |
 | ----------------- | ------------------------------------------------------------------------------ |
 | `serenade:about`  | Version, environment, debug flag                                               |
+| `serenade:scheduler:run` | Scheduler tick loop; `--once` for a single tick (see [SCHEDULER.md](SCHEDULER.md)) |
 | `debug:container` | List DI service ids; **ratatui** TUI when stdout is a TTY (`--plain` for text) |
 | `debug:config`    | Dump flattened parameters; **debug mode required**; secrets redacted unless `--reveal` |
 

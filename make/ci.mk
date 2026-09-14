@@ -4,7 +4,7 @@
 	coverage coverage-summary coverage-html tarpaulin machete outdated fuzz fuzz-build geiger
 
 # Keep in sync with codecov.yml ignore paths and CI coverage.
-COVERAGE_FEATURES := --features serenade-cache/redis,serenade-lock/redis,serenade-serializer/toon
+COVERAGE_FEATURES := --features serenade-cache/redis,serenade-lock/redis,serenade-serializer/toon,serenade-scheduler/messenger
 COVERAGE_IGNORE := examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs
 
 check:
@@ -81,7 +81,7 @@ DOC_OUT ?= $(ROOT)/target/doc
 DOC_CRATE ?= serenade_kernel
 
 doc:
-	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps --features serenade-cache/redis,serenade-lock/redis,serenade-serializer/toon
+	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps --features serenade-cache/redis,serenade-lock/redis,serenade-serializer/toon,serenade-scheduler/messenger
 	@test -d "$(DOC_OUT)" || (echo "missing $(DOC_OUT)"; exit 1)
 	@rm -rf $(ROOT)/docs/api-rust
 	@mkdir -p $(ROOT)/docs/api-rust

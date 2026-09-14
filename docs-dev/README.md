@@ -24,6 +24,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [HTTP_CLIENT.md](HTTP_CLIENT.md) | Outbound HttpClient, mock + reqwest, DI            |
 | [LOCK.md](LOCK.md)               | Named locks, in-memory / filesystem / Redis, DI    |
 | [RATE_LIMITER.md](RATE_LIMITER.md) | Rate limiter policies, helpers, HTTP 429, DI     |
+| [SCHEDULER.md](SCHEDULER.md)     | Scheduler triggers, handlers, console, DI         |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model; admin CRUD is not FrameworkBundle        |

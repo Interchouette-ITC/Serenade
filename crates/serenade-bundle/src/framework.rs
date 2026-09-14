@@ -13,6 +13,7 @@ use serenade_kernel::{BundleInterface, KernelError};
 use serenade_lock::RegisterDefaultLockPass;
 use serenade_mailer::RegisterDefaultMailerPass;
 use serenade_rate_limiter::RegisterDefaultRateLimiterPass;
+use serenade_scheduler::{RegisterDefaultSchedulerPass, RunSchedulerCommand};
 
 use crate::{BundleError, Extension};
 
@@ -44,10 +45,11 @@ impl BundleInterface for FrameworkBundle {
 /// Applies framework package parameters, registers an empty [`RouteCollection`]
 /// as [`ROUTER_SERVICE`], registers built-in console commands, and adds
 /// [`RegisterDefaultMailerPass`] / [`RegisterDefaultHttpClientPass`] /
-/// [`RegisterDefaultLockPass`] / [`RegisterDefaultRateLimiterPass`] so apps
-/// resolve `mailer`, `http_client`, `lock.store`, and `rate_limiter.storage`
-/// unless they replace them. The root config, event dispatcher,
-/// and console application are registered by [`crate::build_container`].
+/// [`RegisterDefaultLockPass`] / [`RegisterDefaultRateLimiterPass`] /
+/// [`RegisterDefaultSchedulerPass`] so apps resolve `mailer`, `http_client`,
+/// `lock.store`, `rate_limiter.storage`, and `scheduler` unless they replace
+/// them. The root config, event dispatcher, and console application are
+/// registered by [`crate::build_container`].
 ///
 /// # Panics
 ///
@@ -70,6 +72,7 @@ impl Extension for FrameworkExtension {
         builder.add_compile_pass(RegisterDefaultHttpClientPass);
         builder.add_compile_pass(RegisterDefaultLockPass);
         builder.add_compile_pass(RegisterDefaultRateLimiterPass);
+        builder.add_compile_pass(RegisterDefaultSchedulerPass);
         // `expect`: hardcoded framework ids cannot collide; avoids Codecov-only `?` Err arms.
         builder
             .register(
@@ -89,6 +92,12 @@ impl Extension for FrameworkExtension {
                 |_| Ok(Box::new(CommandService(Arc::new(DebugConfigCommand)))),
             )
             .expect("framework debug_config command id is unique");
+        builder
+            .register(
+                ServiceDefinition::new("console.command.scheduler_run").with_tag(COMMAND_TAG),
+                |_| Ok(Box::new(CommandService(Arc::new(RunSchedulerCommand)))),
+            )
+            .expect("framework scheduler_run command id is unique");
         Ok(())
     }
 }
