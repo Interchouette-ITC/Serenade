@@ -69,62 +69,44 @@ impl WireEnvelope {
                 message: "invalid wire envelope magic".to_owned(),
             });
         }
-        let name_len_bytes: [u8; 4] =
-            bytes[4..8]
-                .try_into()
-                .map_err(|_| MessengerError::Transport {
-                    message: "wire envelope truncated at name length".to_owned(),
-                })?;
-        let name_len = usize::try_from(u32::from_be_bytes(name_len_bytes)).map_err(|_| {
-            MessengerError::Transport {
-                message: "wire envelope name length does not fit usize".to_owned(),
-            }
-        })?;
-        let name_end = 8usize
-            .checked_add(name_len)
-            .ok_or_else(|| MessengerError::Transport {
-                message: "wire envelope name length overflow".to_owned(),
-            })?;
+        let mut name_len_bytes = [0_u8; 4];
+        name_len_bytes.copy_from_slice(&bytes[4..8]);
+        let name_len = usize::try_from(u32::from_be_bytes(name_len_bytes)).unwrap_or(usize::MAX);
+        if name_len > bytes.len().saturating_sub(8) {
+            return Err(MessengerError::Transport {
+                message: "wire envelope truncated at name".to_owned(),
+            });
+        }
+        let name_end = 8 + name_len;
         if bytes.len() < name_end + 4 {
             return Err(MessengerError::Transport {
                 message: "wire envelope truncated at name".to_owned(),
             });
         }
+        let payload_hdr_end = name_end + 4;
         let message_name = String::from_utf8(bytes[8..name_end].to_vec()).map_err(|error| {
             MessengerError::Transport {
                 message: format!("wire envelope name is not utf-8: {error}"),
             }
         })?;
-        let payload_len_offset = name_end;
-        let payload_len_bytes: [u8; 4] = bytes[payload_len_offset..payload_len_offset + 4]
-            .try_into()
-            .map_err(|_| MessengerError::Transport {
-                message: "wire envelope truncated at payload length".to_owned(),
-            })?;
-        let payload_len = usize::try_from(u32::from_be_bytes(payload_len_bytes)).map_err(|_| {
-            MessengerError::Transport {
-                message: "wire envelope payload length does not fit usize".to_owned(),
-            }
-        })?;
-        let payload_start = payload_len_offset + 4;
-        let payload_end =
-            payload_start
-                .checked_add(payload_len)
-                .ok_or_else(|| MessengerError::Transport {
-                    message: "wire envelope payload length overflow".to_owned(),
-                })?;
-        if bytes.len() != payload_end {
+        let mut payload_len_bytes = [0_u8; 4];
+        payload_len_bytes.copy_from_slice(&bytes[name_end..payload_hdr_end]);
+        let payload_len =
+            usize::try_from(u32::from_be_bytes(payload_len_bytes)).unwrap_or(usize::MAX);
+        let payload_body_len = bytes.len() - payload_hdr_end;
+        if payload_len != payload_body_len {
             return Err(MessengerError::Transport {
                 message: "wire envelope length mismatch".to_owned(),
             });
         }
-        Self::new(message_name, bytes[payload_start..payload_end].to_vec())
+        Self::new(message_name, bytes[payload_hdr_end..].to_vec())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::WireEnvelope;
+    use crate::MessengerError;
 
     #[test]
     fn round_trip_and_rejects_empty_name() {
@@ -136,7 +118,58 @@ mod tests {
     }
 
     #[test]
-    fn decode_rejects_bad_magic() {
+    fn decode_rejects_bad_magic_and_short_header() {
         assert!(WireEnvelope::decode(b"XXXX").is_err());
+        assert!(WireEnvelope::decode(b"SER").is_err());
+        assert!(WireEnvelope::decode(b"SERW").is_err());
+    }
+
+    #[test]
+    fn decode_rejects_truncated_name_and_length_mismatch() {
+        let mut bytes = b"SERW".to_vec();
+        bytes.extend_from_slice(&5_u32.to_be_bytes());
+        bytes.extend_from_slice(b"ab");
+        assert!(matches!(
+            WireEnvelope::decode(&bytes),
+            Err(MessengerError::Transport { .. })
+        ));
+
+        let mut missing_payload_hdr = b"SERW".to_vec();
+        missing_payload_hdr.extend_from_slice(&1_u32.to_be_bytes());
+        missing_payload_hdr.push(b'n');
+        missing_payload_hdr.extend_from_slice(&[0_u8, 0_u8]);
+        assert!(matches!(
+            WireEnvelope::decode(&missing_payload_hdr),
+            Err(MessengerError::Transport { message }) if message.contains("truncated")
+        ));
+
+        let mut good = WireEnvelope::new("n", b"p").expect("wire").encode();
+        good.push(b'x');
+        assert!(matches!(
+            WireEnvelope::decode(&good),
+            Err(MessengerError::Transport { message }) if message.contains("length mismatch")
+        ));
+    }
+
+    #[test]
+    fn decode_rejects_non_utf8_name() {
+        let mut bytes = b"SERW".to_vec();
+        bytes.extend_from_slice(&1_u32.to_be_bytes());
+        bytes.push(0xff);
+        bytes.extend_from_slice(&0_u32.to_be_bytes());
+        assert!(matches!(
+            WireEnvelope::decode(&bytes),
+            Err(MessengerError::Transport { message }) if message.contains("utf-8")
+        ));
+    }
+
+    #[test]
+    fn decode_rejects_claimed_huge_name() {
+        let mut bytes = b"SERW".to_vec();
+        bytes.extend_from_slice(&u32::MAX.to_be_bytes());
+        assert!(matches!(
+            WireEnvelope::decode(&bytes),
+            Err(MessengerError::Transport { .. })
+        ));
     }
 }

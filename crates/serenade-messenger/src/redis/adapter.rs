@@ -121,3 +121,52 @@ fn map_redis(error: &RedisError) -> MessengerError {
         message: error.to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use r2d2::Pool;
+    use redis::Client;
+
+    use super::RedisTransport;
+    use crate::MessengerError;
+
+    #[tokio::test]
+    async fn pool_checkout_timeout_maps_to_transport_error() {
+        let list_key = format!(
+            "serenade:messenger:test:pool:{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        );
+        let transport = RedisTransport {
+            pool: Pool::builder()
+                .max_size(1)
+                .connection_timeout(Duration::from_millis(80))
+                .build(Client::open("redis://127.0.0.1:6379/0").expect("client"))
+                .expect("pool"),
+            list_key,
+        };
+        let _held = transport.pool.get().expect("hold sole connection");
+        assert!(matches!(
+            transport.len(),
+            Err(MessengerError::Transport { .. })
+        ));
+        assert!(matches!(
+            transport.is_empty(),
+            Err(MessengerError::Transport { .. })
+        ));
+        assert!(matches!(
+            transport
+                .send_wire(crate::WireEnvelope::new("demo", b"x").expect("wire"))
+                .await,
+            Err(MessengerError::Transport { .. })
+        ));
+        assert!(matches!(
+            transport.receive_wire().await,
+            Err(MessengerError::Transport { .. })
+        ));
+    }
+}
