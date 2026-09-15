@@ -1,10 +1,12 @@
 use std::sync::{Arc, Mutex};
 
 use super::{
-    AsyncHttpKernel, AsyncMiddleware, AsyncNext, BoxFuture, DefaultExceptionHandler,
-    ExceptionHandler, HttpError, HttpKernel, Method, Middleware, ROUTE_ATTRIBUTE, Request,
-    RequestHandler, Response, Route, RouteCollection, RouteLoader, UrlMatcher, box_future,
-    load_routes,
+    AsyncHealthMiddleware, AsyncHttpKernel, AsyncMiddleware, AsyncNext, AsyncRequestIdMiddleware,
+    BoxFuture, DefaultExceptionHandler, ExceptionHandler, HEALTHZ_PATH, HealthMiddleware,
+    HttpError, HttpKernel, Method, Middleware, READYZ_PATH, REQUEST_ID_HEADER, ROUTE_ATTRIBUTE,
+    Readiness, Request, RequestHandler, RequestIdMiddleware, Response, Route, RouteCollection,
+    RouteLoader, UrlMatcher, box_future, ensure_request_id, healthz, load_routes, readyz,
+    request_id,
 };
 
 struct TraceLayer {
@@ -458,4 +460,97 @@ async fn async_middleware_maps_controller_errors() {
     let response = kernel.handle(Request::new(Method::Get, "/")).await;
     assert_eq!(response.status(), 418);
     assert_eq!(response.body_str(), Some("teapot"));
+}
+
+#[test]
+fn request_id_middleware_propagates_and_generates() {
+    let mut kernel = HttpKernel::new(|request: &mut Request| {
+        assert!(request_id(request).is_some());
+        Ok(Response::text(200, "ok"))
+    });
+    kernel.push_middleware(RequestIdMiddleware);
+
+    let inbound = Request::new(Method::Get, "/").with_header(REQUEST_ID_HEADER, "abc-1");
+    let response = kernel.handle(inbound);
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.headers().get(REQUEST_ID_HEADER), Some("abc-1"));
+
+    let generated = kernel.handle(Request::new(Method::Get, "/"));
+    let id = generated.headers().get(REQUEST_ID_HEADER).expect("id");
+    assert_ne!(id, "");
+}
+
+#[test]
+fn request_id_ignores_blank_inbound_header() {
+    let mut request = Request::new(Method::Get, "/").with_header(REQUEST_ID_HEADER, "  ");
+    let id = ensure_request_id(&mut request);
+    assert_ne!(id.trim(), "");
+    assert_ne!(id, "  ");
+    assert_eq!(ensure_request_id(&mut request), id);
+}
+
+#[test]
+fn health_middleware_short_circuits_probes() {
+    let readiness = Readiness::new();
+    let mut kernel = HttpKernel::new(|_: &mut Request| Ok(Response::text(200, "app")));
+    kernel.push_middleware(HealthMiddleware::new(readiness.clone()));
+
+    let live = kernel.handle(Request::new(Method::Get, HEALTHZ_PATH));
+    assert_eq!(live.status(), 200);
+    assert_eq!(live.body_str(), Some("ok"));
+
+    let ready = kernel.handle(Request::new(Method::Get, READYZ_PATH));
+    assert_eq!(ready.status(), 200);
+    assert_eq!(ready.body_str(), Some("ready"));
+
+    readiness.mark_not_ready();
+    let draining = kernel.handle(Request::new(Method::Get, READYZ_PATH));
+    assert_eq!(draining.status(), 503);
+    assert_eq!(draining.body_str(), Some("not ready"));
+
+    let app = kernel.handle(Request::new(Method::Get, "/app"));
+    assert_eq!(app.body_str(), Some("app"));
+}
+
+#[test]
+fn health_helpers_match_middleware() {
+    assert_eq!(healthz().status(), 200);
+    assert_eq!(readyz(true).body_str(), Some("ready"));
+    assert_eq!(readyz(false).status(), 503);
+    readiness_round_trip();
+    assert!(HealthMiddleware::always_ready().readiness().is_ready());
+    assert!(AsyncHealthMiddleware::always_ready().readiness().is_ready());
+}
+
+fn readiness_round_trip() {
+    let readiness = Readiness::new();
+    assert!(readiness.is_ready());
+    readiness.mark_not_ready();
+    assert!(!readiness.is_ready());
+    readiness.mark_ready();
+    assert!(readiness.is_ready());
+}
+
+#[tokio::test]
+async fn async_ops_middleware_covers_request_id_and_health() {
+    let readiness = Readiness::new();
+    let mut kernel = AsyncHttpKernel::from_sync(|request: &mut Request| {
+        assert!(request_id(request).is_some());
+        Ok(Response::text(200, "async-app"))
+    });
+    kernel.push_middleware(AsyncRequestIdMiddleware);
+    kernel.push_middleware(AsyncHealthMiddleware::new(readiness.clone()));
+
+    let health = kernel.handle(Request::new(Method::Get, HEALTHZ_PATH)).await;
+    assert_eq!(health.body_str(), Some("ok"));
+
+    readiness.mark_not_ready();
+    let not_ready = kernel.handle(Request::new(Method::Get, READYZ_PATH)).await;
+    assert_eq!(not_ready.status(), 503);
+
+    let app = kernel
+        .handle(Request::new(Method::Get, "/").with_header(REQUEST_ID_HEADER, "tid"))
+        .await;
+    assert_eq!(app.body_str(), Some("async-app"));
+    assert_eq!(app.headers().get(REQUEST_ID_HEADER), Some("tid"));
 }

@@ -8,6 +8,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | ---------------------------- | ------------------------------------------------------ |
 | [VISION.md](VISION.md)       | Why Symfony-shaped Rust; what Serenade is not (incl. no core admin generator) |
 | [KERNEL.md](KERNEL.md)       | Kernel components; admin / back-office ownership |
+| [HTTP_OPS.md](HTTP_OPS.md)   | Request-id, health/ready probes, graceful drain      |
 | [CONSOLE.md](CONSOLE.md)     | Console Application, commands, `--env` / ratatui       |
 | [RECIPES.md](RECIPES.md)     | Flex-like recipes, `serenade new`, Cargo stays PM      |
 | [SECURITY.md](SECURITY.md)   | AuthN/Z, firewall, CSRF, password hashing, session login |
