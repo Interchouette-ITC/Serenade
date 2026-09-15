@@ -23,6 +23,57 @@ fn to_axum_preserves_status_and_body() {
     assert_eq!(response.status(), 201);
 }
 
+#[test]
+fn to_axum_skips_invalid_header_names_and_values() {
+    let mut response = Response::text(200, "ok");
+    response.headers_mut().insert("x-ok", "fine");
+    response.headers_mut().insert("bad name", "nope");
+    response.headers_mut().insert("x-bad", "a\nb");
+    let axum = to_axum(&response);
+    assert_eq!(axum.status(), 200);
+    assert_eq!(
+        axum.headers().get("x-ok").and_then(|v| v.to_str().ok()),
+        Some("fine")
+    );
+    assert!(axum.headers().get("bad name").is_none());
+    assert!(axum.headers().get("x-bad").is_none());
+}
+
+#[test]
+fn dispatch_runs_sync_kernel_on_valid_request() {
+    let kernel = HttpKernel::new(|request: &mut Request| {
+        assert_eq!(request.path(), "/sync");
+        assert_eq!(request.body(), b"hi");
+        Ok(Response::text(200, "synced"))
+    });
+    let request = HttpRequest::builder()
+        .method(HttpMethod::POST)
+        .uri("/sync")
+        .body(())
+        .expect("request");
+    let (parts, ()) = request.into_parts();
+    let response = dispatch(&kernel, &parts, b"hi");
+    assert_eq!(response.status(), 200);
+}
+
+#[tokio::test]
+async fn body_over_limit_returns_413() {
+    let kernel =
+        AsyncHttpKernel::from_sync(|_request: &mut Request| Ok(Response::text(200, "nope")));
+    let app = router(Arc::new(kernel));
+    let oversized = vec![0_u8; 16 * 1024 * 1024 + 1];
+    let response = app
+        .oneshot(
+            HttpRequest::builder()
+                .uri("/")
+                .body(Body::from(oversized))
+                .expect("request"),
+        )
+        .await
+        .expect("oneshot");
+    assert_eq!(response.status(), 413);
+}
+
 #[tokio::test]
 async fn router_default_fallback_dispatches_kernel() {
     let kernel = AsyncHttpKernel::from_sync(|request: &mut Request| {

@@ -37,7 +37,9 @@ pub fn from_axum(parts: &Parts, body: impl AsRef<[u8]>) -> Result<Request, HttpE
 pub fn to_axum(response: &Response) -> AxumResponse {
     let status =
         StatusCode::from_u16(response.status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-    let mut builder = AxumResponse::builder().status(status);
+    let mut out = AxumResponse::new(Body::from(response.body().to_vec()));
+    *out.status_mut() = status;
+    let headers = out.headers_mut();
     for (name, value) in response.headers().iter() {
         let Ok(header_name) = HeaderName::try_from(name) else {
             continue;
@@ -45,15 +47,9 @@ pub fn to_axum(response: &Response) -> AxumResponse {
         let Ok(header_value) = HeaderValue::from_str(value) else {
             continue;
         };
-        builder = builder.header(header_name, header_value);
+        headers.append(header_name, header_value);
     }
-    builder
-        .body(Body::from(response.body().to_vec()))
-        .unwrap_or_else(|_| {
-            let mut fallback = AxumResponse::new(Body::from("internal error"));
-            *fallback.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-            fallback
-        })
+    out
 }
 
 /// Maps conversion failure through [`DefaultExceptionHandler`].

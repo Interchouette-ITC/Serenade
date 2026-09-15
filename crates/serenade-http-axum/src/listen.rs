@@ -115,3 +115,21 @@ async fn serenade_service(
     };
     dispatch::dispatch_async(kernel.as_ref(), &parts, bytes).await
 }
+
+#[cfg(test)]
+mod coverage_tests {
+    use std::net::{Ipv4Addr, SocketAddr};
+
+    use super::{BoundServer, await_bound};
+
+    #[tokio::test]
+    async fn await_bound_maps_join_panic_to_io_error() {
+        let join = tokio::spawn(async { panic!("serve task boom") });
+        let server = BoundServer {
+            addr: SocketAddr::from((Ipv4Addr::LOCALHOST, 0)),
+            join,
+        };
+        let error = await_bound(server).await.expect_err("join panic");
+        assert_eq!(error.kind(), std::io::ErrorKind::Other);
+    }
+}
