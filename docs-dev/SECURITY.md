@@ -4,20 +4,20 @@ AuthN/Z hooks, CSRF tokens, and how HTML apps stay safe. This is **not** a full 
 
 ## Pieces
 
-| Type | Role |
-| --- | --- |
-| `UserInterface` / `InMemoryUser` | Principal id + roles |
-| `TokenInterface` / `UsernamePasswordToken` | Authenticated flag, optional user, credentials echo |
-| `Voter` / `AccessDecisionManager` | Affirmative strategy (any `Grant` wins) |
-| `Authenticator` | App-owned credential check |
-| `FirewallMiddleware` | HTTP middleware: read header → authenticate → store token on request attributes |
-| `SessionMiddleware` / `AsyncSessionMiddleware` | HTTP middleware: load/save session via `serenade-session` (see [SESSION.md](SESSION.md)) |
-| `CsrfToken` / `CsrfTokenManager` / `HmacCsrfTokenManager` | Issue and validate CSRF tokens (stateless HMAC) |
-| `PasswordHasher` / `Argon2idPasswordHasher` | Hash and verify passwords (Argon2id, PHC string) |
-| `login` / `logout` / `token_from_session` | Persist identity on `serenade-session` (id + roles only) |
-| `SessionTokenMiddleware` / `AsyncSessionTokenMiddleware` | Restore session identity onto `_security_token` |
-| `SECURITY_SESSION_KEY` | `_serenade.security_token` |
-| `CSRF_FIELD_NAME` (`_token`) | Default HTML field name (Symfony habit) |
+| Type                                                      | Role                                                                                     |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `UserInterface` / `InMemoryUser`                          | Principal id + roles                                                                     |
+| `TokenInterface` / `UsernamePasswordToken`                | Authenticated flag, optional user, credentials echo                                      |
+| `Voter` / `AccessDecisionManager`                         | Affirmative strategy (any `Grant` wins)                                                  |
+| `Authenticator`                                           | App-owned credential check                                                               |
+| `FirewallMiddleware`                                      | HTTP middleware: read header → authenticate → store token on request attributes          |
+| `SessionMiddleware` / `AsyncSessionMiddleware`            | HTTP middleware: load/save session via `serenade-session` (see [SESSION.md](SESSION.md)) |
+| `CsrfToken` / `CsrfTokenManager` / `HmacCsrfTokenManager` | Issue and validate CSRF tokens (stateless HMAC)                                          |
+| `PasswordHasher` / `Argon2idPasswordHasher`               | Hash and verify passwords (Argon2id, PHC string)                                         |
+| `login` / `logout` / `token_from_session`                 | Persist identity on `serenade-session` (id + roles only)                                 |
+| `SessionTokenMiddleware` / `AsyncSessionTokenMiddleware`  | Restore session identity onto `_security_token`                                          |
+| `SECURITY_SESSION_KEY`                                    | `_serenade.security_token`                                                               |
+| `CSRF_FIELD_NAME` (`_token`)                              | Default HTML field name (Symfony habit)                                                  |
 
 Request attribute key: `_security_token` (`TOKEN_ATTRIBUTE`). Helper: `request_token(&request)`.
 
@@ -40,7 +40,7 @@ Package config scaffold remains `config/packages/security.toml` from the `securi
 
 Use a long random app secret. Rotate only with a coordinated cutover (old tokens become invalid).
 
-Session stickiness (HTML apps, flash, later login token storage) is separate: register `SessionMiddleware` from `serenade-session` on the HTTP kernel ([SESSION.md](SESSION.md)). CSRF does not depend on that middleware.
+Session stickiness (HTML apps, flash, and login token storage via the session login bridge) is separate: register `SessionMiddleware` from `serenade-session` on the HTTP kernel ([SESSION.md](SESSION.md)). CSRF does not depend on that middleware.
 
 ## Password hashing
 

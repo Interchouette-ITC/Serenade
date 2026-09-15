@@ -6,6 +6,23 @@
 //! - [`FilesystemLockStore`]: disk-backed store
 //! - [`RedisLockStore`] (feature `redis`): Redis-backed store
 //! - [`RegisterDefaultLockPass`]: DI default service id [`DEFAULT_LOCK_STORE_SERVICE`]
+//!
+//! # Examples
+//!
+//! ```
+//! use std::sync::Arc;
+//! use std::time::Duration;
+//! use serenade_lock::{InMemoryLockStore, LockFactory};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let store = Arc::new(InMemoryLockStore::new());
+//! let factory = LockFactory::new(store);
+//! let lock = factory.create_lock("cron:mail-blast", Some(Duration::from_secs(30)), true)?;
+//! assert!(lock.acquire()?);
+//! lock.release()?;
+//! # Ok(())
+//! # }
+//! ```
 
 mod compile_pass;
 mod error;

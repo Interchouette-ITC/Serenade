@@ -6,6 +6,26 @@
 //! - [`Scheduler`]: `tick` returns due work without sleeping (no wall-clock flake)
 //! - [`HandlerMap`] / [`ScheduleHandler`]: sync dispatch for due jobs
 //! - [`RunSchedulerCommand`] (`serenade:scheduler:run`)
+//!
+//! # Examples
+//!
+//! ```
+//! use std::time::{Duration, UNIX_EPOCH};
+//! use serenade_scheduler::{ManualClock, Schedule, Scheduler, Trigger};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let clock = ManualClock::new(UNIX_EPOCH);
+//! let mut scheduler = Scheduler::new();
+//! scheduler.add(
+//!     Schedule::new("heartbeat", Trigger::interval(Duration::from_secs(60))?)?,
+//!     &clock,
+//! )?;
+//! assert!(scheduler.tick(&clock).is_empty());
+//! clock.advance(Duration::from_secs(60));
+//! assert_eq!(scheduler.tick(&clock).len(), 1);
+//! # Ok(())
+//! # }
+//! ```
 
 mod clock;
 mod compile_pass;

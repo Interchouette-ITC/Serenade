@@ -7,6 +7,28 @@
 //! - [`consume_or_exceed`] / [`require_accepted`]: app-facing helpers
 //! - [`too_many_requests`]: HTTP 429 bridge
 //! - [`RegisterDefaultRateLimiterPass`]: DI default service id [`DEFAULT_RATE_LIMITER_STORAGE_SERVICE`]
+//!
+//! # Examples
+//!
+//! ```
+//! use std::sync::Arc;
+//! use std::time::Duration;
+//! use serenade_rate_limiter::{
+//!     InMemoryRateLimiterStorage, Policy, RateLimiterFactory, consume_or_exceed,
+//! };
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let storage = Arc::new(InMemoryRateLimiterStorage::new());
+//! let factory = RateLimiterFactory::new(
+//!     "login",
+//!     Policy::fixed_window(5, Duration::from_secs(15 * 60))?,
+//!     storage,
+//! )?;
+//! let limiter = factory.create("alice")?;
+//! consume_or_exceed(&limiter, 1)?;
+//! # Ok(())
+//! # }
+//! ```
 
 mod compile_pass;
 mod error;
