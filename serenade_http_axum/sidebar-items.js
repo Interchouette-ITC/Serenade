@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["await_bound","bind_server","conversion_error","dispatch","dispatch_async","from_axum","listen","router","to_axum","version"],"struct":["BoundServer","ShutdownHandle"]};
