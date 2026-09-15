@@ -36,13 +36,19 @@ impl SmtpTransport {
 
     /// Starts a builder for cleartext SMTP to `host` (local / test relays).
     #[must_use]
-    pub fn unencrypted_localhost() -> SmtpTransportBuilder {
+    pub fn unencrypted(host: impl Into<String>) -> SmtpTransportBuilder {
         SmtpTransportBuilder {
-            relay: "localhost".into(),
-            port: Some(25),
+            relay: host.into(),
+            port: None,
             credentials: None,
             unencrypted: true,
         }
+    }
+
+    /// Cleartext SMTP to `localhost` (default port 25).
+    #[must_use]
+    pub fn unencrypted_localhost() -> SmtpTransportBuilder {
+        Self::unencrypted("localhost").port(25)
     }
 }
 
@@ -162,4 +168,90 @@ fn to_mailbox(address: &Address) -> Result<Mailbox, MailerError> {
                 message: format!("invalid mailbox {}: {error}", address.email()),
             })?;
     Ok(Mailbox::new(address.name().map(str::to_owned), email))
+}
+
+#[cfg(all(test, feature = "smtp"))]
+mod smtp_tests {
+    use super::{Address, Email, MailerError, SmtpTransport, to_lettre_message, to_mailbox};
+    use crate::Attachment;
+
+    #[test]
+    fn relay_and_credentials_builders() {
+        SmtpTransport::relay("smtp.example.test")
+            .build()
+            .expect("tls relay build");
+        SmtpTransport::unencrypted("127.0.0.1")
+            .build()
+            .expect("cleartext build without explicit port");
+        SmtpTransport::unencrypted("127.0.0.1")
+            .credentials("user", "secret")
+            .port(2525)
+            .build()
+            .expect("credentials build");
+    }
+
+    #[test]
+    fn to_lettre_message_body_shapes_and_attachment() {
+        let text_only = Email::new()
+            .from("from@example.test")
+            .expect("from")
+            .to("to@example.test")
+            .expect("to")
+            .subject("Text")
+            .text("plain");
+        to_lettre_message(&text_only).expect("text message");
+
+        let html_only = Email::new()
+            .from("from@example.test")
+            .expect("from")
+            .to("to@example.test")
+            .expect("to")
+            .subject("Html")
+            .html("<p>x</p>");
+        to_lettre_message(&html_only).expect("html message");
+
+        let empty = Email::new()
+            .from("from@example.test")
+            .expect("from")
+            .to("to@example.test")
+            .expect("to")
+            .subject("Empty");
+        to_lettre_message(&empty).expect("empty message");
+
+        let named = Email::new()
+            .from("from@example.test")
+            .expect("from")
+            .to("to@example.test")
+            .expect("to")
+            .subject("Named");
+        to_mailbox(&Address::with_name("ada@example.test", Some("Ada Lovelace")).expect("named"))
+            .expect("named mailbox");
+        let _ = named;
+    }
+
+    #[test]
+    fn to_lettre_message_rejects_bad_mailbox_and_content_type() {
+        let bad_mailbox = Email::new()
+            .from("a@b@c")
+            .expect("from")
+            .to("to@example.test")
+            .expect("to")
+            .subject("Bad");
+        assert!(matches!(
+            to_lettre_message(&bad_mailbox),
+            Err(MailerError::Transport { .. })
+        ));
+
+        let bad_type = Email::new()
+            .from("from@example.test")
+            .expect("from")
+            .to("to@example.test")
+            .expect("to")
+            .subject("Bad type")
+            .attach(Attachment::from_bytes("x.bin", "!!!", b"x"));
+        assert!(matches!(
+            to_lettre_message(&bad_type),
+            Err(MailerError::Transport { .. })
+        ));
+    }
 }
