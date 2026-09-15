@@ -62,6 +62,7 @@ impl RedisTransport {
     }
 
     /// Enqueues `envelope` at the tail of the Redis list (RPUSH).
+    #[must_use]
     pub fn send_wire(
         &self,
         envelope: WireEnvelope,
@@ -77,6 +78,7 @@ impl RedisTransport {
     }
 
     /// Pops the next frame from the head of the list (LPOP), if any.
+    #[must_use]
     pub fn receive_wire(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Option<WireEnvelope>, MessengerError>> + Send + '_>>
