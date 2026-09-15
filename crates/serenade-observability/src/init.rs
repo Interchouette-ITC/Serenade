@@ -18,6 +18,17 @@ pub struct LoggingGuard {
     _file_guard: Option<WorkerGuard>,
 }
 
+impl LoggingGuard {
+    /// Wraps an optional non-blocking file-writer guard.
+    #[doc(hidden)]
+    #[must_use]
+    pub const fn from_file_guard(file_guard: Option<WorkerGuard>) -> Self {
+        Self {
+            _file_guard: file_guard,
+        }
+    }
+}
+
 /// Builds a subscriber and optional file-writer guard without installing it globally.
 ///
 /// Prefer [`init`] in application `main`. Tests can use
@@ -65,12 +76,7 @@ pub fn build_subscriber(
         .with(filter)
         .with(stderr_layer)
         .with(file_layer);
-    Ok((
-        subscriber,
-        LoggingGuard {
-            _file_guard: file_guard,
-        },
-    ))
+    Ok((subscriber, LoggingGuard::from_file_guard(file_guard)))
 }
 
 /// Installs the global tracing subscriber for this process.
@@ -100,7 +106,7 @@ pub fn init(config: &LoggingConfig) -> Result<LoggingGuard, ObservabilityError> 
     Ok(guard)
 }
 
-fn build_filter(config: &LoggingConfig) -> Result<EnvFilter, ObservabilityError> {
+pub fn build_filter(config: &LoggingConfig) -> Result<EnvFilter, ObservabilityError> {
     config.resolve_filter_directives().map_or_else(
         || Ok(EnvFilter::default().add_directive(config.default_level.into())),
         |directives| {

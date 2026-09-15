@@ -329,7 +329,7 @@ Scheduling lives in **`serenade-scheduler`** ([#187](https://github.com/Intercho
 
 ## Observability (structured logging)
 
-`serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Apps call `init` from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md).
+`serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Optional feature `otel` adds an OpenTelemetry tracing bridge and OTLP/HTTP export (`OtelConfig`, `init_with_otel`). Apps call `init` (or `init_with_otel`) from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md).
 
 The browser Web Debug Toolbar / Profiler lives in **`serenade-profiler`** ([PROFILER.md](PROFILER.md)): per-request collectors, HTML toolbar injection, and `/_profiler/{token}`. It is not the console. `AsyncHttpKernel` supports an async middleware pipeline (`AsyncMiddleware`) so Actix/`listen` apps can push the profiler the same way sync `HttpKernel` pushes `Middleware`.
 

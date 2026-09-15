@@ -8,6 +8,7 @@ Monolog-like conventions live in **`serenade-observability`**. The preferred sta
 | `LoggingConfig` | Log directory, environment stem, levels, stderr/file sinks, rotation |
 | `init` / `LoggingGuard` | Install the process subscriber; keep the guard until shutdown |
 | Channel constants | Tracing `target` values (`serenade::app`, `serenade::request`, …) |
+| Feature `otel` | Optional OpenTelemetry bridge + OTLP/HTTP exporter (`OtelConfig`, `init_with_otel`) |
 
 ## App vs framework
 
@@ -51,6 +52,21 @@ tracing::info!(target: serenade_observability::APP, "application starting");
 ```
 
 Keep `_logging` (`LoggingGuard`) in scope until process exit so the non-blocking file writer flushes.
+
+## OpenTelemetry (feature `otel`)
+
+Enable the crate feature `otel` to bridge `tracing` spans into OpenTelemetry. Without an endpoint, spans stay in-process (useful for tests and local wiring). With an OTLP/HTTP collector URL, spans export over HTTP:
+
+```rust
+use serenade_kernel::Environment;
+use serenade_observability::{init_with_otel, LoggingConfig, OtelConfig};
+
+let logging = LoggingConfig::for_environment(&Environment::Dev, "var/log");
+let otel = OtelConfig::new("my-service").with_endpoint("http://127.0.0.1:4318");
+let (_logging, _otel) = init_with_otel(&logging, &otel)?;
+```
+
+Keep both guards until shutdown so the file writer and tracer provider flush.
 
 ## Channels
 
