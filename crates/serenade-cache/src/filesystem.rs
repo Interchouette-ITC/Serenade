@@ -11,8 +11,9 @@ use crate::marshaller::CacheMarshaller;
 use crate::{ArrayCacheItem, CacheError, CacheItemPool};
 
 const MAGIC: &[u8; 4] = b"SCFS";
-const VERSION: u8 = 1;
-const HEADER_LEN: usize = 4 + 1 + 8;
+const VERSION_V1: u8 = 1;
+const VERSION_V2: u8 = 2;
+const HEADER_V1_LEN: usize = 4 + 1 + 8;
 
 /// Configuration for [`FilesystemAdapter`].
 #[derive(Debug, Clone)]
@@ -54,8 +55,9 @@ impl FilesystemAdapterConfig {
 /// Filesystem [`CacheItemPool`] using one file per key and a [`CacheMarshaller`].
 ///
 /// Expired entries are deleted on read (`get_item` / `has_item`). `clear` removes
-/// every `*.cache` file under the adapter directory. Values must be marshallable
-/// (default: [`crate::BytesMarshaller`] for `String` / `Vec<u8>`).
+/// every `*.cache` file under the adapter directory (and the `.tags` index).
+/// Values must be marshallable (default: [`crate::BytesMarshaller`] for `String` /
+/// `Vec<u8>`). Invalidation tags are persisted in the record and indexed under `.tags/`.
 pub struct FilesystemAdapter {
     root: PathBuf,
     marshaller: Arc<dyn CacheMarshaller>,
@@ -85,6 +87,86 @@ impl FilesystemAdapter {
         validate_logical_key(key)?;
         Ok(self.root.join(format!("{}.cache", hex_key(key))))
     }
+
+    fn tags_dir(&self) -> PathBuf {
+        self.root.join(".tags")
+    }
+
+    fn tag_index_path(&self, tag: &str) -> PathBuf {
+        self.tags_dir().join(format!("{}.idx", hex_key(tag)))
+    }
+
+    fn read_tags_from_path(path: &Path) -> Result<Vec<String>, CacheError> {
+        let Some(bytes) = read_file(path)? else {
+            return Ok(Vec::new());
+        };
+        Ok(parse_record(&bytes)
+            .map(|(_, tags, _)| tags)
+            .unwrap_or_default())
+    }
+
+    fn unlink_key_from_tags(&self, key: &str, tags: &[String]) -> Result<(), CacheError> {
+        let encoded_key = hex_key(key);
+        for tag in tags.iter().filter(|tag| !tag.is_empty()) {
+            let path = self.tag_index_path(tag);
+            let Some(raw) = read_file(&path)? else {
+                continue;
+            };
+            let text = String::from_utf8_lossy(&raw);
+            let mut kept = Vec::new();
+            for line in text.lines() {
+                if line != encoded_key && !line.is_empty() {
+                    kept.push(line.to_owned());
+                }
+            }
+            if kept.is_empty() {
+                let _ = fs::remove_file(&path);
+            } else {
+                let body = kept.join("\n");
+                atomic_write(&path, body.as_bytes())?;
+            }
+        }
+        Ok(())
+    }
+
+    fn link_key_to_tags(&self, key: &str, tags: &[String]) -> Result<(), CacheError> {
+        if tags.is_empty() {
+            return Ok(());
+        }
+        fs::create_dir_all(self.tags_dir()).map_err(|error| CacheError::Pool {
+            message: format!("create tags dir: {error}"),
+        })?;
+        let encoded_key = hex_key(key);
+        for tag in tags.iter().filter(|tag| !tag.is_empty()) {
+            let path = self.tag_index_path(tag);
+            let mut lines = Vec::new();
+            if let Some(raw) = read_file(&path)? {
+                for line in String::from_utf8_lossy(&raw).lines() {
+                    if !line.is_empty() && line != encoded_key {
+                        lines.push(line.to_owned());
+                    }
+                }
+            }
+            lines.push(encoded_key.clone());
+            atomic_write(&path, lines.join("\n").as_bytes())?;
+        }
+        Ok(())
+    }
+
+    fn remove_stored_key(&self, key: &str) -> Result<bool, CacheError> {
+        let path = self.path_for(key)?;
+        let tags = Self::read_tags_from_path(&path)?;
+        match fs::remove_file(&path) {
+            Ok(()) => {
+                self.unlink_key_from_tags(key, &tags)?;
+                Ok(true)
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(CacheError::Pool {
+                message: format!("delete {}: {error}", path.display()),
+            }),
+        }
+    }
 }
 
 impl CacheItemPool for FilesystemAdapter {
@@ -93,49 +175,46 @@ impl CacheItemPool for FilesystemAdapter {
         let Some(bytes) = read_file(&path)? else {
             return Ok(ArrayCacheItem::miss(key));
         };
-        let Some((expires_unix_ms, payload)) = parse_record(&bytes) else {
+        let Some((expires_unix_ms, tags, payload)) = parse_record(&bytes) else {
             let _ = fs::remove_file(&path);
             return Ok(ArrayCacheItem::miss(key));
         };
         if is_expired_unix_ms(expires_unix_ms) {
-            let _ = fs::remove_file(&path);
+            let _ = self.remove_stored_key(key)?;
             return Ok(ArrayCacheItem::miss(key));
         }
         let Ok(decoded) = self.marshaller.unmarshal(payload) else {
-            let _ = fs::remove_file(&path);
+            let _ = self.remove_stored_key(key)?;
             return Ok(ArrayCacheItem::miss(key));
         };
-        Ok(ArrayCacheItem::hit(key, decoded).with_expiry(instant_from_unix_ms(expires_unix_ms)))
+        Ok(ArrayCacheItem::hit(key, decoded)
+            .with_expiry(instant_from_unix_ms(expires_unix_ms))
+            .with_tags(tags))
     }
 
     fn save(&self, item: ArrayCacheItem) -> Result<(), CacheError> {
         let (key, value, expires_at, tags) = item.into_stored();
         let path = self.path_for(&key)?;
+        let previous_tags = Self::read_tags_from_path(&path)?;
         let Some(value) = value else {
-            let _ = fs::remove_file(&path);
+            let _ = self.remove_stored_key(&key)?;
             return Ok(());
         };
         if expires_at.is_some_and(|at| Instant::now() >= at) {
-            let _ = fs::remove_file(&path);
+            let _ = self.remove_stored_key(&key)?;
             return Ok(());
         }
-        // Tags are not persisted on the filesystem adapter yet.
-        let _ = tags;
+        self.unlink_key_from_tags(&key, &previous_tags)?;
         let payload = self.marshaller.marshal(value.as_ref())?;
         let expires_unix_ms = unix_ms_from_instant(expires_at);
-        let record = encode_record(expires_unix_ms, &payload);
-        atomic_write(&path, &record)
+        let record = encode_record_with_tags(expires_unix_ms, &tags, &payload);
+        atomic_write(&path, &record)?;
+        self.link_key_to_tags(&key, &tags)?;
+        Ok(())
     }
 
     fn delete_item(&self, key: &str) -> Result<bool, CacheError> {
-        let path = self.path_for(key)?;
-        match fs::remove_file(&path) {
-            Ok(()) => Ok(true),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
-            Err(error) => Err(CacheError::Pool {
-                message: format!("delete {}: {error}", path.display()),
-            }),
-        }
+        self.remove_stored_key(key)
     }
 
     fn clear(&self) -> Result<(), CacheError> {
@@ -148,7 +227,36 @@ impl CacheItemPool for FilesystemAdapter {
                 let _ = fs::remove_file(path);
             }
         }
+        let tags_dir = self.tags_dir();
+        if tags_dir.is_dir() {
+            let _ = fs::remove_dir_all(&tags_dir);
+        }
         Ok(())
+    }
+
+    fn invalidate_tags(&self, tags: &[&str]) -> Result<usize, CacheError> {
+        let mut keys = std::collections::HashSet::new();
+        for tag in tags.iter().filter(|tag| !tag.is_empty()) {
+            let path = self.tag_index_path(tag);
+            let Some(raw) = read_file(&path)? else {
+                continue;
+            };
+            for line in String::from_utf8_lossy(&raw).lines() {
+                if line.is_empty() {
+                    continue;
+                }
+                if let Some(key) = unhex_key(line) {
+                    keys.insert(key);
+                }
+            }
+        }
+        let mut removed = 0;
+        for key in keys {
+            if self.remove_stored_key(&key)? {
+                removed += 1;
+            }
+        }
+        Ok(removed)
     }
 }
 
@@ -176,23 +284,80 @@ fn hex_key(key: &str) -> String {
         })
 }
 
-fn encode_record(expires_unix_ms: u64, payload: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(HEADER_LEN + payload.len());
+fn unhex_key(hex: &str) -> Option<String> {
+    if hex.len() % 2 != 0 {
+        return None;
+    }
+    let mut bytes = Vec::with_capacity(hex.len() / 2);
+    let chars: Vec<char> = hex.chars().collect();
+    for chunk in chars.chunks(2) {
+        let high = chunk[0].to_digit(16)?;
+        let low = chunk[1].to_digit(16)?;
+        bytes.push(u8::try_from((high << 4) | low).ok()?);
+    }
+    String::from_utf8(bytes).ok()
+}
+
+fn encode_record_with_tags(expires_unix_ms: u64, tags: &[String], payload: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(HEADER_V1_LEN + 2 + payload.len());
     out.extend_from_slice(MAGIC);
-    out.push(VERSION);
+    out.push(VERSION_V2);
     out.extend_from_slice(&expires_unix_ms.to_le_bytes());
+    let tag_count = u16::try_from(tags.len()).unwrap_or(u16::MAX);
+    out.extend_from_slice(&tag_count.to_le_bytes());
+    for tag in tags.iter().take(usize::from(tag_count)) {
+        let bytes = tag.as_bytes();
+        let len = u16::try_from(bytes.len()).unwrap_or(u16::MAX);
+        out.extend_from_slice(&len.to_le_bytes());
+        out.extend_from_slice(&bytes[..usize::from(len)]);
+    }
     out.extend_from_slice(payload);
     out
 }
 
-fn parse_record(bytes: &[u8]) -> Option<(u64, &[u8])> {
-    if bytes.len() < HEADER_LEN || &bytes[..4] != MAGIC || bytes[4] != VERSION {
+#[cfg(test)]
+fn encode_record(expires_unix_ms: u64, payload: &[u8]) -> Vec<u8> {
+    encode_record_with_tags(expires_unix_ms, &[], payload)
+}
+
+fn parse_record(bytes: &[u8]) -> Option<(u64, Vec<String>, &[u8])> {
+    if bytes.len() < HEADER_V1_LEN || &bytes[..4] != MAGIC {
         return None;
     }
+    let version = bytes[4];
     let mut expiry_bytes = [0_u8; 8];
     expiry_bytes.copy_from_slice(&bytes[5..13]);
     let expires_unix_ms = u64::from_le_bytes(expiry_bytes);
-    Some((expires_unix_ms, &bytes[HEADER_LEN..]))
+    match version {
+        VERSION_V1 => Some((expires_unix_ms, Vec::new(), &bytes[HEADER_V1_LEN..])),
+        VERSION_V2 => {
+            if bytes.len() < HEADER_V1_LEN + 2 {
+                return None;
+            }
+            let mut count_bytes = [0_u8; 2];
+            count_bytes.copy_from_slice(&bytes[HEADER_V1_LEN..HEADER_V1_LEN + 2]);
+            let tag_count = usize::from(u16::from_le_bytes(count_bytes));
+            let mut offset = HEADER_V1_LEN + 2;
+            let mut tags = Vec::with_capacity(tag_count);
+            for _ in 0..tag_count {
+                if offset + 2 > bytes.len() {
+                    return None;
+                }
+                let mut len_bytes = [0_u8; 2];
+                len_bytes.copy_from_slice(&bytes[offset..offset + 2]);
+                let len = usize::from(u16::from_le_bytes(len_bytes));
+                offset += 2;
+                if offset + len > bytes.len() {
+                    return None;
+                }
+                let tag = String::from_utf8(bytes[offset..offset + len].to_vec()).ok()?;
+                offset += len;
+                tags.push(tag);
+            }
+            Some((expires_unix_ms, tags, &bytes[offset..]))
+        }
+        _ => None,
+    }
 }
 
 fn is_expired_unix_ms(expires_unix_ms: u64) -> bool {
@@ -365,11 +530,138 @@ mod tests {
             .join("ttl")
             .join(format!("{}.cache", hex_key("tmp")));
         let bytes = std::fs::read(&path).expect("read");
-        let (_expires, payload) = parse_record(&bytes).expect("parse");
+        let (_expires, _tags, payload) = parse_record(&bytes).expect("parse");
         // Force a past unix expiry on disk (no sleep / no CI scheduling flake).
         std::fs::write(&path, encode_record(1, payload)).expect("rewrite expired");
         assert!(!pool.get_item("tmp").expect("get").is_hit());
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn tag_invalidation_and_overwrite_without_tags() {
+        let (_dir, pool) = open_pool();
+        let mut a = ArrayCacheItem::miss("product:1");
+        a.set(Arc::new(String::from("one")));
+        a.tag(&["product", "catalog"]);
+        pool.save(a).expect("save a");
+        let mut b = ArrayCacheItem::miss("product:2");
+        b.set(Arc::new(String::from("two")));
+        b.tag(&["product"]);
+        pool.save(b).expect("save b");
+        assert_eq!(
+            pool.get_item("product:1").expect("get").tags(),
+            &["product".to_owned(), "catalog".to_owned()]
+        );
+        assert_eq!(pool.invalidate_tags(&["product"]).expect("inv"), 2);
+        assert!(!pool.get_item("product:1").expect("get").is_hit());
+
+        let mut c = ArrayCacheItem::miss("k");
+        c.set(Arc::new(String::from("v")));
+        c.tag(&["keep"]);
+        pool.save(c).expect("save");
+        let mut overwrite = ArrayCacheItem::miss("k");
+        overwrite.set(Arc::new(String::from("v2")));
+        pool.save(overwrite).expect("overwrite");
+        assert_eq!(pool.get_item("k").expect("get").tags(), &[] as &[String]);
+        assert_eq!(pool.invalidate_tags(&["keep"]).expect("gone"), 0);
+    }
+
+    #[test]
+    fn blank_idx_lines_and_empty_tag_ignored() {
+        let (dir, pool) = open_pool();
+        let mut item = ArrayCacheItem::miss("k");
+        item.set(Arc::new(String::from("v")));
+        item.tag(&["", "live"]);
+        pool.save(item).expect("save");
+        assert_eq!(
+            pool.get_item("k").expect("get").tags(),
+            &[String::from("live")]
+        );
+        let idx = dir
+            .path()
+            .join("pool")
+            .join(".tags")
+            .join(format!("{}.idx", hex_key("live")));
+        let mut body = std::fs::read_to_string(&idx).expect("read idx");
+        body.push_str("\n\nzz\n");
+        std::fs::write(&idx, body).expect("pad idx");
+        assert_eq!(pool.invalidate_tags(&["", "live"]).expect("inv"), 1);
+        assert!(!pool.get_item("k").expect("get").is_hit());
+    }
+
+    #[test]
+    fn unhex_round_trip() {
+        use super::unhex_key;
+        let key = "product:42";
+        assert_eq!(unhex_key(&hex_key(key)).as_deref(), Some(key));
+        assert!(unhex_key("abc").is_none());
+        assert!(unhex_key("zz").is_none());
+    }
+
+    #[test]
+    fn parse_v1_and_truncated_v2_and_clear_tags_dir() {
+        use super::{
+            HEADER_V1_LEN, VERSION_V1, encode_record, encode_record_with_tags, parse_record,
+        };
+
+        let mut v1 = b"SCFS".to_vec();
+        v1.push(VERSION_V1);
+        v1.extend_from_slice(&0_u64.to_le_bytes());
+        v1.extend_from_slice(b"hi");
+        let (expires, tags, payload) = parse_record(&v1).expect("v1");
+        assert_eq!(expires, 0);
+        assert_eq!(tags, Vec::<String>::new());
+        assert_eq!(payload, b"hi");
+
+        assert!(parse_record(b"SCFS\x02\0\0\0\0\0\0\0\0").is_none());
+        let mut truncated = encode_record(0, b"x");
+        truncated.truncate(HEADER_V1_LEN + 2);
+        // claim one tag then omit body
+        truncated[HEADER_V1_LEN] = 1;
+        truncated[HEADER_V1_LEN + 1] = 0;
+        assert!(parse_record(&truncated).is_none());
+
+        // Tag length larger than remaining bytes.
+        let mut short_tag = encode_record_with_tags(0, &[String::from("ab")], b"x");
+        short_tag.truncate(HEADER_V1_LEN + 2 + 2 + 1);
+        assert!(parse_record(&short_tag).is_none());
+
+        // Invalid UTF-8 inside a tag length.
+        let mut bad_utf8 = encode_record(0, b"x");
+        // Rewrite as one tag of length 1 with invalid byte 0xFF.
+        bad_utf8.truncate(HEADER_V1_LEN);
+        bad_utf8.extend_from_slice(&1_u16.to_le_bytes());
+        bad_utf8.extend_from_slice(&1_u16.to_le_bytes());
+        bad_utf8.push(0xFF);
+        bad_utf8.extend_from_slice(b"x");
+        assert!(parse_record(&bad_utf8).is_none());
+
+        // Unknown format version.
+        let mut bad_ver = b"SCFS".to_vec();
+        bad_ver.push(9);
+        bad_ver.extend_from_slice(&0_u64.to_le_bytes());
+        assert!(parse_record(&bad_ver).is_none());
+
+        let (dir, pool) = open_pool();
+        let mut item = ArrayCacheItem::miss("t");
+        item.set(Arc::new(String::from("v")));
+        item.tag(&["z"]);
+        pool.save(item).expect("save");
+        pool.clear().expect("clear removes .tags");
+        assert!(!pool.get_item("t").expect("get").is_hit());
+
+        // Stale tag name with missing index file is ignored on delete.
+        let mut item = ArrayCacheItem::miss("orphan");
+        item.set(Arc::new(String::from("v")));
+        item.tag(&["gone"]);
+        pool.save(item).expect("save");
+        let idx = dir
+            .path()
+            .join("pool")
+            .join(".tags")
+            .join(format!("{}.idx", hex_key("gone")));
+        std::fs::remove_file(&idx).expect("drop idx");
+        assert!(pool.delete_item("orphan").expect("delete"));
     }
 
     #[test]
@@ -444,7 +736,7 @@ mod tests {
         assert!(!pool.get_item("keep").expect("get").is_hit());
 
         assert!(parse_record(b"short").is_none());
-        assert!(parse_record(b"SCFS\x02\0\0\0\0\0\0\0\0").is_none());
+        assert!(parse_record(b"SCFS\x63\0\0\0\0\0\0\0\0").is_none());
         assert!(!is_expired_unix_ms(0));
         assert!(is_expired_unix_ms(1));
         assert!(!is_expired_unix_ms(u64::MAX));

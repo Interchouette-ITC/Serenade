@@ -1,5 +1,6 @@
 //! Redis-backed [`CacheItemPool`](crate::CacheItemPool).
 
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -7,7 +8,7 @@ use r2d2::Pool;
 use redis::{Client, Commands, RedisError};
 
 use super::RedisAdapterConfig;
-use super::keys::redis_key;
+use super::keys::{item_tags_key, redis_key, tag_members_key};
 use crate::key::validate_logical_key;
 use crate::marshaller::CacheMarshaller;
 use crate::{ArrayCacheItem, CacheError, CacheItemPool};
@@ -56,6 +57,72 @@ impl RedisAdapter {
     fn prefixed(&self, key: &str) -> Result<String, CacheError> {
         redis_key(&self.prefix, key)
     }
+
+    fn load_item_tags(
+        &self,
+        conn: &mut r2d2::PooledConnection<Client>,
+        key: &str,
+    ) -> Result<Vec<String>, CacheError> {
+        let tags_key = item_tags_key(&self.prefix, key);
+        let tags: HashSet<String> = conn
+            .smembers(&tags_key)
+            .map_err(|error| map_redis(&error))?;
+        let mut list: Vec<String> = tags.into_iter().collect();
+        list.sort();
+        Ok(list)
+    }
+
+    fn unlink_item_tags(
+        &self,
+        conn: &mut r2d2::PooledConnection<Client>,
+        key: &str,
+    ) -> Result<(), CacheError> {
+        let tags_key = item_tags_key(&self.prefix, key);
+        let tags: HashSet<String> = conn
+            .smembers(&tags_key)
+            .map_err(|error| map_redis(&error))?;
+        for tag in &tags {
+            let members = tag_members_key(&self.prefix, tag);
+            let _: () = conn
+                .srem(&members, key)
+                .map_err(|error| map_redis(&error))?;
+        }
+        let _: () = conn.del(&tags_key).map_err(|error| map_redis(&error))?;
+        Ok(())
+    }
+
+    fn link_item_tags(
+        &self,
+        conn: &mut r2d2::PooledConnection<Client>,
+        key: &str,
+        tags: &[String],
+    ) -> Result<(), CacheError> {
+        if tags.is_empty() {
+            return Ok(());
+        }
+        let tags_key = item_tags_key(&self.prefix, key);
+        for tag in tags.iter().filter(|tag| !tag.is_empty()) {
+            let members = tag_members_key(&self.prefix, tag);
+            let _: () = conn
+                .sadd(&members, key)
+                .map_err(|error| map_redis(&error))?;
+            let _: () = conn
+                .sadd(&tags_key, tag.as_str())
+                .map_err(|error| map_redis(&error))?;
+        }
+        Ok(())
+    }
+
+    fn delete_value_and_tags(
+        &self,
+        conn: &mut r2d2::PooledConnection<Client>,
+        key: &str,
+        redis_key: &str,
+    ) -> Result<bool, CacheError> {
+        self.unlink_item_tags(conn, key)?;
+        let removed: i32 = conn.del(redis_key).map_err(|error| map_redis(&error))?;
+        Ok(removed > 0)
+    }
 }
 
 impl CacheItemPool for RedisAdapter {
@@ -64,13 +131,20 @@ impl CacheItemPool for RedisAdapter {
         let mut conn = self.connection()?;
         let value: Option<Vec<u8>> = conn.get(&redis_key).map_err(|error| map_redis(&error))?;
         let Some(bytes) = value else {
+            let _ = self.unlink_item_tags(&mut conn, key);
             return Ok(ArrayCacheItem::miss(key));
         };
         let Ok(decoded) = self.marshaller.unmarshal(&bytes) else {
+            let _ = self.delete_value_and_tags(&mut conn, key, &redis_key);
             return Ok(ArrayCacheItem::miss(key));
         };
         let pttl: i64 = conn.pttl(&redis_key).map_err(|error| map_redis(&error))?;
-        Ok(item_from_pttl(key, decoded, pttl))
+        if pttl == -2 {
+            let _ = self.unlink_item_tags(&mut conn, key);
+            return Ok(ArrayCacheItem::miss(key));
+        }
+        let tags = self.load_item_tags(&mut conn, key)?;
+        Ok(item_from_pttl(key, decoded, pttl).with_tags(tags))
     }
 
     fn save(&self, item: ArrayCacheItem) -> Result<(), CacheError> {
@@ -78,16 +152,15 @@ impl CacheItemPool for RedisAdapter {
         let redis_key = self.prefixed(&key)?;
         let mut conn = self.connection()?;
         let Some(value) = value else {
-            let _: () = conn.del(&redis_key).map_err(|error| map_redis(&error))?;
+            let _ = self.delete_value_and_tags(&mut conn, &key, &redis_key)?;
             return Ok(());
         };
         if expires_at.is_some_and(|at| Instant::now() >= at) {
-            let _: () = conn.del(&redis_key).map_err(|error| map_redis(&error))?;
+            let _ = self.delete_value_and_tags(&mut conn, &key, &redis_key)?;
             return Ok(());
         }
+        self.unlink_item_tags(&mut conn, &key)?;
         let bytes = self.marshaller.marshal(value.as_ref())?;
-        // Tags are not persisted on the Redis adapter yet.
-        let _ = tags;
         match remaining_px_ms(expires_at) {
             Some(px) => {
                 redis::cmd("SET")
@@ -104,14 +177,14 @@ impl CacheItemPool for RedisAdapter {
                     .map_err(|error| map_redis(&error))?;
             }
         }
+        self.link_item_tags(&mut conn, &key, &tags)?;
         Ok(())
     }
 
     fn delete_item(&self, key: &str) -> Result<bool, CacheError> {
         let redis_key = self.prefixed(key)?;
         let mut conn = self.connection()?;
-        let removed: i32 = conn.del(&redis_key).map_err(|error| map_redis(&error))?;
-        Ok(removed > 0)
+        self.delete_value_and_tags(&mut conn, key, &redis_key)
     }
 
     fn clear(&self) -> Result<(), CacheError> {
@@ -164,29 +237,57 @@ impl CacheItemPool for RedisAdapter {
         let mut out = Vec::with_capacity(keys.len());
         for (logical, (full_key, value)) in keys.iter().zip(redis_keys.iter().zip(values)) {
             let Some(bytes) = value else {
+                let _ = self.unlink_item_tags(&mut conn, logical);
                 out.push(ArrayCacheItem::miss(*logical));
                 continue;
             };
             let Ok(decoded) = self.marshaller.unmarshal(&bytes) else {
+                let _ = self.delete_value_and_tags(&mut conn, logical, full_key);
                 out.push(ArrayCacheItem::miss(*logical));
                 continue;
             };
             let pttl: i64 = conn.pttl(full_key).map_err(|error| map_redis(&error))?;
-            out.push(item_from_pttl(logical, decoded, pttl));
+            if pttl == -2 {
+                let _ = self.unlink_item_tags(&mut conn, logical);
+                out.push(ArrayCacheItem::miss(*logical));
+                continue;
+            }
+            let tags = self.load_item_tags(&mut conn, logical)?;
+            out.push(item_from_pttl(logical, decoded, pttl).with_tags(tags));
         }
         Ok(out)
     }
 
     fn delete_items(&self, keys: &[&str]) -> Result<usize, CacheError> {
-        if keys.is_empty() {
-            return Ok(0);
+        let mut removed = 0;
+        for key in keys {
+            if self.delete_item(key)? {
+                removed += 1;
+            }
         }
-        let redis_keys: Vec<String> = keys
-            .iter()
-            .map(|key| self.prefixed(key))
-            .collect::<Result<Vec<_>, _>>()?;
+        Ok(removed)
+    }
+
+    fn invalidate_tags(&self, tags: &[&str]) -> Result<usize, CacheError> {
+        let mut keys = HashSet::new();
         let mut conn = self.connection()?;
-        let removed: usize = conn.del(redis_keys).map_err(|error| map_redis(&error))?;
+        for tag in tags {
+            if tag.is_empty() {
+                continue;
+            }
+            let members_key = tag_members_key(&self.prefix, tag);
+            let members: HashSet<String> = conn
+                .smembers(&members_key)
+                .map_err(|error| map_redis(&error))?;
+            keys.extend(members);
+        }
+        drop(conn);
+        let mut removed = 0;
+        for key in keys {
+            if self.delete_item(&key)? {
+                removed += 1;
+            }
+        }
         Ok(removed)
     }
 }
