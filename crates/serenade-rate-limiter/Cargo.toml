@@ -1,6 +1,6 @@
 [package]
 name = "serenade-rate-limiter"
-description = "Symfony-shaped rate limiter policies, consume API, and in-memory storage"
+description = "Symfony-shaped rate limiter policies, consume API, and storage adapters"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,10 +8,20 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = []
+## Enable [`crate::RedisRateLimiterStorage`] via redis-rs + r2d2.
+redis = ["dep:redis", "dep:r2d2"]
+
 [dependencies]
 serenade-di = { workspace = true }
 serenade-http = { workspace = true }
 thiserror = { workspace = true }
+redis = { version = "0.27", optional = true, default-features = false, features = [
+    "r2d2",
+    "script",
+] }
+r2d2 = { version = "0.8", optional = true }
 
 [lints]
 workspace = true

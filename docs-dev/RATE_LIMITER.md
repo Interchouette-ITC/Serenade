@@ -19,6 +19,19 @@ Symfony **RateLimiter** analogue for login / API / form abuse. Serenade owns pol
 | Store | Role |
 | --- | --- |
 | `InMemoryRateLimiterStorage` | Process-local (default DI) |
+| `RedisRateLimiterStorage` (feature `redis`) | Multi-node windows via Redis keys (unix-millis timestamps; `Instant` bridged at the storage boundary) |
+
+```rust
+use serenade_rate_limiter::{RedisRateLimiterStorage, RedisRateLimiterStorageConfig};
+
+let storage = RedisRateLimiterStorage::connect(
+    RedisRateLimiterStorageConfig::new("redis://127.0.0.1:6379/0")
+        .with_prefix("serenade:rate-limiter:")
+        .with_warm_pool(true),
+)?;
+```
+
+Requires a live Redis and crate feature `redis` (`redis-rs` + `r2d2`). Consume uses `WATCH`/`MULTI` so concurrent nodes share the same budget.
 
 ## App helpers
 

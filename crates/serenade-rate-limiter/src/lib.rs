@@ -3,6 +3,7 @@
 //! - [`Policy`]: token-bucket or fixed-window limits
 //! - [`RateLimiter`] / [`RateLimiterFactory`]: `consume` / `reset`
 //! - [`RateLimiterStorage`] / [`InMemoryRateLimiterStorage`]: persist window state
+//! - [`RedisRateLimiterStorage`] (feature `redis`): multi-node Redis windows
 //! - [`RateLimit`]: accept / remaining / retry-after
 //! - [`consume_or_exceed`] / [`require_accepted`]: app-facing helpers
 //! - [`too_many_requests`]: HTTP 429 bridge
@@ -41,6 +42,9 @@ mod policy;
 mod rate_limit;
 mod storage;
 
+#[cfg(feature = "redis")]
+mod redis;
+
 pub use compile_pass::{
     DEFAULT_RATE_LIMITER_STORAGE_SERVICE, RATE_LIMITER_STORAGE_TAG, RateLimiterStorageService,
     RegisterDefaultRateLimiterPass,
@@ -54,6 +58,9 @@ pub use memory::InMemoryRateLimiterStorage;
 pub use policy::Policy;
 pub use rate_limit::RateLimit;
 pub use storage::{RateLimiterStorage, WindowState};
+
+#[cfg(feature = "redis")]
+pub use redis::{RedisRateLimiterStorage, RedisRateLimiterStorageConfig};
 
 /// Compile-time crate version for diagnostics.
 #[must_use]
