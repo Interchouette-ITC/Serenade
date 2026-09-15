@@ -293,6 +293,7 @@ Rate limiting lives in **`serenade-rate-limiter`** ([#186](https://github.com/In
 | --- | --- |
 | `Policy` / `RateLimiterFactory` / `RateLimiter` | Token bucket or fixed window; consume / reset |
 | `InMemoryRateLimiterStorage` | Process-local (DI default) |
+| `RedisRateLimiterStorage` (feature `redis`) | Multi-node Redis windows |
 | `consume_or_exceed` / `too_many_requests` | App helper + HTTP 429 bridge |
 | `RegisterDefaultRateLimiterPass` | DI: service `rate_limiter.storage` defaults to in-memory |
 
