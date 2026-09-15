@@ -80,6 +80,7 @@ impl FilesystemAdapter {
         fs::create_dir_all(&root).map_err(|error| CacheError::Pool {
             message: format!("create cache dir {}: {error}", root.display()),
         })?;
+        let _ = fs::create_dir_all(root.join(".tags"));
         Ok(Self { root, marshaller })
     }
 
@@ -133,9 +134,6 @@ impl FilesystemAdapter {
         if tags.is_empty() {
             return Ok(());
         }
-        fs::create_dir_all(self.tags_dir()).map_err(|error| CacheError::Pool {
-            message: format!("create tags dir: {error}"),
-        })?;
         let encoded_key = hex_key(key);
         for tag in tags.iter().filter(|tag| !tag.is_empty()) {
             let path = self.tag_index_path(tag);
@@ -231,6 +229,7 @@ impl CacheItemPool for FilesystemAdapter {
         if tags_dir.is_dir() {
             let _ = fs::remove_dir_all(&tags_dir);
         }
+        let _ = fs::create_dir_all(&tags_dir);
         Ok(())
     }
 

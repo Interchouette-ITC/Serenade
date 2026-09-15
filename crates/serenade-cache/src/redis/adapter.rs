@@ -139,10 +139,6 @@ impl CacheItemPool for RedisAdapter {
             return Ok(ArrayCacheItem::miss(key));
         };
         let pttl: i64 = conn.pttl(&redis_key).map_err(|error| map_redis(&error))?;
-        if pttl == -2 {
-            let _ = self.unlink_item_tags(&mut conn, key);
-            return Ok(ArrayCacheItem::miss(key));
-        }
         let tags = self.load_item_tags(&mut conn, key)?;
         Ok(item_from_pttl(key, decoded, pttl).with_tags(tags))
     }
@@ -247,11 +243,6 @@ impl CacheItemPool for RedisAdapter {
                 continue;
             };
             let pttl: i64 = conn.pttl(full_key).map_err(|error| map_redis(&error))?;
-            if pttl == -2 {
-                let _ = self.unlink_item_tags(&mut conn, logical);
-                out.push(ArrayCacheItem::miss(*logical));
-                continue;
-            }
             let tags = self.load_item_tags(&mut conn, logical)?;
             out.push(item_from_pttl(logical, decoded, pttl).with_tags(tags));
         }
