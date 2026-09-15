@@ -101,6 +101,18 @@ Server crates stay thin:
 
 `serenade-http-axum` is the same bridge for Axum (`from_axum`, `to_axum`, `dispatch` / `dispatch_async`, `listen` / `router`). Pick Actix or Axum at the app edge; the foundation crate stays unchanged.
 
+## HTTP ops (request-id, probes, drain)
+
+Built-ins in `serenade-http` (see [HTTP_OPS.md](HTTP_OPS.md)):
+
+| Helper | Role |
+| --- | --- |
+| `RequestIdMiddleware` / `AsyncRequestIdMiddleware` | Propagate or generate `x-request-id` |
+| `HealthMiddleware` / `AsyncHealthMiddleware` | `/healthz` + `/readyz` short-circuit |
+| `Readiness` | Shared ready bit; `mark_not_ready` before drain |
+
+Stop order: mark not ready → stop Actix/Axum listener → `Kernel::shutdown()` on the app kernel.
+
 ## Messenger and jobs
 
 | Pattern | Use |

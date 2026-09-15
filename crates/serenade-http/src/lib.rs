@@ -16,6 +16,7 @@ mod loader;
 mod matcher;
 mod method;
 mod middleware;
+mod ops;
 mod request;
 mod response;
 mod route;
@@ -34,6 +35,11 @@ pub use loader::{RouteLoader, load_routes};
 pub use matcher::{MatchResult, ROUTE_ATTRIBUTE, UrlMatcher};
 pub use method::Method;
 pub use middleware::Middleware;
+pub use ops::{
+    AsyncHealthMiddleware, AsyncRequestIdMiddleware, HEALTHZ_PATH, HealthMiddleware, READYZ_PATH,
+    REQUEST_ID_ATTRIBUTE, REQUEST_ID_HEADER, Readiness, RequestIdMiddleware, ensure_request_id,
+    healthz, readyz, request_id,
+};
 pub use request::Request;
 pub use response::Response;
 pub use route::{Route, RouteCollection};
