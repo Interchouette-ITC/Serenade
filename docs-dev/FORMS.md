@@ -2,19 +2,19 @@
 
 HTML form bind, CSRF (default on), and XSS-safe render helpers.
 
-Apps declare fields and constraints. **Serenade owns** CSRF validation and HTML escaping so MyFeed / RustaShop stay thin.
+Apps declare fields and constraints. **Serenade owns** CSRF validation and HTML escaping so apps stay thin.
 
 ## Crate
 
 **`serenade-form`** ([#110](https://github.com/Interchouette-ITC/Serenade/issues/110))
 
-| Piece | Role |
-| --- | --- |
-| `Form` / `FormBuilder` | Build fields, bind POST body, validate via `serenade-validator` |
-| CSRF (default **on**) | Hidden `_token` field; [`HmacCsrfTokenManager`](SECURITY.md) |
-| `escape_html` / `escape_attr` | Twig autoescape analogue for render |
-| `parse_urlencoded` | `application/x-www-form-urlencoded` body → map |
-| `Form::render` | Escaped `<form>` markup including CSRF when enabled |
+| Piece                         | Role                                                            |
+| ----------------------------- | --------------------------------------------------------------- |
+| `Form` / `FormBuilder`        | Build fields, bind POST body, validate via `serenade-validator` |
+| CSRF (default **on**)         | Hidden `_token` field; [`HmacCsrfTokenManager`](SECURITY.md)    |
+| `escape_html` / `escape_attr` | Twig autoescape analogue for render                             |
+| `parse_urlencoded`            | `application/x-www-form-urlencoded` body → map                  |
+| `Form::render`                | Escaped `<form>` markup including CSRF when enabled             |
 
 ## Flow
 

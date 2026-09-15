@@ -6,18 +6,18 @@ CSRF remains HMAC-stateless in `serenade-security` (no session required).
 
 ## Pieces
 
-| Piece | Role |
-| --- | --- |
-| `Session` | In-request attribute bag (`get` / `set` / `remove` / `clear` / `invalidate`) |
-| `FlashBag` | One-shot messages (`add` / `peek` / `get` / `all` / `clear`) via `session.flash()` |
-| `SessionStore` | Persist attribute maps by opaque session id |
-| `MemorySessionStore` | Process-local store (tests / single-node) |
-| `CookieSession` | Load/save via store + session-id cookie |
-| `CookieSessionOptions` | Cookie name, path, `HttpOnly`, `Secure`, `SameSite`, `Max-Age` |
-| `SessionMiddleware` / `AsyncSessionMiddleware` | Open session on request, commit + `Set-Cookie` on response |
-| `SESSION_ATTRIBUTE` | `_serenade_session` (request attribute key) |
-| `DEFAULT_SESSION_COOKIE` | `SERENADE_SESSION` |
-| `FLASH_SESSION_KEY` | `_serenade.flashes` (internal attribute) |
+| Piece                                          | Role                                                                               |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Session`                                      | In-request attribute bag (`get` / `set` / `remove` / `clear` / `invalidate`)       |
+| `FlashBag`                                     | One-shot messages (`add` / `peek` / `get` / `all` / `clear`) via `session.flash()` |
+| `SessionStore`                                 | Persist attribute maps by opaque session id                                        |
+| `MemorySessionStore`                           | Process-local store (tests / single-node)                                          |
+| `CookieSession`                                | Load/save via store + session-id cookie                                            |
+| `CookieSessionOptions`                         | Cookie name, path, `HttpOnly`, `Secure`, `SameSite`, `Max-Age`                     |
+| `SessionMiddleware` / `AsyncSessionMiddleware` | Open session on request, commit + `Set-Cookie` on response                         |
+| `SESSION_ATTRIBUTE`                            | `_serenade_session` (request attribute key)                                        |
+| `DEFAULT_SESSION_COOKIE`                       | `SERENADE_SESSION`                                                                 |
+| `FLASH_SESSION_KEY`                            | `_serenade.flashes` (internal attribute)                                           |
 
 ## Kernel middleware habit
 
@@ -80,14 +80,14 @@ let peek = session.flash().peek("error");     // keeps
 
 ## Relation to security
 
-| Concern | Owner |
-| --- | --- |
-| CSRF tokens | `serenade-security` (`HmacCsrfTokenManager`) |
-| Session stickiness / flash / login token storage | `serenade-session` (`SessionMiddleware`) |
+| Concern                                          | Owner                                        |
+| ------------------------------------------------ | -------------------------------------------- |
+| CSRF tokens                                      | `serenade-security` (`HmacCsrfTokenManager`) |
+| Session stickiness / flash / login token storage | `serenade-session` (`SessionMiddleware`)     |
 
 See also [SECURITY.md](SECURITY.md).
 
-## Non-goals (this slice)
+## Non-goals
 
 - Redis / DB session cluster as a required v1 product
 - Signed cookie that embeds the whole attribute map (id + store only for now)

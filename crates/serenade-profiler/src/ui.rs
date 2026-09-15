@@ -82,7 +82,7 @@ pub fn profiler_detail_html(profile: &ProfileData, prefix: &str) -> String {
     let route = profile
         .route
         .as_deref()
-        .map_or_else(|| "—".to_owned(), escape);
+        .map_or_else(|| "-".to_owned(), escape);
     let mut queries = String::new();
     if profile.queries.is_empty() {
         queries.push_str("<li>No queries recorded.</li>");

@@ -1,6 +1,23 @@
 //! PSR-like cache contracts, in-memory [`ArrayAdapter`], and [`FilesystemAdapter`].
 //!
 //! Enable Cargo feature `redis` for `RedisAdapter` (redis-rs + r2d2).
+//!
+//! # Examples
+//!
+//! ```
+//! use std::sync::Arc;
+//! use serenade_cache::{ArrayAdapter, ArrayCacheItem, CacheItem, CacheItemPool};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let pool = ArrayAdapter::new();
+//! let mut item = ArrayCacheItem::miss("product:42");
+//! item.set(Arc::new(String::from("payload")));
+//! pool.save(item)?;
+//! let loaded = pool.get_item("product:42")?;
+//! assert!(loaded.is_hit());
+//! # Ok(())
+//! # }
+//! ```
 
 mod compile_pass;
 mod error;
