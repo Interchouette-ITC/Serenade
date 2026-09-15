@@ -22,6 +22,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [SEARCH.md](SEARCH.md)       | Document index contracts, MemorySearchAdapter          |
 | [MAILER.md](MAILER.md)       | Email + Mime lite, Null/File/SMTP transports, DI       |
 | [HTTP_CLIENT.md](HTTP_CLIENT.md) | Outbound HttpClient, mock + reqwest, DI            |
+| [MESSENGER.md](MESSENGER.md)     | Sync bus, in-memory transport, Redis wire frames   |
 | [LOCK.md](LOCK.md)               | Named locks, in-memory / filesystem / Redis, DI    |
 | [RATE_LIMITER.md](RATE_LIMITER.md) | Rate limiter policies, helpers, HTTP 429, DI     |
 | [SCHEDULER.md](SCHEDULER.md)     | Scheduler triggers, handlers, console, DI         |

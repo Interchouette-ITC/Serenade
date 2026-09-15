@@ -5832,6 +5832,8 @@ name = "serenade-messenger"
 version = "0.1.0"
 dependencies = [
  "insta",
+ "r2d2",
+ "redis",
  "thiserror 2.0.20",
  "tokio",
 ]
