@@ -5,6 +5,22 @@ use tempfile::tempdir;
 
 use super::*;
 
+struct NamedAddress(Address);
+
+impl TryInto<Address> for NamedAddress {
+    type Error = MailerError;
+
+    fn try_into(self) -> Result<Address, Self::Error> {
+        Ok(self.0)
+    }
+}
+
+fn named_address(email: &str, name: Option<&str>) -> NamedAddress {
+    NamedAddress(
+        Address::with_name(email, name).unwrap_or_else(|error| panic!("named address: {error:?}")),
+    )
+}
+
 #[test]
 fn address_rejects_empty_and_bare_at() {
     assert!(Address::new("").is_err());
@@ -123,6 +139,45 @@ fn compile_pass_skips_when_default_already_registered() {
     );
 }
 
+#[test]
+fn render_message_formats_named_multi_recipient_and_html_only() {
+    use crate::render::render_message;
+
+    let email = Email::new()
+        .from(named_address("from@example.test", Some("From User")))
+        .expect("from")
+        .to(named_address("one@example.test", Some("One")))
+        .expect("to")
+        .to("two@example.test")
+        .expect("to2")
+        .subject("Hi")
+        .html("<p>only html</p>");
+
+    let dump = render_message(&email);
+    assert!(dump.contains("From: From User <from@example.test>"));
+    assert!(dump.contains("To: One <one@example.test>, two@example.test"));
+    assert!(dump.contains("<p>only html</p>"));
+    assert!(!dump.contains("-- html --"));
+}
+
+#[test]
+fn render_message_text_only_skips_optional_headers() {
+    use crate::render::render_message;
+
+    let email = Email::new()
+        .from("from@example.test")
+        .expect("from")
+        .to("to@example.test")
+        .expect("to")
+        .subject("Plain")
+        .text("body");
+
+    let dump = render_message(&email);
+    assert!(!dump.contains("Cc:"));
+    assert!(!dump.contains("Bcc:"));
+    assert!(dump.contains("body"));
+}
+
 #[cfg(feature = "smtp")]
 #[test]
 fn smtp_builder_dangerous_localhost() {
@@ -133,6 +188,35 @@ fn smtp_builder_dangerous_localhost() {
     // No listener expected; connection failure is still a Transport error.
     let err = transport.send(&sample_email()).expect_err("no smtp");
     assert!(matches!(err, MailerError::Transport { .. }));
+}
+
+#[cfg(feature = "smtp")]
+#[test]
+fn smtp_send_success_against_loopback() {
+    let port = spawn_loopback_smtp();
+    let transport = SmtpTransport::unencrypted("127.0.0.1")
+        .port(port)
+        .build()
+        .expect("transport");
+    let email = Email::new()
+        .from("from@example.test")
+        .expect("from")
+        .to("to@example.test")
+        .expect("to")
+        .subject("Hi")
+        .text("body");
+    transport.send(&email).expect("smtp send");
+}
+
+#[cfg(feature = "smtp")]
+#[test]
+fn smtp_send_validates_before_connect() {
+    let transport = SmtpTransport::unencrypted_localhost()
+        .port(2525)
+        .build()
+        .expect("build");
+    let email = Email::new().to("to@example.test").expect("to");
+    assert_eq!(transport.send(&email), Err(MailerError::MissingSender));
 }
 
 fn sample_email() -> Email {
@@ -155,4 +239,85 @@ fn sample_email() -> Email {
             "text/plain",
             b"hi".as_slice(),
         ))
+}
+
+#[cfg(feature = "smtp")]
+fn spawn_loopback_smtp() -> u16 {
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind smtp");
+    let port = listener.local_addr().expect("addr").port();
+    let (ready_tx, ready_rx) = mpsc::channel();
+    thread::spawn(move || {
+        ready_tx.send(()).expect("ready");
+        for stream in listener.incoming() {
+            let Ok(stream) = stream else {
+                continue;
+            };
+            let _ = smtp_session(stream);
+        }
+    });
+    ready_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("smtp thread");
+    port
+}
+
+#[cfg(feature = "smtp")]
+fn smtp_reply(stream: &mut std::net::TcpStream, code: u16, text: &str) -> std::io::Result<()> {
+    use std::io::Write;
+    write!(stream, "{code} {text}\r\n")?;
+    stream.flush()
+}
+
+#[cfg(feature = "smtp")]
+fn smtp_session(mut stream: std::net::TcpStream) -> std::io::Result<()> {
+    use std::io::Read;
+
+    let mut pending = String::new();
+    let mut buf = [0u8; 1024];
+    let mut in_data = false;
+
+    smtp_reply(&mut stream, 220, "localhost ESMTP ready")?;
+    loop {
+        let read = stream.read(&mut buf)?;
+        if read == 0 {
+            break;
+        }
+        pending.push_str(&String::from_utf8_lossy(&buf[..read]));
+        if in_data {
+            if pending.contains("\r\n.\r\n") {
+                in_data = false;
+                pending.clear();
+                smtp_reply(&mut stream, 250, "OK")?;
+            }
+            continue;
+        }
+        while let Some(pos) = pending.find("\r\n") {
+            let line = pending[..pos].trim().to_owned();
+            pending = pending[pos + 2..].to_owned();
+            if line.is_empty() {
+                continue;
+            }
+            let upper = line.to_uppercase();
+            if upper.starts_with("EHLO") || upper.starts_with("HELO") {
+                smtp_reply(&mut stream, 250, "localhost")?;
+                smtp_reply(&mut stream, 250, "PIPELINING")?;
+            } else if upper.starts_with("STARTTLS") {
+                smtp_reply(&mut stream, 502, "Command not implemented")?;
+            } else if upper == "DATA" {
+                in_data = true;
+                smtp_reply(&mut stream, 354, "End data with <CR><LF>.<CR><LF>")?;
+            } else if upper.starts_with("QUIT") {
+                smtp_reply(&mut stream, 221, "Bye")?;
+                return Ok(());
+            } else {
+                smtp_reply(&mut stream, 250, "OK")?;
+            }
+        }
+    }
+    Ok(())
 }
