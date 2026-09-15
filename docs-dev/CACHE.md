@@ -29,8 +29,10 @@ pool.invalidate_tags(&["product"])?; // removes every item tagged `product`
 ```
 
 - Empty tag names are ignored when tagging or invalidating
-- Re-saving an item **without** tags clears its previous tag links on `ArrayAdapter`
-- `FilesystemAdapter` and `RedisAdapter` do not persist tags yet; `invalidate_tags` returns a pool error on those adapters
+- Re-saving an item **without** tags clears its previous tag links
+- `ArrayAdapter` keeps an in-memory tag index
+- `FilesystemAdapter` embeds tags in the on-disk record (format v2) and indexes them under `{prefix}/.tags/`
+- `RedisAdapter` (feature `redis`) stores tag membership in Redis SETs (`{prefix}\0tag\0…` / `{prefix}\0tags\0…`)
 
 ## Filesystem adapter
 
@@ -50,8 +52,9 @@ let pool = FilesystemAdapter::open(
 
 - One file per key under `{directory}/{prefix}/{hex(key)}.cache`
 - File header stores version + absolute expiry (Unix millis); `0` means no TTL
-- Expired items are **deleted on read** (`get_item` / miss path)
-- `clear` removes `*.cache` files in the prefix directory (not the whole disk)
+- Format **v2** also stores invalidation tags; tag membership lives in `{prefix}/.tags/{hex(tag)}.idx`
+- Expired items are **deleted on read** (`get_item` / miss path), including tag unlinking
+- `clear` removes `*.cache` files and the `.tags` index directory (not the whole disk)
 - Values must be marshallable (`BytesMarshaller`: `String` / `Vec<u8>`); other types: serialize in the app first
 - Atomic write via temp file + rename
 
@@ -64,7 +67,8 @@ Enable with `--features redis` on `serenade-cache`.
 - URL: `RedisAdapterConfig::new("redis://127.0.0.1:6379/0")`
 - Logical key `cart:1` becomes Redis key `{prefix}cart:1` (default prefix `serenade:`)
 - TTL uses `SET … PX`
-- `clear` runs `SCAN MATCH {prefix}*` then `DEL` (never `FLUSHDB`)
+- Tags: SET `{prefix}\0tags\0{key}` (tag names) and SET `{prefix}\0tag\0{tag}` (member keys); `invalidate_tags` deletes members
+- `clear` runs `SCAN MATCH {prefix}*` then `DEL` (never `FLUSHDB`), including tag metadata keys
 - Uses the same `BytesMarshaller` as the filesystem adapter
 
 `CacheItemPool` is **sync**. Async HTTP callers should use `spawn_blocking` (or call from sync code).

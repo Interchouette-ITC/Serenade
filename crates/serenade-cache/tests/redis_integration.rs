@@ -62,6 +62,36 @@ fn save_get_delete_and_ttl() {
 }
 
 #[test]
+fn tag_invalidation_across_keys() {
+    let pool = adapter("serenade-it:tags:");
+    pool.clear().expect("clear");
+
+    let mut a = ArrayCacheItem::miss("product:1");
+    a.set(Arc::new(String::from("one")));
+    a.tag(&["product", "catalog"]);
+    pool.save(a).expect("save a");
+
+    let mut b = ArrayCacheItem::miss("product:2");
+    b.set(Arc::new(String::from("two")));
+    b.tag(&["product"]);
+    pool.save(b).expect("save b");
+
+    let mut c = ArrayCacheItem::miss("user:1");
+    c.set(Arc::new(String::from("user")));
+    c.tag(&["user"]);
+    pool.save(c).expect("save c");
+
+    let hit = pool.get_item("product:1").expect("get");
+    assert_eq!(hit.tags(), &["catalog".to_owned(), "product".to_owned()]);
+
+    assert_eq!(pool.invalidate_tags(&["product"]).expect("invalidate"), 2);
+    assert!(!pool.get_item("product:1").expect("get").is_hit());
+    assert!(!pool.get_item("product:2").expect("get").is_hit());
+    assert!(pool.get_item("user:1").expect("get").is_hit());
+    assert_eq!(pool.invalidate_tags(&["", "missing"]).expect("noop"), 0);
+}
+
+#[test]
 fn clear_is_prefix_scoped() {
     let a = adapter("serenade-it:a:");
     let b = adapter("serenade-it:b:");
@@ -141,8 +171,14 @@ fn corrupt_payload_and_expired_save() {
         .expect("seed");
     assert!(!pool.get_item("bad").expect("get").is_hit());
 
-    let items = pool.get_items(&["bad"]).expect("batch");
+    let _: () = redis::cmd("SET")
+        .arg("serenade-it:corrupt:bad-batch")
+        .arg(vec![9_u8, 1, 2])
+        .query(&mut conn)
+        .expect("seed batch");
+    let items = pool.get_items(&["bad-batch"]).expect("batch");
     assert!(!items[0].is_hit());
+    assert!(!pool.has_item("bad-batch").expect("cleaned"));
 
     let mut item = ArrayCacheItem::miss("gone");
     item.set(Arc::new(String::from("x")));

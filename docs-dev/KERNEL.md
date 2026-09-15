@@ -210,8 +210,8 @@ PSR-like pools live in **`serenade-cache`** ([#9](https://github.com/Interchouet
 | --- | --- |
 | `CacheItem` / `ArrayCacheItem` | Key, hit flag, `Arc` value, optional TTL, optional tags |
 | `CacheItemPool` / `ArrayAdapter` | In-memory get/save/delete/clear; `invalidate_tags` |
-| `FilesystemAdapter` | Disk-backed pool; TTL; marshaller for `String` / `Vec<u8>` |
-| `RedisAdapter` (feature `redis`) | redis-rs + r2d2; prefix keys; `SET`/`PX`; SCAN clear |
+| `FilesystemAdapter` | Disk-backed pool; TTL; marshaller; persisted tags |
+| `RedisAdapter` (feature `redis`) | redis-rs + r2d2; prefix keys; `SET`/`PX`; SCAN clear; persisted tags |
 | `cache.pool` tag | DI tag; `RegisterDefaultCachePoolPass` seeds `cache.app` |
 | HTTP headers | `HttpCacheHeaders` / `maybe_not_modified` in `serenade-http` (see [CACHE.md](CACHE.md)) |
 

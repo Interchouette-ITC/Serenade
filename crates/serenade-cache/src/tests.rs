@@ -231,14 +231,59 @@ fn tag_dedupes_and_survives_overwrite_without_tags() {
 
 #[test]
 fn filesystem_and_default_reject_tag_invalidation() {
+    // Default trait impl (no override) still rejects tags.
+    struct Unsupported;
+    impl CacheItemPool for Unsupported {
+        fn get_item(&self, key: &str) -> Result<ArrayCacheItem, CacheError> {
+            Ok(ArrayCacheItem::miss(key))
+        }
+        fn save(&self, _item: ArrayCacheItem) -> Result<(), CacheError> {
+            Ok(())
+        }
+        fn delete_item(&self, _key: &str) -> Result<bool, CacheError> {
+            Ok(false)
+        }
+        fn clear(&self) -> Result<(), CacheError> {
+            Ok(())
+        }
+    }
+    assert!(matches!(
+        Unsupported.invalidate_tags(&["x"]),
+        Err(CacheError::Pool { .. })
+    ));
+}
+
+#[test]
+fn filesystem_tag_invalidation_removes_matching_keys() {
     let dir = tempfile::tempdir().expect("tempdir");
     let pool = super::FilesystemAdapter::open(
         super::FilesystemAdapterConfig::new(dir.path()),
         Arc::new(super::BytesMarshaller),
     )
     .expect("open");
-    assert!(matches!(
-        pool.invalidate_tags(&["x"]),
-        Err(CacheError::Pool { .. })
-    ));
+
+    let mut a = ArrayCacheItem::miss("product:1");
+    a.set(Arc::new(String::from("one")));
+    a.tag(&["product", "catalog"]);
+    pool.save(a).expect("save a");
+
+    let mut b = ArrayCacheItem::miss("product:2");
+    b.set(Arc::new(String::from("two")));
+    b.tag(&["product"]);
+    pool.save(b).expect("save b");
+
+    let mut c = ArrayCacheItem::miss("user:1");
+    c.set(Arc::new(String::from("user")));
+    c.tag(&["user"]);
+    pool.save(c).expect("save c");
+
+    let hit = pool.get_item("product:1").expect("get");
+    assert_eq!(hit.tags(), &["product".to_owned(), "catalog".to_owned()]);
+
+    assert_eq!(pool.invalidate_tags(&["product"]).expect("invalidate"), 2);
+    assert!(!pool.get_item("product:1").expect("get").is_hit());
+    assert!(!pool.get_item("product:2").expect("get").is_hit());
+    assert!(pool.get_item("user:1").expect("get").is_hit());
+    assert_eq!(pool.invalidate_tags(&["missing"]).expect("noop"), 0);
+    assert_eq!(pool.invalidate_tags(&[""]).expect("empty tag"), 0);
 }

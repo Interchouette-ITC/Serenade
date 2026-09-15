@@ -13,9 +13,21 @@ pub fn redis_key(prefix: &str, key: &str) -> Result<String, CacheError> {
     Ok(format!("{prefix}{key}"))
 }
 
+/// Redis SET of tag names attached to a logical item key.
+#[must_use]
+pub fn item_tags_key(prefix: &str, key: &str) -> String {
+    format!("{prefix}\0tags\0{key}")
+}
+
+/// Redis SET of logical keys that carry `tag`.
+#[must_use]
+pub fn tag_members_key(prefix: &str, tag: &str) -> String {
+    format!("{prefix}\0tag\0{tag}")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::redis_key;
+    use super::{item_tags_key, redis_key, tag_members_key};
     use crate::CacheError;
 
     #[test]
@@ -24,6 +36,8 @@ mod tests {
             redis_key("serenade:", "cart:1").expect("key"),
             "serenade:cart:1"
         );
+        assert_eq!(item_tags_key("p:", "k"), "p:\0tags\0k");
+        assert_eq!(tag_members_key("p:", "t"), "p:\0tag\0t");
     }
 
     #[test]

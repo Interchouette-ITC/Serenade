@@ -72,7 +72,9 @@ pub trait CacheItemPool: Send + Sync {
 
     /// Deletes every item tagged with any of `tags`. Returns how many keys were removed.
     ///
-    /// Default: not supported (returns [`CacheError::Pool`]). [`ArrayAdapter`] implements tags.
+    /// Default: not supported (returns [`CacheError::Pool`]).
+    /// [`ArrayAdapter`] and [`crate::FilesystemAdapter`] implement tags;
+    /// [`crate::RedisAdapter`] does when built with feature `redis`.
     ///
     /// # Errors
     ///
