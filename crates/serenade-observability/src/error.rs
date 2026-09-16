@@ -30,4 +30,8 @@ pub enum ObservabilityError {
     /// A global tracing subscriber is already installed.
     #[error("tracing subscriber already initialized")]
     AlreadyInitialized,
+
+    /// OpenTelemetry pipeline configuration or exporter setup failed.
+    #[error("opentelemetry: {0}")]
+    Otel(String),
 }

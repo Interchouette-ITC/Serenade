@@ -84,6 +84,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-scheduler --all-targets --features messenger
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-observability otel feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-observability --all-targets --features otel
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -105,6 +110,9 @@ jobs:
       - name: Test serenade-scheduler with messenger
         if: needs.changes.outputs.code == 'true'
         run: cargo test -p serenade-scheduler --features messenger
+      - name: Test serenade-observability with otel
+        if: needs.changes.outputs.code == 'true'
+        run: cargo test -p serenade-observability --features otel
 
   cache-redis:
     name: cache redis
