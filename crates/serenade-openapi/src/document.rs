@@ -56,10 +56,19 @@ mod tests {
     }
 
     #[test]
-    fn empty_server_clears() {
+    fn finalize_without_server_clears_servers() {
         let mut doc = EmptyDoc::openapi();
         apply_server(&mut doc, "http://x");
-        apply_server(&mut doc, "  ");
+        finalize_openapi(&mut doc, "demo", "0.1.0", None);
+        assert_eq!(doc.info.title, "demo");
         assert!(doc.servers.is_none());
+    }
+
+    #[test]
+    fn apply_info_alone() {
+        let mut doc = EmptyDoc::openapi();
+        apply_info(&mut doc, "only-info", "9.9.9");
+        assert_eq!(doc.info.title, "only-info");
+        assert_eq!(doc.info.version, "9.9.9");
     }
 }

@@ -48,11 +48,19 @@ mod tests {
 
     #[test]
     fn defaults_match_conventions() {
-        let paths = OpenApiUiPaths::new();
+        let paths = OpenApiUiPaths::default();
         assert_eq!(paths.openapi_json, "/openapi.json");
         assert_eq!(paths.redoc, "/redoc");
         assert_eq!(paths.rapidoc, "/rapidoc");
         assert_eq!(paths.scalar, "/scalar");
         assert!(paths.swagger_ui.contains("swagger-ui"));
+        assert_eq!(OpenApiUiPaths::new(), paths);
+    }
+
+    #[test]
+    fn with_openapi_json_overrides_path() {
+        let paths = OpenApiUiPaths::new().with_openapi_json("/v1/openapi.json");
+        assert_eq!(paths.openapi_json, "/v1/openapi.json");
+        assert_eq!(paths.redoc, "/redoc");
     }
 }
