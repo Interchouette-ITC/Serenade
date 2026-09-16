@@ -1,0 +1,44 @@
+[package]
+name = "serenade-openapi"
+description = "OpenAPI helpers and feature-gated explorer UIs (Swagger, Redoc, RapiDoc, Scalar)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+## Actix-web explorer mounts (Swagger UI, Redoc, RapiDoc, Scalar).
+actix = [
+    "dep:actix-web",
+    "dep:utoipa-swagger-ui",
+    "dep:utoipa-redoc",
+    "dep:utoipa-rapidoc",
+    "dep:utoipa-scalar",
+]
+
+[dependencies]
+utoipa = { version = "5", default-features = false, features = ["macros"] }
+actix-web = { workspace = true, optional = true }
+utoipa-swagger-ui = { version = "9", optional = true, default-features = false, features = [
+    "actix-web",
+    "vendored",
+] }
+utoipa-redoc = { version = "6", optional = true, default-features = false, features = [
+    "actix-web",
+] }
+utoipa-rapidoc = { version = "6", optional = true, default-features = false, features = [
+    "actix-web",
+] }
+utoipa-scalar = { version = "0.3", optional = true, default-features = false, features = [
+    "actix-web",
+] }
+
+[dev-dependencies]
+actix-web = { workspace = true }
+utoipa = { version = "5", features = ["macros"] }
+
+[lints]
+workspace = true

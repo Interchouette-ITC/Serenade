@@ -28,6 +28,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [RATE_LIMITER.md](RATE_LIMITER.md) | Rate limiter policies, helpers, HTTP 429, DI     |
 | [SCHEDULER.md](SCHEDULER.md)     | Scheduler triggers, handlers, console, DI         |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Tracing init, channels, `var/log` file sinks    |
+| [OPENAPI.md](OPENAPI.md)             | utoipa helpers; Swagger / Redoc / RapiDoc / Scalar |
 | [ERRORS.md](ERRORS.md)       | `thiserror` / Display / Debug / API error habits       |
 | [BUNDLES.md](BUNDLES.md)     | Bundle model; admin CRUD is not FrameworkBundle        |
 | [ADMIN.md](ADMIN.md)         | Optional `serenade-admin` CRUD (MyFeed categories dogfood) |

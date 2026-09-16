@@ -57,12 +57,13 @@ Bundles then **compose** these modules: routes, services, subscribers, config.
 | CLI (migrate, seed, worker) | Console (#8; optional ratatui)                                                                       |
 | App scaffolding / recipes   | Flex-like recipes (#30); Cargo for deps                                                              |
 | DTO API ↔ JSON              | Serializer + validator                                                                               |
+| OpenAPI explorers           | `serenade-openapi` (utoipa helpers + optional Swagger/Redoc/RapiDoc/Scalar)                          |
 | Wasm engine plumbing        | `serenade-component-host` (wasmtime CM) + `serenade-sandbox` (Wasmer WASIX) - see [WASM.md](WASM.md) |
 
 ## What stays RustaShop-specific
 
 - Money as integer minor units
-- OpenAPI contract for both UIs
+- Commerce OpenAPI path/schema annotations and dump/CI (framework mounts explorers)
 - WebSocket-first realtime ([RustaShop REALTIME.md](https://github.com/Interchouette-ITC/rustashop/blob/dev/docs-dev/REALTIME.md))
 - WIT worlds, quote/migration fixtures, proposal gates on top of Serenade Wasm hosts
 - AI-native tools and MCP ([RustaShop AI-NATIVE.md](https://github.com/Interchouette-ITC/rustashop/blob/dev/docs-dev/AI-NATIVE.md))
