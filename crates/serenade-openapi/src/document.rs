@@ -76,8 +76,10 @@ mod tests {
     fn apply_server_sets_and_clears() {
         let mut doc = EmptyDoc::openapi();
         apply_server(&mut doc, "http://127.0.0.1:8080");
-        let servers = doc.servers.expect("servers");
-        assert_eq!(servers[0].url, "http://127.0.0.1:8080");
+        assert_eq!(
+            doc.servers.as_ref().expect("servers")[0].url,
+            "http://127.0.0.1:8080"
+        );
         apply_server(&mut doc, "");
         assert!(doc.servers.is_none());
         apply_server(&mut doc, "   ");
