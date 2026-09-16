@@ -1,6 +1,11 @@
 # Paths excluded from Codecov totals (demo app, CLI, console TUI/debug).
 # Plain folder/file paths only (Codecov treats entries as regex; avoid ** bombs).
 # Upload token stays in GitHub Actions secrets, not here.
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
 coverage:
   status:
     project:
