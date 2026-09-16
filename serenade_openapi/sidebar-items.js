@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["apply_info","apply_server","finalize_openapi","version"],"struct":["OpenApiUiPaths"]};
