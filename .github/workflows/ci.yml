@@ -89,6 +89,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-observability --all-targets --features otel
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-openapi actix feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-openapi --all-targets --features actix
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -113,6 +118,9 @@ jobs:
       - name: Test serenade-observability with otel
         if: needs.changes.outputs.code == 'true'
         run: cargo test -p serenade-observability --features otel
+      - name: Test serenade-openapi with actix
+        if: needs.changes.outputs.code == 'true'
+        run: cargo test -p serenade-openapi --features actix
 
   cache-redis:
     name: cache redis

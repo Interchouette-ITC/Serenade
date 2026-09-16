@@ -28,6 +28,7 @@ Cross-cutting infrastructure Serenade owns. Products register domain services an
 | **Validator** | Constraint validation on DTOs and commands |
 | **Contracts** | Stable traits for persistence, clock, id generation, etc. |
 | **Observability** | Structured logging conventions (Monolog-like channels / `var/log` layout); tracing/metrics hooks |
+| **OpenAPI** | Document helpers + optional explorer UIs (`serenade-openapi`; apps own path schemas) |
 | **Testing** | Kernel test harness, fake container, event assertion helpers |
 
 ## Lifecycle
@@ -330,6 +331,10 @@ Scheduling lives in **`serenade-scheduler`** ([#187](https://github.com/Intercho
 ## Observability (structured logging)
 
 `serenade-observability` documents Monolog-like conventions on **`tracing`**: named channels (`serenade::app`, `serenade::request`, …), an app-owned `var/log/{env}.log` layout, and `LoggingConfig` / `init` for stderr + daily rolling files. Optional feature `otel` adds an OpenTelemetry tracing bridge and OTLP/HTTP export (`OtelConfig`, `init_with_otel`). Apps call `init` (or `init_with_otel`) from `main`; crates do not require a global logger. See [OBSERVABILITY.md](OBSERVABILITY.md).
+
+## OpenAPI (explorers)
+
+`serenade-openapi` provides Info/servers helpers and, behind feature `actix`, mounts Swagger UI, Redoc, RapiDoc, and Scalar beside Actix listen. Applications still own `#[derive(OpenApi)]` path and schema lists and the `/openapi.json` route. See [OPENAPI.md](OPENAPI.md).
 
 The browser Web Debug Toolbar / Profiler lives in **`serenade-profiler`** ([PROFILER.md](PROFILER.md)): per-request collectors, HTML toolbar injection, and `/_profiler/{token}`. It is not the console. `AsyncHttpKernel` supports an async middleware pipeline (`AsyncMiddleware`) so Actix/`listen` apps can push the profiler the same way sync `HttpKernel` pushes `Middleware`.
 
