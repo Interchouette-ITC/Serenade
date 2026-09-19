@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_NOTIFIER_SERVICE","NOTIFIER_TRANSPORT_TAG"],"enum":["Channel","Notification","NotifierError"],"fn":["version"],"struct":["MemoryTransport","NotifierService","NullTransport","PushMessage","RegisterDefaultNotifierPass","SmsMessage","SmsOnlyTransport"],"trait":["Transport"]};
