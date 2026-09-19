@@ -351,4 +351,68 @@ mod smtp_tests {
             Err(MailerError::Transport { .. })
         ));
     }
+
+    #[test]
+    fn to_lettre_message_requires_from_for_single_and_multipart() {
+        let text_only = Email::new()
+            .to("to@example.test")
+            .expect("to")
+            .subject("Text")
+            .text("plain");
+        assert!(matches!(
+            to_lettre_message(&text_only),
+            Err(MailerError::Transport { .. })
+        ));
+
+        let multipart = Email::new()
+            .to("to@example.test")
+            .expect("to")
+            .subject("Multi")
+            .text("plain")
+            .html("<p>x</p>");
+        assert!(matches!(
+            to_lettre_message(&multipart),
+            Err(MailerError::Transport { .. })
+        ));
+    }
+
+    #[test]
+    fn multipart_helpers_cover_edge_trees() {
+        use super::{
+            ContentDisposition, MimePart, MimeTree, build_alternative, build_related,
+            multipart_from_tree, single_part_from_mime,
+        };
+
+        let plain = MimePart::text("hi");
+        let html = MimePart::html("<p>x</p>");
+        let binary = MimePart {
+            content_type: "application/octet-stream".to_owned(),
+            filename: Some("blob.bin".to_owned()),
+            disposition: ContentDisposition::Attachment,
+            content_id: None,
+            body: vec![0, 1, 2],
+        };
+
+        multipart_from_tree(&MimeTree::Single(plain.clone())).expect("single via multipart");
+        build_alternative(None, &MimeTree::Single(html.clone())).expect("html-only alternative");
+        let related = MimeTree::Related {
+            root: Box::new(MimeTree::Single(html.clone())),
+            related: vec![MimePart::from_attachment(&Attachment::inline_from_bytes(
+                "i.png",
+                "image/png",
+                "i",
+                vec![9],
+            ))],
+        };
+        build_alternative(None, &related).expect("related without text alternative");
+        build_related(
+            &MimeTree::Alternative {
+                text: Some(plain),
+                html: Box::new(MimeTree::Single(html)),
+            },
+            &[],
+        )
+        .expect("related around alternative root");
+        single_part_from_mime(&binary).expect("binary single part");
+    }
 }

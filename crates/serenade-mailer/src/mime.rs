@@ -203,6 +203,30 @@ mod tests {
     }
 
     #[test]
+    fn text_with_inline_without_html_is_related() {
+        let email = Email::new()
+            .from("a@b.test")
+            .expect("from")
+            .to("c@d.test")
+            .expect("to")
+            .subject("s")
+            .text("see image")
+            .embed(Attachment::inline_from_bytes(
+                "x.png",
+                "image/png",
+                "x",
+                vec![1],
+            ));
+        let tree = MimeTree::from_email(&email);
+        assert_eq!(tree.multipart_subtype(), Some("related"));
+        let MimeTree::Related { root, related } = tree else {
+            unreachable!("asserted related subtype");
+        };
+        assert!(matches!(*root, MimeTree::Single(_)));
+        assert_eq!(related.len(), 1);
+    }
+
+    #[test]
     fn inline_and_file_nest_related_inside_mixed() {
         let email = Email::new()
             .from("a@b.test")
@@ -222,13 +246,16 @@ mod tests {
                 "application/pdf",
                 vec![9],
             ));
-        let MimeTree::Mixed { body, attachments } = MimeTree::from_email(&email) else {
-            panic!("expected mixed");
+        let tree = MimeTree::from_email(&email);
+        assert_eq!(tree.multipart_subtype(), Some("mixed"));
+        let MimeTree::Mixed { body, attachments } = tree else {
+            unreachable!("asserted mixed subtype");
         };
         assert_eq!(attachments.len(), 1);
         assert_eq!(attachments[0].filename.as_deref(), Some("invoice.pdf"));
+        assert_eq!(body.multipart_subtype(), Some("related"));
         let MimeTree::Related { root, related } = *body else {
-            panic!("expected related");
+            unreachable!("asserted related body");
         };
         assert_eq!(related.len(), 1);
         assert_eq!(related[0].content_id.as_deref(), Some("logo@serenade"));
@@ -251,8 +278,10 @@ mod tests {
                 "x",
                 vec![1],
             ));
-        let MimeTree::Alternative { text, html } = MimeTree::from_email(&email) else {
-            panic!("expected alternative");
+        let tree = MimeTree::from_email(&email);
+        assert_eq!(tree.multipart_subtype(), Some("alternative"));
+        let MimeTree::Alternative { text, html } = tree else {
+            unreachable!("asserted alternative subtype");
         };
         assert!(text.is_some());
         assert_eq!(html.multipart_subtype(), Some("related"));
