@@ -217,13 +217,11 @@ mod tests {
                 "x",
                 vec![1],
             ));
-        let tree = MimeTree::from_email(&email);
-        assert_eq!(tree.multipart_subtype(), Some("related"));
-        let MimeTree::Related { root, related } = tree else {
-            unreachable!("asserted related subtype");
-        };
-        assert!(matches!(*root, MimeTree::Single(_)));
-        assert_eq!(related.len(), 1);
+        assert!(matches!(
+            MimeTree::from_email(&email),
+            MimeTree::Related { root, related }
+                if matches!(root.as_ref(), MimeTree::Single(_)) && related.len() == 1
+        ));
     }
 
     #[test]
@@ -246,20 +244,19 @@ mod tests {
                 "application/pdf",
                 vec![9],
             ));
-        let tree = MimeTree::from_email(&email);
-        assert_eq!(tree.multipart_subtype(), Some("mixed"));
-        let MimeTree::Mixed { body, attachments } = tree else {
-            unreachable!("asserted mixed subtype");
-        };
-        assert_eq!(attachments.len(), 1);
-        assert_eq!(attachments[0].filename.as_deref(), Some("invoice.pdf"));
-        assert_eq!(body.multipart_subtype(), Some("related"));
-        let MimeTree::Related { root, related } = *body else {
-            unreachable!("asserted related body");
-        };
-        assert_eq!(related.len(), 1);
-        assert_eq!(related[0].content_id.as_deref(), Some("logo@serenade"));
-        assert!(matches!(*root, MimeTree::Single(_)));
+        assert!(matches!(
+            MimeTree::from_email(&email),
+            MimeTree::Mixed { body, attachments }
+                if attachments.len() == 1
+                    && attachments[0].filename.as_deref() == Some("invoice.pdf")
+                    && matches!(
+                        body.as_ref(),
+                        MimeTree::Related { root, related }
+                            if related.len() == 1
+                                && related[0].content_id.as_deref() == Some("logo@serenade")
+                                && matches!(root.as_ref(), MimeTree::Single(_))
+                    )
+        ));
     }
 
     #[test]
@@ -278,12 +275,10 @@ mod tests {
                 "x",
                 vec![1],
             ));
-        let tree = MimeTree::from_email(&email);
-        assert_eq!(tree.multipart_subtype(), Some("alternative"));
-        let MimeTree::Alternative { text, html } = tree else {
-            unreachable!("asserted alternative subtype");
-        };
-        assert!(text.is_some());
-        assert_eq!(html.multipart_subtype(), Some("related"));
+        assert!(matches!(
+            MimeTree::from_email(&email),
+            MimeTree::Alternative { text: Some(_), html }
+                if html.multipart_subtype() == Some("related")
+        ));
     }
 }
