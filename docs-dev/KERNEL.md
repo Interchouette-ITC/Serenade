@@ -289,6 +289,18 @@ Non-email channels live in **`serenade-notifier`** ([#230](https://github.com/In
 
 `FrameworkExtension` installs the default notifier pass. Email remains in the mailer crate.
 
+## String / Inflector
+
+Helpers live in **`serenade-string`** ([#229](https://github.com/Interchouette-ITC/Serenade/issues/229)). See [STRING.md](STRING.md).
+
+| Piece | Role |
+| --- | --- |
+| `slug` | URL-safe lowercase slug |
+| `snake_case` / `kebab_case` / `camel_case` / `pascal_case` / `title_case` | Case transforms |
+| `pluralize` / `singularize` | English Inflector (limited irregulars) |
+
+Pure functions; no DI pass. ICU / catalogue plurals stay in [I18N.md](I18N.md).
+
 ## HttpClient (outbound)
 
 Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Interchouette-ITC/Serenade/issues/184)). See [HTTP_CLIENT.md](HTTP_CLIENT.md).

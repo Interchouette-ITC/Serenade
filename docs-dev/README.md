@@ -23,6 +23,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [SEARCH.md](SEARCH.md)       | Document index contracts, MemorySearchAdapter          |
 | [MAILER.md](MAILER.md)       | Email + Mime multipart, Null/File/SMTP transports, DI  |
 | [NOTIFIER.md](NOTIFIER.md)   | SMS + push channels, Null/Memory transports, DI        |
+| [STRING.md](STRING.md)       | Slug, case transforms, English Inflector helpers       |
 | [HTTP_CLIENT.md](HTTP_CLIENT.md) | Outbound HttpClient, mock + reqwest, DI            |
 | [MESSENGER.md](MESSENGER.md)     | Sync bus, in-memory transport, Redis wire frames   |
 | [LOCK.md](LOCK.md)               | Named locks, in-memory / filesystem / Redis, DI    |
