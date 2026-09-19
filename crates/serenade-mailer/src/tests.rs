@@ -140,6 +140,48 @@ fn compile_pass_skips_when_default_already_registered() {
 }
 
 #[test]
+fn address_parse_display_and_list() {
+    let named = Address::parse(r"Ada Lovelace <ada@example.test>").expect("parse");
+    assert_eq!(named.email(), "ada@example.test");
+    assert_eq!(named.name(), Some("Ada Lovelace"));
+    assert_eq!(named.to_string(), "Ada Lovelace <ada@example.test>");
+
+    let list = Address::parse_list("a@b.test, Bob <c@d.test>").expect("list");
+    assert_eq!(list.len(), 2);
+    assert_eq!(list[1].name(), Some("Bob"));
+
+    assert!(Address::parse("<>").is_err());
+}
+
+#[test]
+fn email_embed_builds_related_mixed_tree() {
+    let email = Email::new()
+        .from("from@example.test")
+        .expect("from")
+        .to("to@example.test")
+        .expect("to")
+        .subject("Embed")
+        .text("plain")
+        .html("<img src=\"cid:logo@serenade\" />")
+        .embed(Attachment::inline_from_bytes(
+            "logo.png",
+            "image/png",
+            "logo@serenade",
+            vec![1, 2, 3],
+        ))
+        .attach(Attachment::from_bytes(
+            "note.txt",
+            "text/plain",
+            b"hi".as_slice(),
+        ));
+
+    assert_eq!(email.mime_tree().multipart_subtype(), Some("mixed"));
+    assert!(email.attachments()[0].is_inline());
+    assert_eq!(email.attachments()[0].content_id(), Some("logo@serenade"));
+    assert!(!email.attachments()[1].is_inline());
+}
+
+#[test]
 fn render_message_formats_named_multi_recipient_and_html_only() {
     use crate::render::render_message;
 
@@ -158,6 +200,28 @@ fn render_message_formats_named_multi_recipient_and_html_only() {
     assert!(dump.contains("To: One <one@example.test>, two@example.test"));
     assert!(dump.contains("<p>only html</p>"));
     assert!(!dump.contains("-- html --"));
+}
+
+#[test]
+fn render_message_shows_inline_and_mime_hint() {
+    use crate::render::render_message;
+
+    let email = Email::new()
+        .from("from@example.test")
+        .expect("from")
+        .to("to@example.test")
+        .expect("to")
+        .subject("Hi")
+        .html("<img src=\"cid:x\" />")
+        .embed(Attachment::inline_from_bytes(
+            "x.png",
+            "image/png",
+            "x",
+            vec![9],
+        ));
+    let dump = render_message(&email);
+    assert!(dump.contains("X-Serenade-Mime: multipart/related"));
+    assert!(dump.contains("-- inline: x.png cid:x"));
 }
 
 #[test]

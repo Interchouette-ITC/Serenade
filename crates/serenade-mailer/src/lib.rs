@@ -1,6 +1,6 @@
-//! Email message, Mime lite types, and sync transports (Symfony Mailer shaped).
+//! Email message, Mime types, and sync transports (Symfony Mailer shaped).
 //!
-//! Types: [`Email`], [`Address`], [`Body`], [`Attachment`].
+//! Types: [`Email`], [`Address`], [`Body`], [`Attachment`], [`MimeTree`].
 //! Transports: [`NullTransport`], [`FileTransport`], and (feature `smtp`) [`SmtpTransport`].
 //! DI: [`RegisterDefaultMailerPass`] seeds service id [`DEFAULT_MAILER_SERVICE`].
 
@@ -11,6 +11,7 @@ mod compile_pass;
 mod email;
 mod error;
 mod file;
+mod mime;
 mod null;
 mod render;
 mod transport;
@@ -19,7 +20,7 @@ mod transport;
 mod smtp;
 
 pub use address::Address;
-pub use attachment::Attachment;
+pub use attachment::{Attachment, ContentDisposition};
 pub use body::Body;
 pub use compile_pass::{
     DEFAULT_MAILER_SERVICE, MAILER_TRANSPORT_TAG, MailerService, RegisterDefaultMailerPass,
@@ -27,6 +28,7 @@ pub use compile_pass::{
 pub use email::Email;
 pub use error::MailerError;
 pub use file::FileTransport;
+pub use mime::{MimePart, MimeTree};
 pub use null::NullTransport;
 pub use transport::Transport;
 

@@ -14,6 +14,11 @@ pub fn render_message(email: &Email) -> String {
     out.push_str("Subject: ");
     out.push_str(email.subject_line());
     out.push_str("\r\n");
+    if let Some(subtype) = email.mime_tree().multipart_subtype() {
+        out.push_str("X-Serenade-Mime: multipart/");
+        out.push_str(subtype);
+        out.push_str("\r\n");
+    }
     out.push_str("\r\n");
     if let Some(text) = email.message_body().text_part() {
         out.push_str(text);
@@ -27,8 +32,15 @@ pub fn render_message(email: &Email) -> String {
         out.push_str("\r\n");
     }
     for attachment in email.attachments() {
-        out.push_str("\r\n-- attachment: ");
-        out.push_str(attachment.filename());
+        if attachment.is_inline() {
+            out.push_str("\r\n-- inline: ");
+            out.push_str(attachment.filename());
+            out.push_str(" cid:");
+            out.push_str(attachment.content_id().unwrap_or(""));
+        } else {
+            out.push_str("\r\n-- attachment: ");
+            out.push_str(attachment.filename());
+        }
         out.push_str(" (");
         out.push_str(attachment.content_type());
         out.push_str(", ");
@@ -48,14 +60,7 @@ fn append_addrs(out: &mut String, header: &str, addresses: &[crate::Address]) {
         if index > 0 {
             out.push_str(", ");
         }
-        if let Some(name) = address.name() {
-            out.push_str(name);
-            out.push_str(" <");
-            out.push_str(address.email());
-            out.push('>');
-        } else {
-            out.push_str(address.email());
-        }
+        out.push_str(&address.to_string());
     }
     out.push_str("\r\n");
 }

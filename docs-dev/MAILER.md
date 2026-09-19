@@ -1,16 +1,24 @@
 # Mailer
 
-Email message, Mime lite types, and sync transports live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153), [#152](https://github.com/Interchouette-ITC/Serenade/issues/152)).
+Email message, Mime multipart types, and sync transports live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153), [#152](https://github.com/Interchouette-ITC/Serenade/issues/152), [#228](https://github.com/Interchouette-ITC/Serenade/issues/228)).
 
 ## Types
 
 | Type | Role |
 | --- | --- |
-| `Address` | Mailbox string with optional display name |
+| `Address` | Mailbox (`email@host` or `Name <email@host>`), `parse` / `parse_list`, `Display` |
 | `Body` | Plain text and/or HTML |
-| `Attachment` | Filename, MIME type, raw bytes |
-| `Email` | Builder for headers, subject, body, attachments |
+| `Attachment` | Downloadable or inline (CID) part: filename, MIME type, bytes, disposition |
+| `ContentDisposition` | `Attachment` vs `Inline` |
+| `Email` | Builder for headers, subject, body, `attach` / `embed` |
+| `MimeTree` / `MimePart` | Multipart layout: `alternative` / `related` / `mixed` |
 | `MailerError` | Build / send failures |
+
+`Email::mime_tree()` returns the nested structure SMTP encode uses:
+
+- text + HTML → `multipart/alternative`
+- HTML + CID embeds → `multipart/related` (HTML alternative sibling when text is present)
+- downloadable files → outer `multipart/mixed`
 
 ## Transports
 
@@ -34,16 +42,24 @@ Apps replace the default by registering their own `mailer` service (file or SMTP
 use serenade_mailer::{Attachment, Email, FileTransport, NullTransport, Transport};
 
 let email = Email::new()
-    .from("shop@example.test")?
+    .from("Shop <shop@example.test>")?
     .to("buyer@example.test")?
     .subject("Order confirmation")
     .text("Thanks for your order.")
-    .html("<p>Thanks for your order.</p>")
+    .html("<p>Thanks <img src=\"cid:logo@shop\" /></p>")
+    .embed(Attachment::inline_from_bytes(
+        "logo.png",
+        "image/png",
+        "logo@shop",
+        b"\x89PNG".as_slice(),
+    ))
     .attach(Attachment::from_bytes(
         "receipt.txt",
         "text/plain",
         b"order-1".as_slice(),
     ));
+
+assert_eq!(email.mime_tree().multipart_subtype(), Some("mixed"));
 
 NullTransport::new().send(&email)?;
 FileTransport::new("var/mail").send(&email)?;
@@ -63,3 +79,4 @@ smtp.send(&email)?;
 ## Related
 
 - Parent epic: [#145](https://github.com/Interchouette-ITC/Serenade/issues/145)
+- Mime deepen: [#228](https://github.com/Interchouette-ITC/Serenade/issues/228)

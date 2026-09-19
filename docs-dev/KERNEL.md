@@ -258,16 +258,17 @@ Basic document search lives in **`serenade-search`** ([#129](https://github.com/
 
 No SaaS engine in core. Apps wire adapters when they need one.
 
-## Mailer / Mime lite
+## Mailer / Mime
 
-Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153)). See [MAILER.md](MAILER.md).
+Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153), [#228](https://github.com/Interchouette-ITC/Serenade/issues/228)). See [MAILER.md](MAILER.md).
 
 | Piece | Role |
 | --- | --- |
-| `Address` | Mailbox (email + optional display name) |
+| `Address` | Mailbox (email + optional display name; `parse` / `parse_list`) |
 | `Body` | Text and/or HTML parts |
-| `Attachment` | Filename, content type, bytes |
-| `Email` | Builder for From/To/Cc/Bcc/Reply-To, subject, body, attachments |
+| `Attachment` / `ContentDisposition` | Downloadable or inline (CID) parts |
+| `MimeTree` / `MimePart` | `multipart/alternative`, `related`, `mixed` |
+| `Email` | Builder for From/To/Cc/Bcc/Reply-To, subject, body, attach/embed |
 | `Transport` | Sync `send` contract |
 | `NullTransport` / `FileTransport` / `SmtpTransport` | Discard / file dump / SMTP (lettre) |
 | `RegisterDefaultMailerPass` | DI: service `mailer` defaults to null |
