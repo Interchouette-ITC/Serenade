@@ -5826,6 +5826,7 @@ dependencies = [
  "serenade-kernel",
  "serenade-lock",
  "serenade-mailer",
+ "serenade-notifier",
  "serenade-rate-limiter",
  "serenade-scheduler",
  "thiserror 2.0.20",
@@ -6028,6 +6029,14 @@ dependencies = [
  "redis",
  "thiserror 2.0.20",
  "tokio",
+]
+
+[[package]]
+name = "serenade-notifier"
+version = "0.1.0"
+dependencies = [
+ "serenade-di",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

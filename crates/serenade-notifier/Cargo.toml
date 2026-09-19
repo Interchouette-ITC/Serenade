@@ -1,0 +1,16 @@
+[package]
+name = "serenade-notifier"
+description = "SMS and push notification channels with Null and in-memory transports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serenade-di = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
