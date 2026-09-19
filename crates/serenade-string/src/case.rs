@@ -88,3 +88,22 @@ fn capitalize(word: &str) -> String {
     out.push_str(chars.as_str());
     out
 }
+
+#[cfg(test)]
+mod case_edge_tests {
+    use super::{camel_case, capitalize, kebab_case, pascal_case, snake_case, title_case};
+
+    #[test]
+    fn splits_when_cap_run_follows_lowercase() {
+        assert_eq!(snake_case("AbcDEF"), "abc_d_e_f");
+        assert_eq!(kebab_case("fooHTTP"), "foo-h-t-t-p");
+        assert_eq!(camel_case("AbcDEF"), "abcDEF");
+    }
+
+    #[test]
+    fn capitalize_empty_word() {
+        assert_eq!(capitalize(""), "");
+        assert_eq!(pascal_case(""), "");
+        assert_eq!(title_case(""), "");
+    }
+}

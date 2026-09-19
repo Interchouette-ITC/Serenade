@@ -139,3 +139,23 @@ fn restore_case(original: &str, transformed: &str) -> String {
     }
     transformed.to_owned()
 }
+
+#[cfg(test)]
+mod inflect_edge_tests {
+    use super::{pluralize, restore_case, singularize};
+
+    #[test]
+    fn singularize_unchanged_when_no_rule_matches() {
+        assert_eq!(singularize("cat"), "cat");
+        assert_eq!(singularize("ss"), "ss");
+    }
+
+    #[test]
+    fn restore_case_all_caps_and_empty_transformed() {
+        assert_eq!(pluralize("BOX"), "BOXES");
+        assert_eq!(pluralize("CAT"), "CATS");
+        assert_eq!(singularize("BOXES"), "BOX");
+        assert_eq!(restore_case("A", ""), "");
+        assert_eq!(restore_case("", "x"), "x");
+    }
+}
