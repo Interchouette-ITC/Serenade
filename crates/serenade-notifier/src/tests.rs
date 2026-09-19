@@ -72,11 +72,17 @@ fn null_transport_validates_and_discards() {
 #[test]
 fn memory_transport_records_sends() {
     let transport = MemoryTransport::new();
+    assert!(transport.supports(Channel::Sms));
+    assert!(transport.supports(Channel::Push));
     transport.send(&Notification::sms("+1", "a")).expect("sms");
     transport
         .send(&Notification::push("tok", "t", "b"))
         .expect("push");
     assert_eq!(transport.sent().len(), 2);
+    assert!(matches!(
+        transport.send(&Notification::sms("", "x")),
+        Err(NotifierError::MissingRecipient)
+    ));
     transport.clear();
     assert_eq!(transport.sent().len(), 0);
 }

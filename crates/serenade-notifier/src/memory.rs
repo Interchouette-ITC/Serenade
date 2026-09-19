@@ -47,9 +47,7 @@ impl Transport for MemoryTransport {
         validate_for_send(notification)?;
         self.sent
             .lock()
-            .map_err(|error| NotifierError::Transport {
-                message: error.to_string(),
-            })?
+            .expect("memory transport lock")
             .push(notification.clone());
         Ok(())
     }
