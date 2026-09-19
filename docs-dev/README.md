@@ -21,7 +21,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
 | [SESSION.md](SESSION.md)     | Session bag, flash, SessionStore, cookie + HTTP middleware |
 | [SEARCH.md](SEARCH.md)       | Document index contracts, MemorySearchAdapter          |
-| [MAILER.md](MAILER.md)       | Email + Mime lite, Null/File/SMTP transports, DI       |
+| [MAILER.md](MAILER.md)       | Email + Mime multipart, Null/File/SMTP transports, DI  |
 | [HTTP_CLIENT.md](HTTP_CLIENT.md) | Outbound HttpClient, mock + reqwest, DI            |
 | [MESSENGER.md](MESSENGER.md)     | Sync bus, in-memory transport, Redis wire frames   |
 | [LOCK.md](LOCK.md)               | Named locks, in-memory / filesystem / Redis, DI    |

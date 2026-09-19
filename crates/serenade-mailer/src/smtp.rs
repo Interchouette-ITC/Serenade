@@ -1,11 +1,12 @@
 //! SMTP transport (lettre).
 
-use lettre::message::{Mailbox, Message, MultiPart, SinglePart};
+use lettre::message::{Attachment as LettreAttachment, Mailbox, Message, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{SmtpTransport as LettreSmtp, Transport as LettreTransport};
 
+use crate::mime::{MimePart, MimeTree};
 use crate::null::validate_for_send;
-use crate::{Address, Email, MailerError, Transport};
+use crate::{Address, ContentDisposition, Email, MailerError, Transport};
 
 /// SMTP relay transport (Symfony `SmtpTransport`).
 #[derive(Clone, Debug)]
@@ -124,39 +125,111 @@ fn to_lettre_message(email: &Email) -> Result<Message, MailerError> {
     }
     builder = builder.subject(email.subject_line());
 
-    let text = email.message_body().text_part();
-    let html = email.message_body().html_part();
-    let multipart = match (text, html) {
-        (Some(text), Some(html)) => MultiPart::alternative()
-            .singlepart(SinglePart::plain(text.to_owned()))
-            .singlepart(SinglePart::html(html.to_owned())),
-        (Some(text), None) => MultiPart::mixed().singlepart(SinglePart::plain(text.to_owned())),
-        (None, Some(html)) => MultiPart::mixed().singlepart(SinglePart::html(html.to_owned())),
-        (None, None) => MultiPart::mixed().singlepart(SinglePart::plain(String::new())),
-    };
-
-    let mut multipart = multipart;
-    for attachment in email.attachments() {
-        multipart = multipart.singlepart(
-            SinglePart::builder()
-                .header(
-                    lettre::message::header::ContentType::parse(attachment.content_type())
-                        .map_err(|error| MailerError::Transport {
-                            message: error.to_string(),
-                        })?,
-                )
-                .header(lettre::message::header::ContentDisposition::attachment(
-                    attachment.filename(),
-                ))
-                .body(attachment.body().to_vec()),
-        );
+    let tree = email.mime_tree();
+    match tree {
+        MimeTree::Single(part) => {
+            builder
+                .singlepart(single_part_from_mime(&part)?)
+                .map_err(|error| MailerError::Transport {
+                    message: error.to_string(),
+                })
+        }
+        other => builder
+            .multipart(multipart_from_tree(&other)?)
+            .map_err(|error| MailerError::Transport {
+                message: error.to_string(),
+            }),
     }
+}
 
-    builder
-        .multipart(multipart)
-        .map_err(|error| MailerError::Transport {
-            message: error.to_string(),
-        })
+fn multipart_from_tree(tree: &MimeTree) -> Result<MultiPart, MailerError> {
+    match tree {
+        MimeTree::Single(part) => Ok(MultiPart::mixed().singlepart(single_part_from_mime(part)?)),
+        MimeTree::Alternative { text, html } => build_alternative(text.as_ref(), html),
+        MimeTree::Related { root, related } => build_related(root, related),
+        MimeTree::Mixed { body, attachments } => build_mixed(body, attachments),
+    }
+}
+
+fn build_alternative(text: Option<&MimePart>, html: &MimeTree) -> Result<MultiPart, MailerError> {
+    match html {
+        MimeTree::Single(part) => {
+            if let Some(text_part) = text {
+                Ok(MultiPart::alternative()
+                    .singlepart(single_part_from_mime(text_part)?)
+                    .singlepart(single_part_from_mime(part)?))
+            } else {
+                Ok(MultiPart::alternative().singlepart(single_part_from_mime(part)?))
+            }
+        }
+        nested => {
+            let related = multipart_from_tree(nested)?;
+            if let Some(text_part) = text {
+                Ok(MultiPart::alternative()
+                    .singlepart(single_part_from_mime(text_part)?)
+                    .multipart(related))
+            } else {
+                Ok(related)
+            }
+        }
+    }
+}
+
+fn build_related(root: &MimeTree, related: &[MimePart]) -> Result<MultiPart, MailerError> {
+    let mut multipart = match root {
+        MimeTree::Single(part) => MultiPart::related().singlepart(single_part_from_mime(part)?),
+        nested => MultiPart::related().multipart(multipart_from_tree(nested)?),
+    };
+    for part in related {
+        multipart = multipart.singlepart(file_part(part)?);
+    }
+    Ok(multipart)
+}
+
+fn build_mixed(body: &MimeTree, attachments: &[MimePart]) -> Result<MultiPart, MailerError> {
+    let mut multipart = match body {
+        MimeTree::Single(part) => MultiPart::mixed().singlepart(single_part_from_mime(part)?),
+        nested => MultiPart::mixed().multipart(multipart_from_tree(nested)?),
+    };
+    for part in attachments {
+        multipart = multipart.singlepart(file_part(part)?);
+    }
+    Ok(multipart)
+}
+
+fn single_part_from_mime(part: &MimePart) -> Result<SinglePart, MailerError> {
+    if part.content_type.starts_with("text/html") {
+        let body = String::from_utf8_lossy(&part.body).into_owned();
+        return Ok(SinglePart::html(body));
+    }
+    if part.content_type.starts_with("text/plain") {
+        let body = String::from_utf8_lossy(&part.body).into_owned();
+        return Ok(SinglePart::plain(body));
+    }
+    file_part(part)
+}
+
+fn file_part(part: &MimePart) -> Result<SinglePart, MailerError> {
+    let content_type =
+        lettre::message::header::ContentType::parse(&part.content_type).map_err(|error| {
+            MailerError::Transport {
+                message: error.to_string(),
+            }
+        })?;
+    let filename = part
+        .filename
+        .clone()
+        .unwrap_or_else(|| "part.bin".to_owned());
+    match part.disposition {
+        ContentDisposition::Inline => {
+            let content_id = part.content_id.clone().unwrap_or_else(|| filename.clone());
+            Ok(LettreAttachment::new_inline_with_name(content_id, filename)
+                .body(part.body.clone(), content_type))
+        }
+        ContentDisposition::Attachment => {
+            Ok(LettreAttachment::new(filename).body(part.body.clone(), content_type))
+        }
+    }
 }
 
 fn to_mailbox(address: &Address) -> Result<Mailbox, MailerError> {
@@ -218,6 +291,30 @@ mod smtp_tests {
             .subject("Empty");
         to_lettre_message(&empty).expect("empty message");
 
+        let with_embed = Email::new()
+            .from("from@example.test")
+            .expect("from")
+            .to("to@example.test")
+            .expect("to")
+            .subject("Embed")
+            .text("plain")
+            .html("<img src=\"cid:logo\" />")
+            .embed(Attachment::inline_from_bytes(
+                "logo.png",
+                "image/png",
+                "logo",
+                vec![1, 2, 3],
+            ))
+            .attach(Attachment::from_bytes("a.txt", "text/plain", b"x"));
+        let message = to_lettre_message(&with_embed).expect("multipart message");
+        let formatted = message.formatted();
+        let encoded = String::from_utf8_lossy(&formatted);
+        assert!(encoded.contains("multipart/mixed"));
+        assert!(encoded.contains("multipart/alternative"));
+        assert!(encoded.contains("multipart/related"));
+        assert!(encoded.contains("Content-ID: <logo>"));
+        assert!(encoded.contains("filename=\"a.txt\""));
+
         let named = Email::new()
             .from("from@example.test")
             .expect("from")
@@ -253,5 +350,69 @@ mod smtp_tests {
             to_lettre_message(&bad_type),
             Err(MailerError::Transport { .. })
         ));
+    }
+
+    #[test]
+    fn to_lettre_message_requires_from_for_single_and_multipart() {
+        let text_only = Email::new()
+            .to("to@example.test")
+            .expect("to")
+            .subject("Text")
+            .text("plain");
+        assert!(matches!(
+            to_lettre_message(&text_only),
+            Err(MailerError::Transport { .. })
+        ));
+
+        let multipart = Email::new()
+            .to("to@example.test")
+            .expect("to")
+            .subject("Multi")
+            .text("plain")
+            .html("<p>x</p>");
+        assert!(matches!(
+            to_lettre_message(&multipart),
+            Err(MailerError::Transport { .. })
+        ));
+    }
+
+    #[test]
+    fn multipart_helpers_cover_edge_trees() {
+        use super::{
+            ContentDisposition, MimePart, MimeTree, build_alternative, build_related,
+            multipart_from_tree, single_part_from_mime,
+        };
+
+        let plain = MimePart::text("hi");
+        let html = MimePart::html("<p>x</p>");
+        let binary = MimePart {
+            content_type: "application/octet-stream".to_owned(),
+            filename: Some("blob.bin".to_owned()),
+            disposition: ContentDisposition::Attachment,
+            content_id: None,
+            body: vec![0, 1, 2],
+        };
+
+        multipart_from_tree(&MimeTree::Single(plain.clone())).expect("single via multipart");
+        build_alternative(None, &MimeTree::Single(html.clone())).expect("html-only alternative");
+        let related = MimeTree::Related {
+            root: Box::new(MimeTree::Single(html.clone())),
+            related: vec![MimePart::from_attachment(&Attachment::inline_from_bytes(
+                "i.png",
+                "image/png",
+                "i",
+                vec![9],
+            ))],
+        };
+        build_alternative(None, &related).expect("related without text alternative");
+        build_related(
+            &MimeTree::Alternative {
+                text: Some(plain),
+                html: Box::new(MimeTree::Single(html)),
+            },
+            &[],
+        )
+        .expect("related around alternative root");
+        single_part_from_mime(&binary).expect("binary single part");
     }
 }

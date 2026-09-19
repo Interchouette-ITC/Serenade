@@ -123,11 +123,36 @@ impl Email {
         self
     }
 
-    /// Adds an attachment.
+    /// Adds a downloadable attachment.
     #[must_use]
     pub fn attach(mut self, attachment: Attachment) -> Self {
         self.attachments.push(attachment);
         self
+    }
+
+    /// Adds an inline (CID) part for HTML `cid:` references.
+    #[must_use]
+    pub fn embed(mut self, attachment: Attachment) -> Self {
+        self.attachments.push(attachment);
+        self
+    }
+
+    /// Plain-text body when set.
+    #[must_use]
+    pub fn text_part(&self) -> Option<&str> {
+        self.body.text_part()
+    }
+
+    /// HTML body when set.
+    #[must_use]
+    pub fn html_part(&self) -> Option<&str> {
+        self.body.html_part()
+    }
+
+    /// Mime multipart tree for this message (see [`crate::MimeTree`]).
+    #[must_use]
+    pub fn mime_tree(&self) -> crate::MimeTree {
+        crate::MimeTree::from_email(self)
     }
 
     /// From addresses.

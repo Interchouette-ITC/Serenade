@@ -1,6 +1,6 @@
 [package]
 name = "serenade-mailer"
-description = "Email message, Mime lite types, and Null/File/SMTP transports"
+description = "Email message, Mime multipart tree, and Null/File/SMTP transports"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
