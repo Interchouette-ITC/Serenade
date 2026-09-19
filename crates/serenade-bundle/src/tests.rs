@@ -120,6 +120,12 @@ fn framework_extension_wires_router_config_and_dispatcher() {
         .expect("to")
         .subject("hi");
     mailer.send(&email).expect("null send");
+    let notifier = container
+        .get_as::<serenade_notifier::NotifierService>(serenade_notifier::DEFAULT_NOTIFIER_SERVICE)
+        .expect("notifier");
+    notifier
+        .send(&serenade_notifier::Notification::sms("+1", "hi"))
+        .expect("null notify");
     let _http = container
         .get_as::<serenade_http_client::HttpClientService>(
             serenade_http_client::DEFAULT_HTTP_CLIENT_SERVICE,

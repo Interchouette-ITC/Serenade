@@ -275,6 +275,20 @@ Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/
 
 `FrameworkExtension` installs the default mailer pass. See [MAILER.md](MAILER.md).
 
+## Notifier (SMS / push)
+
+Non-email channels live in **`serenade-notifier`** ([#230](https://github.com/Interchouette-ITC/Serenade/issues/230)). See [NOTIFIER.md](NOTIFIER.md).
+
+| Piece | Role |
+| --- | --- |
+| `Channel` | `Sms` / `Push` |
+| `Notification` | SMS or push payload |
+| `Transport` | Sync `supports` + `send` |
+| `NullTransport` / `MemoryTransport` / `SmsOnlyTransport` | Discard / record / SMS-only |
+| `RegisterDefaultNotifierPass` | DI: service `notifier` defaults to null |
+
+`FrameworkExtension` installs the default notifier pass. Email remains in the mailer crate.
+
 ## HttpClient (outbound)
 
 Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Interchouette-ITC/Serenade/issues/184)). See [HTTP_CLIENT.md](HTTP_CLIENT.md).
