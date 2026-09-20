@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["EntryKind","FinderError"],"fn":["name_matches","version"],"struct":["Finder"]};
