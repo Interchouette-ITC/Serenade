@@ -5941,6 +5941,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "serenade-filesystem"
+version = "0.1.0"
+dependencies = [
+ "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "serenade-form"
 version = "0.1.0"
 dependencies = [

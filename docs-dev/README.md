@@ -25,6 +25,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [NOTIFIER.md](NOTIFIER.md)   | SMS + push channels, Null/Memory transports, DI        |
 | [STRING.md](STRING.md)       | Slug, case transforms, English Inflector helpers       |
 | [WORKFLOW.md](WORKFLOW.md)   | Places, transitions, guards, marking store             |
+| [FILESYSTEM.md](FILESYSTEM.md) | Path helpers, dump/mirror, temp files                |
 | [HTTP_CLIENT.md](HTTP_CLIENT.md) | Outbound HttpClient, mock + reqwest, DI            |
 | [MESSENGER.md](MESSENGER.md)     | Sync bus, in-memory transport, Redis wire frames   |
 | [LOCK.md](LOCK.md)               | Named locks, in-memory / filesystem / Redis, DI    |
