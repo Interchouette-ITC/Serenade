@@ -301,6 +301,19 @@ Helpers live in **`serenade-string`** ([#229](https://github.com/Interchouette-I
 
 Pure functions; no DI pass. ICU / catalogue plurals stay in [I18N.md](I18N.md).
 
+## Workflow
+
+State machines live in **`serenade-workflow`** ([#239](https://github.com/Interchouette-ITC/Serenade/issues/239)). See [WORKFLOW.md](WORKFLOW.md).
+
+| Piece | Role |
+| --- | --- |
+| `Definition` / `DefinitionBuilder` | Places, transitions, initial marking |
+| `Workflow` | `can` / `apply` / `enabled_transitions` |
+| `Marking` / `MarkingStore` / `MemoryMarkingStore` | Subject places + persist trait |
+| `Guard` / `TransitionListener` | Block before apply; hook after apply |
+
+Construct in app code; no FrameworkExtension pass yet.
+
 ## HttpClient (outbound)
 
 Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Interchouette-ITC/Serenade/issues/184)). See [HTTP_CLIENT.md](HTTP_CLIENT.md).
