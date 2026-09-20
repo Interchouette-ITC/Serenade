@@ -178,3 +178,119 @@ fn temp_helpers_under_parent() {
 fn version_is_nonzero() {
     assert_ne!(crate::version(), "");
 }
+
+#[test]
+fn read_to_string_missing_and_not_file() {
+    let dir = temp_dir().expect("temp");
+    let missing = dir.path().join("nope");
+    assert_eq!(
+        read_to_string(&missing).expect_err("missing"),
+        FilesystemError::NotFound {
+            path: PathBuf::from(&missing),
+        }
+    );
+    assert_eq!(
+        read_to_string(dir.path()).expect_err("dir"),
+        FilesystemError::NotFile {
+            path: PathBuf::from(dir.path()),
+        }
+    );
+}
+
+#[test]
+fn remove_tree_noop_and_single_file() {
+    let dir = temp_dir().expect("temp");
+    let missing = dir.path().join("absent");
+    remove_tree(&missing).expect("noop");
+
+    let file = dir.path().join("alone.txt");
+    dump_file(&file, b"x").expect("dump");
+    remove_tree(&file).expect("file");
+    assert!(!exists(&file));
+}
+
+#[test]
+fn remove_nonempty_dir_is_io_error() {
+    let dir = temp_dir().expect("temp");
+    let nested = dir.path().join("full");
+    mkdir(&nested).expect("mkdir");
+    dump_file(nested.join("f"), b"1").expect("dump");
+    let err = remove(&nested).expect_err("nonempty");
+    assert!(matches!(err, FilesystemError::Io { op: "remove", .. }));
+}
+
+#[test]
+fn filesystem_error_eq_covers_io_and_mismatch() {
+    let a = FilesystemError::io(
+        "dump_file",
+        "a.txt",
+        std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+    );
+    let b = FilesystemError::io(
+        "dump_file",
+        "a.txt",
+        std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+    );
+    let c = FilesystemError::io(
+        "dump_file",
+        "a.txt",
+        std::io::Error::from(std::io::ErrorKind::NotFound),
+    );
+    assert_eq!(a, b);
+    assert_ne!(a, c);
+    assert_ne!(
+        a,
+        FilesystemError::NotFound {
+            path: PathBuf::from("a.txt"),
+        }
+    );
+    assert_eq!(
+        FilesystemError::NotDirectory {
+            path: PathBuf::from("d"),
+        },
+        FilesystemError::NotDirectory {
+            path: PathBuf::from("d"),
+        }
+    );
+}
+
+#[test]
+fn bare_relative_paths_skip_parent_mkdir() {
+    let dir = temp_dir().expect("temp");
+    let prev = std::env::current_dir().expect("cwd");
+    std::env::set_current_dir(dir.path()).expect("chdir");
+    let result = (|| {
+        dump_file("bare.txt", b"hi")?;
+        append_to_file("bare.txt", b"!")?;
+        touch("touched.txt")?;
+        copy("bare.txt", "copy.txt")?;
+        rename("copy.txt", "renamed.txt")?;
+        assert_eq!(read_to_string("bare.txt")?, "hi!");
+        assert_eq!(read_to_string("renamed.txt")?, "hi!");
+        assert!(is_file("touched.txt"));
+        Ok::<(), FilesystemError>(())
+    })();
+    std::env::set_current_dir(&prev).expect("restore cwd");
+    result.expect("bare paths");
+}
+
+#[cfg(unix)]
+#[test]
+fn mirror_skips_symlinks() {
+    let dir = temp_dir().expect("temp");
+    let src = dir.path().join("src");
+    let dst = dir.path().join("dst");
+    mkdir(&src).expect("mkdir");
+    dump_file(src.join("real.txt"), b"ok").expect("dump");
+    std::os::unix::fs::symlink("real.txt", src.join("link.txt")).expect("symlink");
+    mirror(&src, &dst).expect("mirror");
+    assert_eq!(read_to_string(dst.join("real.txt")).expect("real"), "ok");
+    assert!(!exists(dst.join("link.txt")));
+}
+
+#[test]
+fn mkdir_noop_when_already_directory() {
+    let dir = temp_dir().expect("temp");
+    mkdir(dir.path()).expect("first");
+    mkdir(dir.path()).expect("second");
+}
