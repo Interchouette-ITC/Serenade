@@ -11,6 +11,8 @@ rust-version.workspace = true
 [features]
 ## OAuth 2.0 / OIDC relying-party helpers (not an authorization server).
 oauth = ["dep:base64", "dep:serde", "dep:serde_json"]
+## LDAP directory bind helpers (trait + mock; apps own the LDAP client).
+ldap = []
 
 [dependencies]
 argon2 = { workspace = true }

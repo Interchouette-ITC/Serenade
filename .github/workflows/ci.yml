@@ -99,6 +99,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-security --all-targets --features oauth
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-security ldap feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-security --all-targets --features ldap
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -129,6 +134,9 @@ jobs:
       - name: Test serenade-security with oauth
         if: needs.changes.outputs.code == 'true'
         run: cargo test -p serenade-security --features oauth
+      - name: Test serenade-security with ldap
+        if: needs.changes.outputs.code == 'true'
+        run: cargo test -p serenade-security --features ldap
 
   cache-redis:
     name: cache redis

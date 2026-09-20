@@ -1,8 +1,8 @@
 # Security
 
 AuthN/Z hooks, CSRF tokens, and how HTML apps stay safe. OAuth 2.0 / OIDC **client**
-helpers live behind Cargo feature `oauth` (not an authorization server). LDAP is
-still a non-goal until the Wave 32b slice lands.
+helpers live behind Cargo feature `oauth`. LDAP **directory bind** helpers live
+behind feature `ldap` (apps own the LDAP client; Serenade is not a directory server).
 
 ## Pieces
 
@@ -21,6 +21,8 @@ still a non-goal until the Wave 32b slice lands.
 | `OAuthClientConfig` / `build_authorization_request` (feature `oauth`) | PKCE authorize URL + state                                                               |
 | `token_exchange_form` / `TokenExchanger` / `MockTokenExchanger` (feature `oauth`) | Token endpoint body + sync exchange trait                                      |
 | `token_from_oidc_subject` / `subject_from_id_token` (feature `oauth`) | Map IdP subject → security token (JWT payload decode is **unverified**)        |
+| `LdapBindConfig` / `LdapBinder` / `MockLdapBinder` (feature `ldap`) | Directory bind config + sync trait (apps own LDAP client)                        |
+| `LdapAuthenticator` / `authenticate_ldap_password` (feature `ldap`) | `username:password` firewall authenticator + bind → token                        |
 | `SECURITY_SESSION_KEY`                                    | `_serenade.security_token`                                                               |
 | `CSRF_FIELD_NAME` (`_token`)                              | Default HTML field name (Symfony habit)                                                  |
 
@@ -152,9 +154,52 @@ GitHub returns JSON when you send `Accept: application/json` on the token POST. 
 
 **Production:** verify ID tokens with the IdP JWKS before trusting `subject_from_id_token`. Store and compare `state`. Keep `code_verifier` server-side only.
 
+## LDAP directory bind (feature `ldap`)
+
+Enable with `serenade-security` feature `ldap`. Serenade shapes the **bind**
+handshake; apps own the LDAP network client (for example `ldap3`).
+
+```rust
+use serenade_security::{
+    LdapAuthenticator, LdapBindConfig, MockLdapBinder, LdapIdentity,
+    authenticate_ldap_password, FirewallMiddleware, login,
+};
+
+let config = LdapBindConfig::new(
+    "ldaps://ldap.example.com",
+    "dc=example,dc=com",
+    "uid={username},ou=people,dc=example,dc=com",
+);
+let _dn = config.user_dn("alice")?; // uid=alice,ou=people,...
+
+// Production: implement LdapBinder with your LDAP client using config.uri() + user_dn().
+// Tests:
+let binder = MockLdapBinder::new(LdapIdentity::new(
+    "uid=alice,ou=people,dc=example,dc=com",
+    "alice",
+    ["ROLE_USER"],
+))
+.with_credentials("alice", "secret");
+
+let token = authenticate_ldap_password(&binder, "alice", "secret")?;
+// login(session, &token);
+
+// Or firewall header / basic-style credentials as username:password:
+let firewall = FirewallMiddleware::new("X-Ldap-Credentials", LdapAuthenticator::new(binder));
+```
+
+| Piece | Role |
+| --- | --- |
+| `LdapBindConfig` | URI, base DN, `{username}` DN template |
+| `LdapBinder` | Sync bind → `LdapIdentity` |
+| `MockLdapBinder` | Tests without a directory |
+| `LdapAuthenticator` | `Authenticator` for `username:password` credentials |
+
+**Production:** use LDAPS or StartTLS; never log passwords; map directory groups to roles in your `LdapBinder` implementation.
+
 ## Non-goals
 
 - Authorization server / IdP in Serenade
-- LDAP directory bind (Wave 32b)
+- Shipping an LDAP server or mandatory LDAP SDK
 - Built-in user persistence
 - Coupling CSRF to a server session (CSRF v0 stays HMAC-stateless; session is optional via `serenade-session`)

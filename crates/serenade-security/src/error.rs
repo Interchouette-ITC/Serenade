@@ -33,4 +33,10 @@ pub enum SecurityError {
         /// Underlying message.
         message: String,
     },
+    /// LDAP bind or directory helper failed.
+    #[error("ldap error: {message}")]
+    Ldap {
+        /// Underlying message.
+        message: String,
+    },
 }
