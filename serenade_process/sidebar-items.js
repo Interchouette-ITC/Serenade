@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ProcessError"],"fn":["version"],"struct":["CompletedProcess","Process"]};
