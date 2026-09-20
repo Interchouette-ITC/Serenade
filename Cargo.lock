@@ -5949,6 +5949,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "serenade-finder"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.20",
+ "walkdir",
+]
+
+[[package]]
 name = "serenade-form"
 version = "0.1.0"
 dependencies = [

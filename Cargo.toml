@@ -30,6 +30,7 @@ members = [
     "crates/serenade-workflow",
     "crates/serenade-filesystem",
     "crates/serenade-process",
+    "crates/serenade-finder",
     "crates/serenade-session",
     "crates/serenade-observability",
     "crates/serenade-openapi",
@@ -83,7 +84,9 @@ serenade-string = { path = "crates/serenade-string", version = "0.1.0" }
 serenade-workflow = { path = "crates/serenade-workflow", version = "0.1.0" }
 serenade-filesystem = { path = "crates/serenade-filesystem", version = "0.1.0" }
 serenade-process = { path = "crates/serenade-process", version = "0.1.0" }
+serenade-finder = { path = "crates/serenade-finder", version = "0.1.0" }
 serenade-session = { path = "crates/serenade-session", version = "0.1.0" }
+walkdir = "2"
 serenade-observability = { path = "crates/serenade-observability", version = "0.1.0" }
 serenade-openapi = { path = "crates/serenade-openapi", version = "0.1.0" }
 serenade-component-host = { path = "crates/serenade-component-host", version = "0.1.0" }
