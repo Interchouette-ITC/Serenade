@@ -11,7 +11,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [HTTP_OPS.md](HTTP_OPS.md)   | Request-id, health/ready probes, graceful drain      |
 | [CONSOLE.md](CONSOLE.md)     | Console Application, commands, `--env` / ratatui       |
 | [RECIPES.md](RECIPES.md)     | Flex-like recipes, `serenade new`, Cargo stays PM      |
-| [SECURITY.md](SECURITY.md)   | AuthN/Z, firewall, CSRF, password hashing, session login |
+| [SECURITY.md](SECURITY.md)   | AuthN/Z, firewall, CSRF, password hashing, session login, OAuth/OIDC client (`oauth` feature) |
 | [FORMS.md](FORMS.md)         | HTML forms, CSRF default-on, XSS-safe render   |
 | [I18N.md](I18N.md)           | Translator, catalogues, locale, ICU helpers    |
 | [PROFILER.md](PROFILER.md)   | Web debug toolbar / per-request profiler       |

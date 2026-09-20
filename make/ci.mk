@@ -4,7 +4,7 @@
 	coverage coverage-summary coverage-html tarpaulin machete outdated fuzz fuzz-build geiger
 
 # Keep in sync with codecov.yml ignore paths and CI coverage.
-COVERAGE_FEATURES := --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger
+COVERAGE_FEATURES := --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth
 COVERAGE_IGNORE := examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs
 
 check:

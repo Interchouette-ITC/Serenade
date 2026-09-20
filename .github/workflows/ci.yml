@@ -94,6 +94,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-openapi --all-targets --features actix
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-security oauth feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-security --all-targets --features oauth
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -121,6 +126,9 @@ jobs:
       - name: Test serenade-openapi with actix
         if: needs.changes.outputs.code == 'true'
         run: cargo test -p serenade-openapi --features actix
+      - name: Test serenade-security with oauth
+        if: needs.changes.outputs.code == 'true'
+        run: cargo test -p serenade-security --features oauth
 
   cache-redis:
     name: cache redis
