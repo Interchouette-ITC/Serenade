@@ -294,3 +294,37 @@ fn mkdir_noop_when_already_directory() {
     mkdir(dir.path()).expect("first");
     mkdir(dir.path()).expect("second");
 }
+
+#[test]
+fn root_paths_take_parent_none_branch() {
+    // `Path::parent()` is `None` for `/` and `""` (not `Some("")` like `bare.txt`).
+    assert!(matches!(
+        dump_file("/", b"x").expect_err("dump /"),
+        FilesystemError::Io { .. }
+    ));
+    assert!(matches!(
+        append_to_file("/", b"x").expect_err("append /"),
+        FilesystemError::Io { .. }
+    ));
+    assert!(matches!(
+        touch("/").expect_err("touch /"),
+        FilesystemError::Io { .. }
+    ));
+    assert!(matches!(
+        dump_file("", b"x").expect_err("dump empty"),
+        FilesystemError::Io { .. }
+    ));
+
+    let dir = temp_dir().expect("temp");
+    let src = dir.path().join("src.txt");
+    dump_file(&src, b"x").expect("src");
+    assert!(matches!(
+        copy(&src, "/").expect_err("copy to /"),
+        FilesystemError::Io { .. }
+    ));
+    assert!(matches!(
+        rename(&src, "/").expect_err("rename to /"),
+        FilesystemError::Io { .. }
+    ));
+    assert!(exists(&src));
+}
