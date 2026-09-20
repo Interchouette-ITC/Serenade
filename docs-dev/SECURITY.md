@@ -1,6 +1,8 @@
 # Security
 
-AuthN/Z hooks, CSRF tokens, and how HTML apps stay safe. This is **not** a full OAuth/OIDC stack.
+AuthN/Z hooks, CSRF tokens, and how HTML apps stay safe. OAuth 2.0 / OIDC **client**
+helpers live behind Cargo feature `oauth` (not an authorization server). LDAP is
+still a non-goal until the Wave 32b slice lands.
 
 ## Pieces
 
@@ -16,6 +18,9 @@ AuthN/Z hooks, CSRF tokens, and how HTML apps stay safe. This is **not** a full 
 | `PasswordHasher` / `Argon2idPasswordHasher`               | Hash and verify passwords (Argon2id, PHC string)                                         |
 | `login` / `logout` / `token_from_session`                 | Persist identity on `serenade-session` (id + roles only)                                 |
 | `SessionTokenMiddleware` / `AsyncSessionTokenMiddleware`  | Restore session identity onto `_security_token`                                          |
+| `OAuthClientConfig` / `build_authorization_request` (feature `oauth`) | PKCE authorize URL + state                                                               |
+| `token_exchange_form` / `TokenExchanger` / `MockTokenExchanger` (feature `oauth`) | Token endpoint body + sync exchange trait                                      |
+| `token_from_oidc_subject` / `subject_from_id_token` (feature `oauth`) | Map IdP subject → security token (JWT payload decode is **unverified**)        |
 | `SECURITY_SESSION_KEY`                                    | `_serenade.security_token`                                                               |
 | `CSRF_FIELD_NAME` (`_token`)                              | Default HTML field name (Symfony habit)                                                  |
 
@@ -92,8 +97,64 @@ logout(request_session_mut(request).expect("session"));
 
 Default HTML escaping for form render lives in **`serenade-form`** (`escape_html` / `escape_attr`). Controllers must not concatenate raw user input into HTML responses.
 
+## OAuth 2.0 / OIDC client (feature `oauth`)
+
+Enable with `serenade-security` feature `oauth`. Serenade shapes the **relying party**
+handshake; apps own HTTP to the IdP and JWT signature verification.
+
+```rust
+use serenade_security::{
+    OAuthClientConfig, MockTokenExchanger, TokenExchanger, build_authorization_request,
+    parse_token_response, subject_from_id_token, token_exchange_form, token_from_oidc_subject,
+    login,
+};
+
+// Example endpoints (replace with your IdP / Google / GitHub values):
+let config = OAuthClientConfig::new(
+    "client-id",
+    "https://accounts.google.com/o/oauth2/v2/auth", // or GitHub authorize URL
+    "https://oauth2.googleapis.com/token",
+    "https://app.example/oauth/callback",
+)
+.with_scopes(["openid", "email", "profile"])
+.with_client_secret("client-secret"); // omit for public PKCE clients
+
+// 1) Login start: redirect the browser, store state + code_verifier in session.
+let auth = build_authorization_request(&config)?;
+// redirect to auth.url(); remember auth.state() and auth.code_verifier()
+
+// 2) Callback: verify state, then POST token_exchange_form(...) to config.token_endpoint().
+let body = token_exchange_form(&config, "authorization-code", "stored-verifier");
+// let json = http_post(config.token_endpoint(), body)?;
+// let tokens = parse_token_response(&json)?;
+
+// Tests can skip HTTP:
+let tokens = MockTokenExchanger::new(parse_token_response(
+    r#"{"access_token":"at","id_token":"hdr.eyJzdWIiOiJ1MSJ9.sig"}"#,
+)?)
+.exchange_code(&config, "code", "verifier")?;
+
+let subject = if let Some(id_token) = tokens.id_token.as_deref() {
+    subject_from_id_token(id_token)? // unverified payload; verify JWKS in production
+} else {
+    "lookup-via-userinfo".to_owned()
+};
+let security_token = token_from_oidc_subject(subject, ["ROLE_USER"], tokens.access_token);
+// login(session, &security_token);
+```
+
+| Provider | Authorize | Token |
+| --- | --- | --- |
+| Google (OIDC) | `https://accounts.google.com/o/oauth2/v2/auth` | `https://oauth2.googleapis.com/token` |
+| GitHub (OAuth) | `https://github.com/login/oauth/authorize` | `https://github.com/login/oauth/access_token` |
+
+GitHub returns JSON when you send `Accept: application/json` on the token POST. Prefer OIDC `openid` scope when the IdP supports it so `id_token` carries `sub`.
+
+**Production:** verify ID tokens with the IdP JWKS before trusting `subject_from_id_token`. Store and compare `state`. Keep `code_verifier` server-side only.
+
 ## Non-goals
 
-- OAuth2 / OIDC providers
+- Authorization server / IdP in Serenade
+- LDAP directory bind (Wave 32b)
 - Built-in user persistence
 - Coupling CSRF to a server session (CSRF v0 stays HMAC-stateless; session is optional via `serenade-session`)

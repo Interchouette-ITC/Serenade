@@ -6156,8 +6156,11 @@ name = "serenade-security"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "base64 0.22.1",
  "getrandom 0.3.4",
  "hmac",
+ "serde",
+ "serde_json",
  "serenade-http",
  "serenade-session",
  "sha2 0.10.9",

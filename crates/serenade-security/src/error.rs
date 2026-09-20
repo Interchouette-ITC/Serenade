@@ -27,4 +27,10 @@ pub enum SecurityError {
         /// Underlying message.
         message: String,
     },
+    /// OAuth / OIDC client helper failed.
+    #[error("oauth error: {message}")]
+    OAuth {
+        /// Underlying message.
+        message: String,
+    },
 }
