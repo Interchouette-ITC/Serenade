@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["WorkflowError"],"fn":["block","version"],"struct":["CompletedContext","Definition","DefinitionBuilder","Marking","MemoryMarkingStore","Transition","TransitionContext","Workflow"],"trait":["Guard","MarkingStore","TransitionListener"]};
