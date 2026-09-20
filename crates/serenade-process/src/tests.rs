@@ -12,7 +12,9 @@ fn echo_must_run_captures_stdout() {
     assert!(out.is_successful());
     assert_eq!(out.code(), Some(0));
     assert!(out.stdout_string().contains("serenade"));
+    assert!(out.stdout().windows(8).any(|w| w == b"serenade"));
     assert_eq!(out.stderr(), b"");
+    assert_eq!(out.stderr_string(), "");
     assert_eq!(out.status().code(), Some(0));
 }
 
@@ -44,6 +46,25 @@ fn timeout_kills_long_sleep() {
             timeout: Duration::from_millis(100),
         }
     );
+}
+
+#[test]
+fn timeout_allows_fast_command() {
+    let out = Process::new("true")
+        .timeout(Duration::from_secs(5))
+        .must_run()
+        .expect("true within timeout");
+    assert!(out.is_successful());
+}
+
+#[test]
+fn stderr_string_from_command() {
+    let out = Process::new("sh")
+        .args(["-c", "printf '%s' 'err' 1>&2"])
+        .run()
+        .expect("stderr");
+    assert_eq!(out.stderr_string(), "err");
+    assert_eq!(out.stdout(), b"");
 }
 
 #[test]
@@ -102,10 +123,15 @@ fn spawn_missing_binary_is_io() {
         .run()
         .expect_err("io");
     assert!(matches!(err, ProcessError::Io { .. }));
+    let again = Process::new("serenade-process-no-such-bin-xyz")
+        .run()
+        .expect_err("io2");
+    assert_eq!(err, again);
 }
 
 #[test]
-fn process_error_eq_mismatch() {
+fn process_error_eq_covers_variants() {
+    assert_eq!(ProcessError::EmptyCommand, ProcessError::EmptyCommand);
     assert_ne!(
         ProcessError::EmptyCommand,
         ProcessError::Failed {
@@ -118,6 +144,39 @@ fn process_error_eq_mismatch() {
         timeout: Duration::from_secs(1),
     };
     assert_eq!(a, a);
+    assert_ne!(
+        a,
+        ProcessError::TimedOut {
+            command: "sleep".into(),
+            timeout: Duration::from_secs(2),
+        }
+    );
+    let io = ProcessError::Io {
+        command: "x".into(),
+        source: std::io::Error::from(std::io::ErrorKind::NotFound),
+    };
+    assert_eq!(
+        io,
+        ProcessError::Io {
+            command: "x".into(),
+            source: std::io::Error::from(std::io::ErrorKind::NotFound),
+        }
+    );
+    assert_ne!(
+        io,
+        ProcessError::Io {
+            command: "x".into(),
+            source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+        }
+    );
+    assert_eq!(
+        ProcessError::InvalidCwd {
+            path: PathBuf::from("/a"),
+        },
+        ProcessError::InvalidCwd {
+            path: PathBuf::from("/a"),
+        }
+    );
 }
 
 #[test]

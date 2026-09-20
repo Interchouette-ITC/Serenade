@@ -142,13 +142,7 @@ impl Process {
             buf
         });
 
-        let status = match self.timeout {
-            None => child.wait().map_err(|source| ProcessError::Io {
-                command: self.command_string(),
-                source,
-            })?,
-            Some(timeout) => wait_with_timeout(&mut child, timeout, &self.command_string())?,
-        };
+        let status = wait_child(&mut child, self.timeout, &self.command_string())?;
 
         let stdout = stdout_handle.join().unwrap_or_default();
         let stderr = stderr_handle.join().unwrap_or_default();
@@ -173,32 +167,27 @@ impl Process {
     }
 }
 
-fn wait_with_timeout(
+fn wait_child(
     child: &mut std::process::Child,
-    timeout: Duration,
+    timeout: Option<Duration>,
     command: &str,
 ) -> Result<std::process::ExitStatus, ProcessError> {
     let start = Instant::now();
     loop {
-        match child.try_wait() {
-            Ok(Some(status)) => return Ok(status),
-            Ok(None) => {
-                if start.elapsed() >= timeout {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err(ProcessError::TimedOut {
-                        command: command.to_owned(),
-                        timeout,
-                    });
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-            Err(source) => {
-                return Err(ProcessError::Io {
+        if let Ok(Some(status)) = child.try_wait() {
+            return Ok(status);
+        }
+        // `Err` / `Ok(None)`: still running (or rare try_wait I/O); keep polling.
+        if let Some(limit) = timeout {
+            if start.elapsed() >= limit {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(ProcessError::TimedOut {
                     command: command.to_owned(),
-                    source,
+                    timeout: limit,
                 });
             }
         }
+        thread::sleep(Duration::from_millis(10));
     }
 }
