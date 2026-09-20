@@ -1,0 +1,16 @@
+[package]
+name = "serenade-finder"
+description = "Directory walking with name glob and type filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+walkdir = { workspace = true }
+
+[lints]
+workspace = true

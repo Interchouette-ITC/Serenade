@@ -336,6 +336,16 @@ Child processes live in **`serenade-process`** ([#243](https://github.com/Interc
 | `run` / `must_run` | Capture stdout/stderr; optional fail-on-nonzero |
 | `CompletedProcess` | Exit status + output helpers |
 
+## Finder
+
+Directory walking lives in **`serenade-finder`** ([#245](https://github.com/Interchouette-ITC/Serenade/issues/245)). See [FINDER.md](FINDER.md).
+
+| Piece | Role |
+| --- | --- |
+| `Finder` | Builder: roots, files/directories, name glob, depth |
+| `collect` | Sorted matching paths |
+| `name_matches` | Basename `*` / `?` helper |
+
 ## HttpClient (outbound)
 
 Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Interchouette-ITC/Serenade/issues/184)). See [HTTP_CLIENT.md](HTTP_CLIENT.md).
