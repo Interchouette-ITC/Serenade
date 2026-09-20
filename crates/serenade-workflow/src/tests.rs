@@ -140,3 +140,94 @@ fn memory_store_clear_resets_to_initial() {
     store.clear("s");
     assert_eq!(wf.marking("s"), Marking::single("draft"));
 }
+
+#[test]
+fn marking_empty_len_and_is_empty() {
+    let empty = Marking::empty();
+    assert_eq!(empty.len(), 0);
+    assert!(empty.is_empty());
+    let one = Marking::single("draft");
+    assert_eq!(one.len(), 1);
+    assert!(!one.is_empty());
+}
+
+#[test]
+fn workflow_exposes_name_and_definition() {
+    let wf = article_workflow();
+    assert_eq!(wf.name(), "article");
+    assert_eq!(wf.definition().places(), ["draft", "published", "archived"]);
+    assert!(wf.definition().transition("publish").is_some());
+    assert!(!wf.can("doc", "nope"));
+}
+
+#[test]
+fn definition_builder_place_and_validation_errors() {
+    let ok = DefinitionBuilder::new()
+        .place("draft")
+        .place("published")
+        .edge("publish", "draft", "published")
+        .build()
+        .expect("ok");
+    assert_eq!(ok.places(), ["draft", "published"]);
+    assert_eq!(ok.initial(), &Marking::single("draft"));
+
+    assert_eq!(
+        DefinitionBuilder::new().build().expect_err("empty"),
+        WorkflowError::EmptyPlaces
+    );
+    assert_eq!(
+        DefinitionBuilder::new()
+            .place("")
+            .build()
+            .expect_err("empty place"),
+        WorkflowError::EmptyPlaceName
+    );
+    assert_eq!(
+        DefinitionBuilder::new()
+            .places(["a"])
+            .transition(Transition::new("", ["a"], ["a"]))
+            .build()
+            .expect_err("empty transition"),
+        WorkflowError::EmptyTransitionName
+    );
+    assert_eq!(
+        DefinitionBuilder::new()
+            .places(["a", "b"])
+            .edge("go", "a", "b")
+            .edge("go", "b", "a")
+            .build()
+            .expect_err("dup transition"),
+        WorkflowError::DuplicateTransition {
+            transition: "go".into(),
+        }
+    );
+    assert_eq!(
+        DefinitionBuilder::new()
+            .places(["a"])
+            .transition(Transition::new("noop", [] as [&str; 0], ["a"]))
+            .build()
+            .expect_err("empty from"),
+        WorkflowError::EmptyPlaceName
+    );
+    assert_eq!(
+        DefinitionBuilder::new()
+            .places(["a"])
+            .initial(Marking::single("missing"))
+            .build()
+            .expect_err("bad initial"),
+        WorkflowError::UnknownInitialPlace {
+            place: "missing".into(),
+        }
+    );
+}
+
+#[test]
+fn star_guard_applies_to_all_transitions() {
+    let mut wf = article_workflow();
+    wf.add_guard(
+        "*",
+        Arc::new(|ctx: &crate::TransitionContext<'_>| Err(block(ctx.transition.name(), "frozen"))),
+    );
+    assert!(!wf.can("x", "publish"));
+    assert!(!wf.can("x", "archive"));
+}
