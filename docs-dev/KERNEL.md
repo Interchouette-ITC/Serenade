@@ -326,6 +326,16 @@ Path helpers live in **`serenade-filesystem`** ([#241](https://github.com/Interc
 | `copy` / `mirror` | File and tree copy |
 | `temp_dir` / `temp_file` | Temporary paths |
 
+## Process
+
+Child processes live in **`serenade-process`** ([#243](https://github.com/Interchouette-ITC/Serenade/issues/243)). See [PROCESS.md](PROCESS.md).
+
+| Piece | Role |
+| --- | --- |
+| `Process` | Builder: args, cwd, env, timeout |
+| `run` / `must_run` | Capture stdout/stderr; optional fail-on-nonzero |
+| `CompletedProcess` | Exit status + output helpers |
+
 ## HttpClient (outbound)
 
 Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Interchouette-ITC/Serenade/issues/184)). See [HTTP_CLIENT.md](HTTP_CLIENT.md).
