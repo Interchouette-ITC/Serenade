@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FilesystemError"],"fn":["append_to_file","copy","dump_file","exists","is_dir","is_file","mirror","mkdir","read","read_to_string","remove","remove_tree","rename","temp_dir","temp_dir_in","temp_file","temp_file_in","touch","version"]};
