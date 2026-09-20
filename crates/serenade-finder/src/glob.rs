@@ -46,5 +46,10 @@ mod tests {
         assert!(name_matches("*", "anything"));
         assert!(name_matches("pre*", "prefix"));
         assert!(!name_matches("pre*", "xprefix"));
+        // Trailing stars after the name is fully consumed.
+        assert!(name_matches("abc*", "abc"));
+        assert!(name_matches("a***", "a"));
+        assert!(name_matches("**", ""));
+        assert!(!name_matches("a*b", "a"));
     }
 }

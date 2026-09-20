@@ -155,6 +155,53 @@ fn follow_links_flag_runs() {
     assert_ne!(found.len(), 0);
 }
 
+#[cfg(unix)]
+#[test]
+fn walk_errors_on_unreadable_directory() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tree();
+    let locked = dir.join("locked");
+    fs::create_dir(&locked).expect("mkdir locked");
+    fs::write(locked.join("secret.txt"), b"x").expect("secret");
+    let mut perms = fs::metadata(&locked).expect("meta").permissions();
+    perms.set_mode(0o000);
+    fs::set_permissions(&locked, perms).expect("chmod 000");
+
+    let err = Finder::new().in_path(&dir).collect().expect_err("walk");
+
+    let mut perms = fs::metadata(&locked).expect("meta2").permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&locked, perms).expect("chmod restore");
+
+    assert!(matches!(err, FinderError::Walk { .. }));
+}
+
+#[cfg(unix)]
+#[test]
+fn skips_non_utf8_basenames_for_name_filter() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    let dir = tree();
+    let weird = OsStr::from_bytes(b"weird\xff.rs");
+    fs::write(dir.join(weird), b"x").expect("weird");
+    let found = Finder::new()
+        .in_path(&dir)
+        .files()
+        .name("*.rs")
+        .max_depth(1)
+        .collect()
+        .expect("collect");
+    // UTF-8 a.rs matches; non-UTF-8 basename is skipped by the name filter.
+    assert!(found.iter().any(|p| ends_with(p, "a.rs")));
+    assert!(
+        !found
+            .iter()
+            .any(|p| p.as_os_str().as_bytes().contains(&0xff))
+    );
+}
+
 fn ends_with(path: &Path, name: &str) -> bool {
     path.file_name().and_then(|s| s.to_str()) == Some(name)
 }

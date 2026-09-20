@@ -117,21 +117,19 @@ impl Finder {
                 walker = walker.follow_links(true);
             }
             for entry in walker {
-                let entry = entry.map_err(|err| {
-                    let path = err.path().map_or_else(|| root.clone(), Path::to_path_buf);
-                    let source = err.into_io_error().unwrap_or_else(|| {
-                        std::io::Error::other("walkdir error without io source")
-                    });
-                    FinderError::Walk { path, source }
+                let entry = entry.map_err(|err| FinderError::Walk {
+                    path: err.path().map_or_else(|| root.clone(), Path::to_path_buf),
+                    source: std::io::Error::other(err.to_string()),
                 })?;
                 let path = entry.path();
                 let file_type = entry.file_type();
-                if self.ignore_dotfiles {
-                    if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-                        if name.starts_with('.') && path != root.as_path() {
-                            continue;
-                        }
-                    }
+                if self.ignore_dotfiles
+                    && path
+                        .file_name()
+                        .and_then(|s| s.to_str())
+                        .is_some_and(|name| name.starts_with('.') && path != root.as_path())
+                {
+                    continue;
                 }
                 let ok_kind = match self.kind {
                     EntryKind::Any => true,
