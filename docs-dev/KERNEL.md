@@ -314,6 +314,18 @@ State machines live in **`serenade-workflow`** ([#239](https://github.com/Interc
 
 Construct in app code; no FrameworkExtension pass yet.
 
+## Filesystem
+
+Path helpers live in **`serenade-filesystem`** ([#241](https://github.com/Interchouette-ITC/Serenade/issues/241)). See [FILESYSTEM.md](FILESYSTEM.md).
+
+| Piece | Role |
+| --- | --- |
+| `exists` / `is_file` / `is_dir` | Presence checks |
+| `mkdir` / `remove` / `remove_tree` / `rename` | Directory and path ops |
+| `dump_file` / `append_to_file` / `read` / `touch` | File contents |
+| `copy` / `mirror` | File and tree copy |
+| `temp_dir` / `temp_file` | Temporary paths |
+
 ## HttpClient (outbound)
 
 Outbound HTTP lives in **`serenade-http-client`** ([#184](https://github.com/Interchouette-ITC/Serenade/issues/184)). See [HTTP_CLIENT.md](HTTP_CLIENT.md).
