@@ -322,8 +322,15 @@ fn pkce_s256_challenge(verifier: &str) -> String {
 }
 
 fn random_url_safe(byte_len: usize) -> Result<String, SecurityError> {
+    random_url_safe_from(byte_len, |buf| getrandom::fill(buf).map_err(|_| ()))
+}
+
+fn random_url_safe_from(
+    byte_len: usize,
+    fill: impl FnOnce(&mut [u8]) -> Result<(), ()>,
+) -> Result<String, SecurityError> {
     let mut buf = vec![0_u8; byte_len];
-    getrandom::fill(&mut buf).map_err(|_| SecurityError::OAuth {
+    fill(&mut buf).map_err(|()| SecurityError::OAuth {
         message: "RNG failed".to_owned(),
     })?;
     Ok(URL_SAFE_NO_PAD.encode(buf))
@@ -478,6 +485,28 @@ mod tests {
             config.scopes(),
             &["openid".to_owned(), "profile".to_owned()]
         );
+    }
+
+    #[test]
+    fn decode_rejects_bad_payload_encoding() {
+        let err = decode_jwt_payload_json("hdr.!!!not-b64!!!.sig").expect_err("bad b64");
+        assert!(matches!(err, SecurityError::OAuth { .. }));
+        assert!(err.to_string().contains("encoding"));
+    }
+
+    #[test]
+    fn decode_rejects_bad_payload_json() {
+        let payload = URL_SAFE_NO_PAD.encode(b"not-json");
+        let jwt = format!("hdr.{payload}.sig");
+        let err = decode_jwt_payload_json(&jwt).expect_err("bad json");
+        assert!(matches!(err, SecurityError::OAuth { .. }));
+        assert!(err.to_string().contains("JSON"));
+    }
+
+    #[test]
+    fn random_url_safe_maps_fill_failure() {
+        let err = random_url_safe_from(8, |_| Err(())).expect_err("rng");
+        assert!(matches!(err, SecurityError::OAuth { message } if message == "RNG failed"));
     }
 
     #[test]
