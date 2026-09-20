@@ -156,6 +156,7 @@ mod inflect_edge_tests {
         assert_eq!(pluralize("CAT"), "CATS");
         assert_eq!(singularize("BOXES"), "BOX");
         assert_eq!(restore_case("A", ""), "");
+        assert_eq!(restore_case("Ab", ""), "");
         assert_eq!(restore_case("", "x"), "x");
     }
 }
