@@ -6038,6 +6038,7 @@ name = "serenade-mailer"
 version = "0.1.0"
 dependencies = [
  "lettre",
+ "serde_json",
  "serenade-di",
  "tempfile",
  "thiserror 2.0.20",

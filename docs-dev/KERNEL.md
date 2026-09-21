@@ -260,7 +260,7 @@ No SaaS engine in core. Apps wire adapters when they need one.
 
 ## Mailer / Mime
 
-Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153), [#228](https://github.com/Interchouette-ITC/Serenade/issues/228)). See [MAILER.md](MAILER.md).
+Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153), [#228](https://github.com/Interchouette-ITC/Serenade/issues/228), [#253](https://github.com/Interchouette-ITC/Serenade/issues/253)). See [MAILER.md](MAILER.md).
 
 | Piece | Role |
 | --- | --- |
@@ -271,6 +271,7 @@ Outgoing message types live in **`serenade-mailer`** ([#153](https://github.com/
 | `Email` | Builder for From/To/Cc/Bcc/Reply-To, subject, body, attach/embed |
 | `Transport` | Sync `send` contract |
 | `NullTransport` / `FileTransport` / `SmtpTransport` | Discard / file dump / SMTP (lettre) |
+| `EspHttpTransport` (feature `esp`) | HTTP ESP mail API; apps own the HTTP client |
 | `RegisterDefaultMailerPass` | DI: service `mailer` defaults to null |
 
 `FrameworkExtension` installs the default mailer pass. See [MAILER.md](MAILER.md).
