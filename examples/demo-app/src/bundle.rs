@@ -9,6 +9,8 @@ use serenade_di::{ContainerBuilder, ServiceDefinition};
 use serenade_event::{Event, EventError, EventSubscriber, SUBSCRIBER_TAG, SubscriberService};
 use serenade_http::{Method, Route, RouteCollection, RouteLoader};
 use serenade_kernel::BundleInterface;
+use serenade_string::{pluralize, slug};
+use serenade_workflow::{DefinitionBuilder, MemoryMarkingStore, Workflow};
 
 /// Service id for the greeting string registered by [`DemoExtension`].
 pub const DEMO_GREETING_SERVICE: &str = "demo.greeting";
@@ -57,6 +59,14 @@ impl Extension for DemoExtension {
             |_| Ok(Box::new(CommandService(Arc::new(HelloCommand)))),
         )?;
         builder.register(
+            ServiceDefinition::new("console.command.demo_slug").with_tag(COMMAND_TAG),
+            |_| Ok(Box::new(CommandService(Arc::new(SlugCommand)))),
+        )?;
+        builder.register(
+            ServiceDefinition::new("console.command.demo_workflow").with_tag(COMMAND_TAG),
+            |_| Ok(Box::new(CommandService(Arc::new(WorkflowCommand)))),
+        )?;
+        builder.register(
             ServiceDefinition::new("demo.subscriber.ready").with_tag(SUBSCRIBER_TAG),
             |_| Ok(Box::new(SubscriberService(Arc::new(DemoReadySubscriber)))),
         )?;
@@ -88,6 +98,77 @@ impl Command for HelloCommand {
         println!("{greeting}");
         Ok(())
     }
+}
+
+/// Console command `demo:slug` - dogfoods [`serenade_string`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SlugCommand;
+
+impl Command for SlugCommand {
+    fn name(&self) -> &'static str {
+        "demo:slug"
+    }
+
+    fn description(&self) -> &'static str {
+        "Slug and pluralize a phrase (serenade-string dogfood)"
+    }
+
+    fn execute(&self, input: &Input) -> Result<(), ConsoleError> {
+        let phrase = input
+            .args()
+            .first()
+            .map_or("Hello Serenade Demo", String::as_str);
+        let s = slug(phrase);
+        let p = pluralize("demo");
+        println!("slug={s} plural={p}");
+        Ok(())
+    }
+}
+
+/// Console command `demo:workflow` - dogfoods [`serenade_workflow`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WorkflowCommand;
+
+impl Command for WorkflowCommand {
+    fn name(&self) -> &'static str {
+        "demo:workflow"
+    }
+
+    fn description(&self) -> &'static str {
+        "Apply draft→published on a sample article workflow"
+    }
+
+    fn execute(&self, _input: &Input) -> Result<(), ConsoleError> {
+        let marking = run_article_publish("demo-1")
+            .map_err(|error| ConsoleError::Failed(error.to_string()))?;
+        println!("subject=demo-1 place={marking}");
+        Ok(())
+    }
+}
+
+/// Builds the sample article workflow and publishes `subject_id` once.
+///
+/// # Errors
+///
+/// Returns [`serenade_workflow::WorkflowError`] when the definition or apply fails.
+pub fn run_article_publish(subject_id: &str) -> Result<String, serenade_workflow::WorkflowError> {
+    let definition = DefinitionBuilder::new()
+        .places(["draft", "published", "archived"])
+        .edge("publish", "draft", "published")
+        .edge("archive", "published", "archived")
+        .build()?;
+    let workflow = Workflow::new(
+        "demo_article",
+        definition,
+        Arc::new(MemoryMarkingStore::new()),
+    );
+    if !workflow.can(subject_id, "publish") {
+        return Err(serenade_workflow::WorkflowError::NotEnabled {
+            transition: "publish".into(),
+        });
+    }
+    let next = workflow.apply(subject_id, "publish")?;
+    Ok(next.places().next().unwrap_or("").to_owned())
 }
 
 /// Fired by the sample binary after boot (`demo.ready`).
@@ -139,6 +220,7 @@ mod tests {
     use serenade_console::{Application, Input};
     use serenade_event::DISPATCHER_SERVICE;
     use serenade_kernel::{App, Application as KernelApp, Environment};
+    use serenade_string::slug;
 
     use super::*;
 
@@ -191,5 +273,22 @@ mod tests {
         let cmd = HelloCommand;
         let input = Input::new(Environment::Dev, true, Vec::new(), None);
         cmd.execute(&input).expect("no container");
+    }
+
+    #[test]
+    fn demo_slug_command_uses_serenade_string() {
+        let cmd = SlugCommand;
+        let input = Input::new(Environment::Dev, true, vec!["Hello World!".into()], None);
+        cmd.execute(&input).expect("slug");
+        assert_eq!(slug("Hello World!"), "hello-world");
+    }
+
+    #[test]
+    fn demo_workflow_publishes_draft() {
+        let place = run_article_publish("article-test").expect("publish");
+        assert_eq!(place, "published");
+        let cmd = WorkflowCommand;
+        let input = Input::new(Environment::Dev, true, Vec::new(), None);
+        cmd.execute(&input).expect("workflow cmd");
     }
 }

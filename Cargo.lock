@@ -5916,6 +5916,8 @@ dependencies = [
  "serenade-http",
  "serenade-kernel",
  "serenade-observability",
+ "serenade-string",
+ "serenade-workflow",
  "tracing",
 ]
 

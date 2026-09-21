@@ -7,5 +7,5 @@ mod bundle;
 
 pub use bundle::{
     DEMO_GREETING_SERVICE, DemoBundle, DemoExtension, DemoReady, DemoReadySubscriber, HelloCommand,
-    demo_container,
+    SlugCommand, WorkflowCommand, demo_container, run_article_publish,
 };
