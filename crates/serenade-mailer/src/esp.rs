@@ -246,8 +246,12 @@ impl<P: EspHttpPoster> Transport for EspHttpTransport<P> {
 /// # Errors
 ///
 /// Returns [`MailerError::MissingSender`], [`MailerError::MissingRecipient`], or
-/// [`MailerError::Transport`] when the message has no text/HTML body or JSON
-/// encoding fails.
+/// [`MailerError::Transport`] when the message has no text/HTML body.
+///
+/// # Panics
+///
+/// Panics only if `serde_json` fails to encode the in-memory payload (should not
+/// happen for this string/array shape).
 pub fn build_esp_payload(email: &Email) -> Result<Vec<u8>, MailerError> {
     validate_for_send(email)?;
     let from = email
@@ -287,9 +291,7 @@ pub fn build_esp_payload(email: &Email) -> Result<Vec<u8>, MailerError> {
         payload["reply_to"] = address_json(reply);
     }
 
-    serde_json::to_vec(&payload).map_err(|error| MailerError::Transport {
-        message: format!("ESP JSON encode: {error}"),
-    })
+    Ok(serde_json::to_vec(&payload).expect("ESP JSON encode is infallible for this payload shape"))
 }
 
 fn addresses_json(addresses: &[Address]) -> serde_json::Value {
@@ -337,11 +339,21 @@ mod tests {
 
     #[test]
     fn config_authorization_is_bearer() {
-        let config = EspApiConfig::new("https://api.example/mail/send", "sg-key");
+        let config = EspApiConfig::new("https://api.example/mail/send", "sg-key")
+            .auth_scheme(EspAuthScheme::Bearer);
         assert_eq!(config.endpoint_url(), "https://api.example/mail/send");
         assert_eq!(config.api_key(), "sg-key");
         assert_eq!(config.auth_scheme_value(), EspAuthScheme::Bearer);
         assert_eq!(config.authorization_header(), "Bearer sg-key");
+    }
+
+    #[test]
+    fn transport_exposes_config_and_poster() {
+        let poster = MockEspHttpPoster::accepted();
+        let transport =
+            EspHttpTransport::new(EspApiConfig::new("https://api.example/send", "k"), poster);
+        assert_eq!(transport.config().api_key(), "k");
+        assert!(transport.poster().last_request().is_none());
     }
 
     #[test]
@@ -413,6 +425,30 @@ mod tests {
             EspHttpTransport::new(EspApiConfig::new("https://api.example/send", "bad"), poster);
         let err = transport.send(&sample_email()).expect_err("fail");
         assert!(matches!(err, MailerError::Transport { message } if message.contains("401")));
+    }
+
+    #[test]
+    fn transport_truncates_long_error_body() {
+        let long = "x".repeat(250);
+        let poster = MockEspHttpPoster::new(EspHttpResponse::new(502, long));
+        let transport =
+            EspHttpTransport::new(EspApiConfig::new("https://api.example/send", "k"), poster);
+        let err = transport.send(&sample_email()).expect_err("fail");
+        assert!(matches!(
+            &err,
+            MailerError::Transport { message }
+                if message.contains("502")
+                    && message.contains("...")
+                    && message.len() < 280
+        ));
+    }
+
+    #[test]
+    fn response_accessors() {
+        let response = EspHttpResponse::new(202, " accepted ");
+        assert_eq!(response.status(), 202);
+        assert_eq!(response.body(), " accepted ");
+        assert!(response.is_success());
     }
 
     #[test]
