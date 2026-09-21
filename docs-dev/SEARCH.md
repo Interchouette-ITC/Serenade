@@ -6,13 +6,13 @@ Serenade ships **contracts**, a zero-deps **in-memory** adapter, and (feature `h
 
 ## Pieces
 
-| Piece | Role |
-| --- | --- |
-| `SearchDocument` | Stable `id` + named text `fields` |
-| `SearchQuery` / `SearchHit` | Free-text query, optional limit/offset, ranked hit |
-| `DocumentIndex` | `upsert` / `delete` / `query` / `clear` |
-| `MemorySearchAdapter` | Case-insensitive whitespace-token AND match; score = occurrence sum |
-| `HttpSearchAdapter` (feature `http`) | REST stub; apps own the HTTP client via `SearchHttpPoster` |
+| Piece                                | Role                                                                |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `SearchDocument`                     | Stable `id` + named text `fields`                                   |
+| `SearchQuery` / `SearchHit`          | Free-text query, optional limit/offset, ranked hit                  |
+| `DocumentIndex`                      | `upsert` / `delete` / `query` / `clear`                             |
+| `MemorySearchAdapter`                | Case-insensitive whitespace-token AND match; score = occurrence sum |
+| `HttpSearchAdapter` (feature `http`) | REST stub; apps own the HTTP client via `SearchHttpPoster`          |
 
 Matching on the memory adapter concatenates field values. Empty / whitespace-only queries return no hits.
 
@@ -20,20 +20,20 @@ Matching on the memory adapter concatenates field values. Empty / whitespace-onl
 
 Enable with `serenade-search` feature `http`. Serenade shapes a small REST surface; apps own the network client (no mandatory SaaS SDK).
 
-| Piece | Role |
-| --- | --- |
-| `HttpSearchConfig` | Base URL + optional Bearer API key |
-| `SearchHttpPoster` / `MockSearchHttpPoster` | Sync request trait + test double |
-| `HttpSearchAdapter` | Implements `DocumentIndex` over HTTP JSON |
+| Piece                                       | Role                                      |
+| ------------------------------------------- | ----------------------------------------- |
+| `HttpSearchConfig`                          | Base URL + optional Bearer API key        |
+| `SearchHttpPoster` / `MockSearchHttpPoster` | Sync request trait + test double          |
+| `HttpSearchAdapter`                         | Implements `DocumentIndex` over HTTP JSON |
 
 Endpoints (relative to base URL):
 
-| Op | Method | Path | Body / response |
-| --- | --- | --- | --- |
-| upsert | `PUT` | `/documents/{id}` | `{ "id", "fields" }` |
-| delete | `DELETE` | `/documents/{id}` | optional `{ "deleted": bool }` (default true on 2xx) |
-| query | `POST` | `/search` | request `{ "q", "limit?", "offset" }`; response `{ "hits": [{ "id", "score?" }] }` |
-| clear | `DELETE` | `/documents` | empty |
+| Op     | Method   | Path              | Body / response                                                                    |
+| ------ | -------- | ----------------- | ---------------------------------------------------------------------------------- |
+| upsert | `PUT`    | `/documents/{id}` | `{ "id", "fields" }`                                                               |
+| delete | `DELETE` | `/documents/{id}` | optional `{ "deleted": bool }` (default true on 2xx)                               |
+| query  | `POST`   | `/search`         | request `{ "q", "limit?", "offset" }`; response `{ "hits": [{ "id", "score?" }] }` |
+| clear  | `DELETE` | `/documents`      | empty                                                                              |
 
 ```rust
 use serenade_search::{
@@ -53,13 +53,13 @@ index
 
 ## Ownership
 
-| Concern | Owner |
-| --- | --- |
-| Traits + memory adapter | Serenade (`serenade-search`) |
-| HTTP stub shapes (feature `http`) | Serenade |
-| When to index domain entities | Application |
-| SaaS / engine clients | Application (or plug into `SearchHttpPoster`) |
-| FrameworkBundle SaaS wiring | **None** |
+| Concern                           | Owner                                         |
+| --------------------------------- | --------------------------------------------- |
+| Traits + memory adapter           | Serenade (`serenade-search`)                  |
+| HTTP stub shapes (feature `http`) | Serenade                                      |
+| When to index domain entities     | Application                                   |
+| SaaS / engine clients             | Application (or plug into `SearchHttpPoster`) |
+| FrameworkBundle SaaS wiring       | **None**                                      |
 
 ## MyFeed dogfood
 
@@ -70,7 +70,8 @@ index
 - delete on admin delete
 - `GET /search?q=` returns escaped HTML results
 
-Later load (~10k posts) may motivate an engine adapter via the HTTP stub; that remains application-owned.
+Apps that outgrow the memory index can plug `HttpSearchAdapter` (feature `http`)
+or their own `DocumentIndex`; indexing policy stays application-owned.
 
 ## Example
 

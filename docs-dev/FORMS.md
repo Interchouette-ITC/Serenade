@@ -41,4 +41,4 @@ Disable only with `Form::builder(…).csrf(false)` when you have a deliberate no
 
 - CSRF manager API: [SECURITY.md](SECURITY.md)
 - Validator constraints: [KERNEL.md](KERNEL.md) (Validator)
-- Beginner demo: MyFeed (`examples/MyFeed`, epic #112) depends on this crate
+- HTML apps: see `examples/MyFeed` (depends on this crate)

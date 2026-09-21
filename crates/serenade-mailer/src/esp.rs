@@ -190,6 +190,29 @@ impl EspHttpPoster for MockEspHttpPoster {
 }
 
 /// HTTP ESP transport (SendGrid-class JSON mail API).
+///
+/// # Examples
+///
+/// ```
+/// use serenade_mailer::{
+///     Email, EspApiConfig, EspHttpTransport, MockEspHttpPoster, Transport,
+/// };
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let poster = MockEspHttpPoster::accepted();
+/// let transport = EspHttpTransport::new(
+///     EspApiConfig::new("https://api.example/v3/mail/send", "api-key"),
+///     poster,
+/// );
+/// let email = Email::new()
+///     .from("shop@example.test")?
+///     .to("buyer@example.test")?
+///     .subject("Hi")
+///     .text("hello");
+/// transport.send(&email)?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone, Debug)]
 pub struct EspHttpTransport<P> {
     config: EspApiConfig,

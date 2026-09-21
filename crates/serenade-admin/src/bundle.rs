@@ -29,8 +29,8 @@ impl BundleInterface for AdminBundle {
 
 /// DI extension for the `admin` package key.
 ///
-/// Registers an empty [`AdminRegistry`] as [`ADMIN_REGISTRY_SERVICE`]. Apps add
-/// resources in code (or a later config loader) before compiling routes.
+/// Registers an empty [`AdminRegistry`] as [`ADMIN_REGISTRY_SERVICE`]. Apps register
+/// resources in code before compiling routes.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AdminExtension;
 

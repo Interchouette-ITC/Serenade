@@ -4,18 +4,18 @@
 optional explorer UIs. Applications still declare their own `#[derive(OpenApi)]`
 paths and schemas; Serenade owns path conventions and UI mounting.
 
-| Piece | Role |
-| --- | --- |
-| `OpenApiUiPaths` | Default `/swagger-ui/`, `/redoc`, `/rapidoc`, `/scalar`, `/openapi.json` |
-| `finalize_openapi` / `apply_info` / `apply_server` | Title, version, servers |
-| Feature `actix` | `configure_actix_ui` mounts all four explorers on Actix |
+| Piece                                              | Role                                                                     |
+| -------------------------------------------------- | ------------------------------------------------------------------------ |
+| `OpenApiUiPaths`                                   | Default `/swagger-ui/`, `/redoc`, `/rapidoc`, `/scalar`, `/openapi.json` |
+| `finalize_openapi` / `apply_info` / `apply_server` | Title, version, servers                                                  |
+| Feature `actix`                                    | `configure_actix_ui` mounts all four explorers on Actix                  |
 
 ## App vs framework
 
-| Owner | Responsibility |
-| --- | --- |
+| Owner           | Responsibility                                                                    |
+| --------------- | --------------------------------------------------------------------------------- |
 | **Application** | `#[derive(OpenApi)]` path list, `ToSchema` DTOs, serving `/openapi.json`, dump/CI |
-| **Framework** | Explorer mounts, default paths, Info/servers helpers, this document |
+| **Framework**   | Explorer mounts, default paths, Info/servers helpers, this document               |
 
 OpenAPI is **opt-in**: depend on `serenade-openapi` and enable feature `actix` when
 you want Swagger UI, Redoc, RapiDoc, and Scalar. Binaries that only need the JSON
@@ -55,8 +55,8 @@ Keep that route on the app so OpenAPI dump binaries stay independent of UI crate
 
 ## Axum
 
-No Axum mount helper in this crate yet. Axum apps can still use `finalize_openapi`
-and mount utoipa UI crates directly, or wait for a future `axum` feature.
+No Axum mount helper in this crate. Axum apps use `finalize_openapi` and mount
+utoipa UI crates themselves.
 
 ## Non-goals
 

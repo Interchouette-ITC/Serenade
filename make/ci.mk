@@ -81,7 +81,7 @@ DOC_OUT ?= $(ROOT)/target/doc
 DOC_CRATE ?= serenade_kernel
 
 doc:
-	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger
+	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth,serenade-security/ldap,serenade-mailer/esp,serenade-search/http
 	@test -d "$(DOC_OUT)" || (echo "missing $(DOC_OUT)"; exit 1)
 	@rm -rf $(ROOT)/docs/api-rust
 	@mkdir -p $(ROOT)/docs/api-rust
