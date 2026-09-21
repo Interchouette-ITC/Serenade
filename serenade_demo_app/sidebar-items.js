@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["DEMO_GREETING_SERVICE"],"fn":["demo_container"],"struct":["DemoBundle","DemoExtension","DemoReady","DemoReadySubscriber","HelloCommand"]};
+window.SIDEBAR_ITEMS = {"constant":["DEMO_GREETING_SERVICE"],"fn":["demo_container","run_article_publish"],"struct":["DemoBundle","DemoExtension","DemoReady","DemoReadySubscriber","HelloCommand","SlugCommand","WorkflowCommand"]};
