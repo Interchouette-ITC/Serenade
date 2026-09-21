@@ -3836,6 +3836,7 @@ dependencies = [
  "serenade-translation",
  "serenade-validator",
  "serenade-view",
+ "serenade-workflow",
  "tokio",
  "tracing",
  "tracing-subscriber",

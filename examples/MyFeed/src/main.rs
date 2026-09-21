@@ -33,6 +33,9 @@ use serenade_security::HmacCsrfTokenManager;
 use serenade_translation::{Locale, LocaleNegotiator, Translator};
 use serenade_validator::NotBlank;
 use serenade_view::{escape_attr, escape_html, path};
+use serenade_workflow::{
+    DefinitionBuilder, ExpressionGuard, MemoryMarkingStore, Workflow, WorkflowError,
+};
 use tracing_subscriber::prelude::*;
 
 use crate::embed::is_allowed_embed;
@@ -1032,6 +1035,8 @@ fn handle_admin_moderation(
         return Ok(redirect("/admin"));
     }
     if approve {
+        try_approve_comment_workflow(&format!("comment-{id}"))
+            .map_err(|err| HttpError::bad_request(format!("moderation workflow blocked: {err}")))?;
         let _ = state.store.approve_comment(id);
         let _ = state.notifier.send(&Notification::sms(
             "+10000000000",
@@ -1041,6 +1046,30 @@ fn handle_admin_moderation(
         let _ = state.store.remove_comment(id);
     }
     Ok(redirect("/admin"))
+}
+
+/// Dogfood: pending→approved via [`ExpressionGuard`] (blocks subject `guest`).
+fn try_approve_comment_workflow(subject_id: &str) -> Result<(), WorkflowError> {
+    let definition = DefinitionBuilder::new()
+        .places(["pending", "approved"])
+        .edge("approve", "pending", "approved")
+        .build()?;
+    let mut workflow = Workflow::new(
+        "myfeed_comment",
+        definition,
+        Arc::new(MemoryMarkingStore::new()),
+    );
+    workflow.add_guard(
+        "approve",
+        Arc::new(ExpressionGuard::new(r#"!(subject_id == "guest")"#)),
+    );
+    if !workflow.can(subject_id, "approve") {
+        return Err(WorkflowError::NotEnabled {
+            transition: "approve".into(),
+        });
+    }
+    workflow.apply(subject_id, "approve")?;
+    Ok(())
 }
 
 fn route_post_id(request: &Request) -> Result<u64, HttpError> {
@@ -1248,4 +1277,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(serenade_http_actix::listen(bind, async_kernel))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod workflow_tests {
+    use super::try_approve_comment_workflow;
+
+    #[test]
+    fn expression_guard_allows_admin_subject() {
+        try_approve_comment_workflow("comment-1").expect("admin subject");
+    }
+
+    #[test]
+    fn expression_guard_blocks_guest_subject() {
+        assert!(try_approve_comment_workflow("guest").is_err());
+    }
 }

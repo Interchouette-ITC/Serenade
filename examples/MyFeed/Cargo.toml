@@ -32,6 +32,7 @@ serenade-filesystem = { workspace = true }
 serenade-finder = { workspace = true }
 serenade-notifier = { workspace = true }
 serenade-string = { workspace = true }
+serenade-workflow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
