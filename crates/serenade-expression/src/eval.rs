@@ -41,7 +41,13 @@ fn eval_expr(expr: &Expr, ctx: &ExpressionContext) -> Result<Value, ExpressionEr
             BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => {
                 let l = eval_expr(left, ctx)?;
                 let r = eval_expr(right, ctx)?;
-                cmp_ord(*op, &l, &r).map(Value::Bool)
+                let ord = match *op {
+                    BinaryOp::Lt => OrdOp::Lt,
+                    BinaryOp::Le => OrdOp::Le,
+                    BinaryOp::Gt => OrdOp::Gt,
+                    _ => OrdOp::Ge,
+                };
+                cmp_values(ord, &l, &r).map(Value::Bool)
             }
             BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div => {
                 let l = eval_expr(left, ctx)?;
@@ -89,21 +95,10 @@ fn eval_unary(op: UnaryOp, value: Value) -> Result<Value, ExpressionError> {
     }
 }
 
-fn cmp_ord(op: BinaryOp, left: &Value, right: &Value) -> Result<bool, ExpressionError> {
-    let ord = match op {
-        BinaryOp::Lt => OrdOp::Lt,
-        BinaryOp::Le => OrdOp::Le,
-        BinaryOp::Gt => OrdOp::Gt,
-        BinaryOp::Ge => OrdOp::Ge,
-        _ => {
-            return Err(ExpressionError::Type {
-                message: "internal: non-compare op in cmp_ord".to_owned(),
-            });
-        }
-    };
+fn cmp_values(op: OrdOp, left: &Value, right: &Value) -> Result<bool, ExpressionError> {
     match (left, right) {
-        (Value::Int(a), Value::Int(b)) => Ok(int_ord(ord, *a, *b)),
-        (Value::Str(a), Value::Str(b)) => Ok(str_ord(ord, a, b)),
+        (Value::Int(a), Value::Int(b)) => Ok(int_ord(op, *a, *b)),
+        (Value::Str(a), Value::Str(b)) => Ok(str_ord(op, a, b)),
         _ => Err(ExpressionError::Type {
             message: format!("cannot compare {left:?} with {right:?}"),
         }),
