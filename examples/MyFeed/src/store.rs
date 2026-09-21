@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use rusqlite::{Connection, OptionalExtension, params};
+use serenade_string::slug;
 
 /// Moderation state for a comment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -144,9 +145,10 @@ impl FeedStore {
             return;
         }
         for name in DEFAULT_CATEGORIES {
+            let slug_name = slug(name);
             let _ = conn.execute(
                 "INSERT OR IGNORE INTO categories (name) VALUES (?1)",
-                params![*name],
+                params![slug_name],
             );
         }
     }
@@ -195,9 +197,13 @@ impl FeedStore {
         rows.filter_map(Result::ok).collect()
     }
 
-    /// Adds a category (max 40 chars, unique case-insensitive).
+    /// Adds a category (slugified, max 40 chars, unique case-insensitive).
     pub fn add_category(&self, name: &str) -> Result<(), &'static str> {
         let name = name.trim();
+        if name.is_empty() {
+            return Err("Category name is required.");
+        }
+        let name = slug(name);
         if name.is_empty() {
             return Err("Category name is required.");
         }
@@ -479,14 +485,14 @@ mod tests {
     #[test]
     fn moderation_likes_and_categories() {
         let store = FeedStore::open_memory();
-        assert!(store.categories().contains(&"Work".to_owned()));
+        assert!(store.categories().contains(&"work".to_owned()));
         assert!(store.add_category("Music").is_ok());
-        assert!(store.remove_category("Music"));
+        assert!(store.remove_category("music"));
         let post = store.add_post(NewPost {
             body: "<p>hello</p>".into(),
             embed_url: None,
             image_data: None,
-            category: "Life".into(),
+            category: "life".into(),
         });
         assert_eq!(store.like_post(post.id), Some(1));
         let comment = store.add_comment(post.id, "nice".into()).expect("comment");
@@ -504,7 +510,7 @@ mod tests {
                 body: "<p>edited</p>".into(),
                 embed_url: None,
                 image_data: None,
-                category: "Work".into(),
+                category: "work".into(),
             }
         ));
         assert!(
@@ -536,7 +542,7 @@ mod tests {
                 body: "<p>kept</p>".into(),
                 embed_url: None,
                 image_data: None,
-                category: "Life".into(),
+                category: "life".into(),
             });
         }
         let store2 = FeedStore::open(&path);
