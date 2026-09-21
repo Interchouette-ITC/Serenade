@@ -301,6 +301,17 @@ Helpers live in **`serenade-string`** ([#229](https://github.com/Interchouette-I
 
 Pure functions; no DI pass. ICU / catalogue plurals stay in [I18N.md](I18N.md).
 
+## Expression
+
+Safe rule formulas live in **`serenade-expression`** ([#251](https://github.com/Interchouette-ITC/Serenade/issues/251)). See [EXPRESSION.md](EXPRESSION.md).
+
+| Piece | Role |
+| --- | --- |
+| `evaluate` / `evaluate_bool` | Parse and run against `ExpressionContext` |
+| `ExpressionGuard` | In `serenade-workflow`: block transitions from an expression string |
+
+Boolean / arithmetic / property paths only. No function calls or scripting VM.
+
 ## Workflow
 
 State machines live in **`serenade-workflow`** ([#239](https://github.com/Interchouette-ITC/Serenade/issues/239)). See [WORKFLOW.md](WORKFLOW.md).

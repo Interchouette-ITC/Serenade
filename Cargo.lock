@@ -5941,6 +5941,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "serenade-expression"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "serenade-filesystem"
 version = "0.1.0"
 dependencies = [
@@ -6247,6 +6254,7 @@ dependencies = [
 name = "serenade-workflow"
 version = "0.1.0"
 dependencies = [
+ "serenade-expression",
  "thiserror 2.0.20",
 ]
 

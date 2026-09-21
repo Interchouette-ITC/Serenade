@@ -27,6 +27,7 @@ members = [
     "crates/serenade-mailer",
     "crates/serenade-notifier",
     "crates/serenade-string",
+    "crates/serenade-expression",
     "crates/serenade-workflow",
     "crates/serenade-filesystem",
     "crates/serenade-process",
@@ -81,6 +82,7 @@ serenade-search = { path = "crates/serenade-search", version = "0.1.0" }
 serenade-mailer = { path = "crates/serenade-mailer", version = "0.1.0" }
 serenade-notifier = { path = "crates/serenade-notifier", version = "0.1.0" }
 serenade-string = { path = "crates/serenade-string", version = "0.1.0" }
+serenade-expression = { path = "crates/serenade-expression", version = "0.1.0" }
 serenade-workflow = { path = "crates/serenade-workflow", version = "0.1.0" }
 serenade-filesystem = { path = "crates/serenade-filesystem", version = "0.1.0" }
 serenade-process = { path = "crates/serenade-process", version = "0.1.0" }

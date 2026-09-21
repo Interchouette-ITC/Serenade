@@ -13,7 +13,8 @@ Symfony Workflow shaped: places, transitions, guards, marking store. No commerce
 | `Marking` | Places currently occupied by a subject |
 | `MarkingStore` / `MemoryMarkingStore` | Persist markings by subject id |
 | `Workflow` | `can` / `apply` / `enabled_transitions` |
-| `Guard` | Block a transition before it applies |
+| `Guard` | Block a transition before it applies (Rust closure or [`ExpressionGuard`](EXPRESSION.md)) |
+| `ExpressionGuard` | Guard from a boolean expression string (see [EXPRESSION.md](EXPRESSION.md)) |
 | `TransitionListener` | Hook after a successful `apply` |
 
 ## Example
@@ -56,14 +57,28 @@ workflow.add_guard(
 );
 ```
 
+Or use a rule expression ([EXPRESSION.md](EXPRESSION.md)):
+
+```rust
+use std::sync::Arc;
+use serenade_workflow::ExpressionGuard;
+
+workflow.add_guard(
+    "publish",
+    Arc::new(ExpressionGuard::new(
+        r#"!(subject_id == "guest") && place.draft"#,
+    )),
+);
+```
+
 ## Limits
 
 - Subject identity is a string id (apps map entities → ids)
 - In-memory store only in this crate; implement [`MarkingStore`] for DB/Redis
 - No DI compile pass yet (construct `Workflow` in app code)
-- Rule-expression guards belong in a later wave; use Rust `Guard` closures today
 
 ## Related
 
+- [EXPRESSION.md](EXPRESSION.md) - safe rule formulas / `ExpressionGuard`
 - [KERNEL.md](KERNEL.md) - component index
 - [STRING.md](STRING.md) - slug / case helpers often used near workflow place names
