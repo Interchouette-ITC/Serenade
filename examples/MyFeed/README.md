@@ -47,6 +47,15 @@ Open `/admin`, enter the token (default `myfeed-dev-admin`). Approve comments, m
 
 See epic [#112](https://github.com/Interchouette-ITC/Serenade/issues/112) and `docs-dev/MYFEED.md`.
 
+## Wave 29–34 dogfood
+
+| Crate | How this sample uses it |
+| --- | --- |
+| `serenade-string` | Category names stored as slugs |
+| `serenade-notifier` | `NullTransport` SMS on comment approve |
+| `serenade-filesystem` / `serenade-finder` | Translation dir check + `*.toml` discovery |
+| `serenade-workflow` + `ExpressionGuard` | Comment approve pending → approved (blocks subject `guest`) |
+
 ## About / inspiration
 
 Thanks to [JARVI3 Pulse](https://jarvi3.com/pulse) for inspiring the feed-first shape of this demo. JARVI3 Pulse is original work - not affiliated with Serenade. The in-app **About** link in the footer repeats this note.
