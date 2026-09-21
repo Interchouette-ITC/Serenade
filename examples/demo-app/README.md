@@ -16,5 +16,14 @@ Console entry (`bin/console` analogue):
 cargo run -p serenade-demo-app --bin console
 cargo run -p serenade-demo-app --bin console -- serenade:about
 cargo run -p serenade-demo-app --bin console -- demo:hello
+cargo run -p serenade-demo-app --bin console -- demo:slug "Hello World"
+cargo run -p serenade-demo-app --bin console -- demo:workflow
 cargo run -p serenade-demo-app --bin console -- debug:container --plain
 ```
+
+## Wave 29–34 dogfood
+
+| Crate | How this sample uses it |
+| --- | --- |
+| `serenade-string` | Console `demo:slug` (slug + pluralize) |
+| `serenade-workflow` | Console `demo:workflow` (draft → published) |
