@@ -248,15 +248,16 @@ Push `SessionMiddleware::new(CookieSession::new(store))` (first registered is ou
 
 ## Search / indexation
 
-Basic document search lives in **`serenade-search`** ([#129](https://github.com/Interchouette-ITC/Serenade/issues/129)). See [SEARCH.md](SEARCH.md).
+Basic document search lives in **`serenade-search`** ([#129](https://github.com/Interchouette-ITC/Serenade/issues/129), [#255](https://github.com/Interchouette-ITC/Serenade/issues/255)). See [SEARCH.md](SEARCH.md).
 
 | Piece | Role |
 | --- | --- |
 | `SearchDocument` / `SearchQuery` / `SearchHit` | Ids, text fields, ranked hits |
 | `DocumentIndex` | Upsert / delete / query / clear |
 | `MemorySearchAdapter` | Zero-deps in-memory index |
+| `HttpSearchAdapter` (feature `http`) | REST stub; apps own the HTTP client |
 
-No SaaS engine in core. Apps wire adapters when they need one.
+No mandatory SaaS engine in core. Apps wire adapters when they need one.
 
 ## Mailer / Mime
 

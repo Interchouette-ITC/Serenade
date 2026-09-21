@@ -109,6 +109,11 @@ jobs:
         run: >-
           cargo clippy -p serenade-mailer --all-targets --features esp
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+      - name: Lint serenade-search http feature
+        if: needs.changes.outputs.code == 'true'
+        run: >-
+          cargo clippy -p serenade-search --all-targets --features http
+          -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
     name: workspace tests
@@ -145,6 +150,9 @@ jobs:
       - name: Test serenade-mailer with esp
         if: needs.changes.outputs.code == 'true'
         run: cargo test -p serenade-mailer --features esp
+      - name: Test serenade-search with http
+        if: needs.changes.outputs.code == 'true'
+        run: cargo test -p serenade-search --features http
 
   cache-redis:
     name: cache redis
