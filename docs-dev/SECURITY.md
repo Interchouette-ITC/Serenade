@@ -197,6 +197,30 @@ let firewall = FirewallMiddleware::new("X-Ldap-Credentials", LdapAuthenticator::
 
 **Production:** use LDAPS or StartTLS; never log passwords; map directory groups to roles in your `LdapBinder` implementation.
 
+## Rule expressions (access checks)
+
+Boolean formulas for config-style access rules live in **`serenade-expression`**
+(see [EXPRESSION.md](EXPRESSION.md)). Apps build an `ExpressionContext` from the
+security token (and any request attributes) then call `evaluate_bool`:
+
+```rust
+use serenade_expression::{ExpressionContext, Value, evaluate_bool};
+use serenade_security::{TokenInterface, UserInterface, request_token};
+
+// After FirewallMiddleware / SessionTokenMiddleware:
+let token = request_token(request).expect("token");
+let mut ctx = ExpressionContext::new();
+if let Some(user) = token.user() {
+    ctx.insert("user.id", Value::string(user.user_identifier()));
+    let is_admin = user.roles().iter().any(|r| r == "ROLE_ADMIN");
+    ctx.insert("user.admin", Value::Bool(is_admin));
+}
+assert!(evaluate_bool(r#"user.admin == true"#, &ctx)?);
+```
+
+Workflow transition guards can use the same language via `ExpressionGuard`
+([WORKFLOW.md](WORKFLOW.md)).
+
 ## Non-goals
 
 - Authorization server / IdP in Serenade

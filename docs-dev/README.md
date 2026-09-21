@@ -24,7 +24,8 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [MAILER.md](MAILER.md)       | Email + Mime multipart, Null/File/SMTP transports, DI  |
 | [NOTIFIER.md](NOTIFIER.md)   | SMS + push channels, Null/Memory transports, DI        |
 | [STRING.md](STRING.md)       | Slug, case transforms, English Inflector helpers       |
-| [WORKFLOW.md](WORKFLOW.md)   | Places, transitions, guards, marking store             |
+| [EXPRESSION.md](EXPRESSION.md) | Safe rule formulas for guards and access checks      |
+| [WORKFLOW.md](WORKFLOW.md)   | Places, transitions, guards, marking store, ExpressionGuard |
 | [FILESYSTEM.md](FILESYSTEM.md) | Path helpers, dump/mirror, temp files                |
 | [PROCESS.md](PROCESS.md)     | Child process spawn, timeout, exit/output              |
 | [FINDER.md](FINDER.md)       | Directory walk, name glob, type/depth filters          |

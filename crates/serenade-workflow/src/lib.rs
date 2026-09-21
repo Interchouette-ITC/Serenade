@@ -3,7 +3,7 @@
 //! - [`Definition`] / [`DefinitionBuilder`] - places, transitions, initial marking
 //! - [`Workflow`] - `can` / `apply` / `enabled_transitions`
 //! - [`MarkingStore`] + [`MemoryMarkingStore`] - subject markings
-//! - [`Guard`] - block illegal or policy-denied transitions
+//! - [`Guard`] / [`ExpressionGuard`] - block illegal or policy-denied transitions
 //!
 //! # Examples
 //!
@@ -31,6 +31,7 @@
 
 mod definition;
 mod error;
+mod expression_guard;
 mod guard;
 mod marking;
 mod memory;
@@ -40,6 +41,7 @@ mod workflow;
 
 pub use definition::{Definition, DefinitionBuilder};
 pub use error::WorkflowError;
+pub use expression_guard::ExpressionGuard;
 pub use guard::{Guard, TransitionContext, block};
 pub use marking::Marking;
 pub use memory::MemoryMarkingStore;
