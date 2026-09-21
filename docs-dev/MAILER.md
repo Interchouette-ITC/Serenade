@@ -1,6 +1,6 @@
 # Mailer
 
-Email message, Mime multipart types, and sync transports live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153), [#152](https://github.com/Interchouette-ITC/Serenade/issues/152), [#228](https://github.com/Interchouette-ITC/Serenade/issues/228)).
+Email message, Mime multipart types, and sync transports live in **`serenade-mailer`** ([#153](https://github.com/Interchouette-ITC/Serenade/issues/153), [#152](https://github.com/Interchouette-ITC/Serenade/issues/152), [#228](https://github.com/Interchouette-ITC/Serenade/issues/228), [#253](https://github.com/Interchouette-ITC/Serenade/issues/253)).
 
 ## Types
 
@@ -27,6 +27,7 @@ Email message, Mime multipart types, and sync transports live in **`serenade-mai
 | `NullTransport` | Discards messages (default DI mailer) |
 | `FileTransport` | Writes a readable dump under a directory |
 | `SmtpTransport` | SMTP via lettre (Cargo feature `smtp`, on by default) |
+| `EspHttpTransport` | HTTP ESP mail API (Cargo feature `esp`, off by default) |
 
 All implement [`Transport`](https://docs.rs/serenade-mailer) with sync `send`.
 
@@ -76,7 +77,33 @@ let smtp = SmtpTransport::relay("smtp.example.test")
 smtp.send(&email)?;
 ```
 
+## ESP HTTP (feature `esp`)
+
+Enable with `serenade-mailer` feature `esp`. Serenade shapes a **SendGrid-class** JSON mail
+API and a sync [`EspHttpPoster`] trait; apps own the HTTP client (no mandatory vendor SDK).
+
+| Piece | Role |
+| --- | --- |
+| `EspApiConfig` | Endpoint URL + API key (`Authorization: Bearer <api_key>`) |
+| `EspHttpPoster` / `MockEspHttpPoster` | Sync POST trait + test double |
+| `EspHttpTransport` | Builds JSON from `Email`, POSTs, requires 2xx |
+| `build_esp_payload` | Shared JSON encoder (text/HTML; attachments omitted) |
+
+```rust
+use serenade_mailer::{
+    EspApiConfig, EspHttpTransport, MockEspHttpPoster, Transport,
+};
+
+let poster = MockEspHttpPoster::accepted();
+let transport = EspHttpTransport::new(
+    EspApiConfig::new("https://api.example/v3/mail/send", "api-key"),
+    poster,
+);
+transport.send(&email)?;
+```
+
 ## Related
 
 - Parent epic: [#145](https://github.com/Interchouette-ITC/Serenade/issues/145)
 - Mime deepen: [#228](https://github.com/Interchouette-ITC/Serenade/issues/228)
+- ESP HTTP: [#253](https://github.com/Interchouette-ITC/Serenade/issues/253)

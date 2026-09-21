@@ -2,6 +2,7 @@
 //!
 //! Types: [`Email`], [`Address`], [`Body`], [`Attachment`], [`MimeTree`].
 //! Transports: [`NullTransport`], [`FileTransport`], and (feature `smtp`) [`SmtpTransport`].
+//! Feature `esp` adds `EspHttpTransport` (SendGrid-class HTTP mail API).
 //! DI: [`RegisterDefaultMailerPass`] seeds service id [`DEFAULT_MAILER_SERVICE`].
 
 mod address;
@@ -16,6 +17,8 @@ mod null;
 mod render;
 mod transport;
 
+#[cfg(feature = "esp")]
+mod esp;
 #[cfg(feature = "smtp")]
 mod smtp;
 
@@ -32,6 +35,11 @@ pub use mime::{MimePart, MimeTree};
 pub use null::NullTransport;
 pub use transport::Transport;
 
+#[cfg(feature = "esp")]
+pub use esp::{
+    EspApiConfig, EspAuthScheme, EspHttpPoster, EspHttpResponse, EspHttpTransport,
+    MockEspHttpPoster, MockEspRequest, build_esp_payload,
+};
 #[cfg(feature = "smtp")]
 pub use smtp::{SmtpTransport, SmtpTransportBuilder};
 

@@ -12,10 +12,13 @@ rust-version.workspace = true
 default = ["smtp"]
 ## Enable [`crate::SmtpTransport`] via lettre.
 smtp = ["dep:lettre"]
+## Enable EspHttpTransport (SendGrid-class HTTP mail API; apps own the HTTP client).
+esp = ["dep:serde_json"]
 
 [dependencies]
 serenade-di = { workspace = true }
 thiserror = { workspace = true }
+serde_json = { workspace = true, optional = true }
 lettre = { version = "0.11", optional = true, default-features = false, features = [
     "smtp-transport",
     "builder",
