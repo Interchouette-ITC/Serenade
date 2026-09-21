@@ -5,24 +5,37 @@
 <a href=#5 id=5 data-nosnippet>5</a>//! - [`evaluate`] / [`evaluate_bool`] - parse and run against [`ExpressionContext`]
 <a href=#6 id=6 data-nosnippet>6</a>//! - [`Value`] - bool, int, string
 <a href=#7 id=7 data-nosnippet>7</a>//! - Dotted paths resolve as flat context keys (`user.role`)
-<a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">mod </span>context;
-<a href=#10 id=10 data-nosnippet>10</a><span class="kw">mod </span>error;
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">mod </span>eval;
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">mod </span>parse;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">mod </span>value;
-<a href=#14 id=14 data-nosnippet>14</a>
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">pub use </span>context::ExpressionContext;
-<a href=#16 id=16 data-nosnippet>16</a><span class="kw">pub use </span>error::ExpressionError;
-<a href=#17 id=17 data-nosnippet>17</a><span class="kw">pub use </span>eval::{evaluate, evaluate_bool};
-<a href=#18 id=18 data-nosnippet>18</a><span class="kw">pub use </span>value::Value;
-<a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// Compile-time crate version for diagnostics.
-<a href=#21 id=21 data-nosnippet>21</a></span><span class="attr">#[must_use]
-<a href=#22 id=22 data-nosnippet>22</a></span><span class="kw">pub const fn </span>version() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="macro">env!</span>(<span class="string">"CARGO_PKG_VERSION"</span>)
-<a href=#24 id=24 data-nosnippet>24</a>}
-<a href=#25 id=25 data-nosnippet>25</a>
-<a href=#26 id=26 data-nosnippet>26</a><span class="attr">#[cfg(test)]
-<a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">mod </span>tests;
+<a href=#8 id=8 data-nosnippet>8</a>//!
+<a href=#9 id=9 data-nosnippet>9</a>//! # Examples
+<a href=#10 id=10 data-nosnippet>10</a>//!
+<a href=#11 id=11 data-nosnippet>11</a>//! ```
+<a href=#12 id=12 data-nosnippet>12</a>//! use serenade_expression::{ExpressionContext, Value, evaluate_bool};
+<a href=#13 id=13 data-nosnippet>13</a>//!
+<a href=#14 id=14 data-nosnippet>14</a>//! # fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+<a href=#15 id=15 data-nosnippet>15</a>//! let mut ctx = ExpressionContext::new();
+<a href=#16 id=16 data-nosnippet>16</a>//! ctx.insert("user.role", Value::string("admin"));
+<a href=#17 id=17 data-nosnippet>17</a>//! assert!(evaluate_bool(r#"user.role == "admin""#, &amp;ctx)?);
+<a href=#18 id=18 data-nosnippet>18</a>//! # Ok(())
+<a href=#19 id=19 data-nosnippet>19</a>//! # }
+<a href=#20 id=20 data-nosnippet>20</a>//! ```
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a></span><span class="kw">mod </span>context;
+<a href=#23 id=23 data-nosnippet>23</a><span class="kw">mod </span>error;
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">mod </span>eval;
+<a href=#25 id=25 data-nosnippet>25</a><span class="kw">mod </span>parse;
+<a href=#26 id=26 data-nosnippet>26</a><span class="kw">mod </span>value;
+<a href=#27 id=27 data-nosnippet>27</a>
+<a href=#28 id=28 data-nosnippet>28</a><span class="kw">pub use </span>context::ExpressionContext;
+<a href=#29 id=29 data-nosnippet>29</a><span class="kw">pub use </span>error::ExpressionError;
+<a href=#30 id=30 data-nosnippet>30</a><span class="kw">pub use </span>eval::{evaluate, evaluate_bool};
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub use </span>value::Value;
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a><span class="doccomment">/// Compile-time crate version for diagnostics.
+<a href=#34 id=34 data-nosnippet>34</a></span><span class="attr">#[must_use]
+<a href=#35 id=35 data-nosnippet>35</a></span><span class="kw">pub const fn </span>version() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="macro">env!</span>(<span class="string">"CARGO_PKG_VERSION"</span>)
+<a href=#37 id=37 data-nosnippet>37</a>}
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a><span class="attr">#[cfg(test)]
+<a href=#40 id=40 data-nosnippet>40</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>
