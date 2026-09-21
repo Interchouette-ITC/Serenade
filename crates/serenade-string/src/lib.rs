@@ -3,6 +3,16 @@
 //! - [`slug`] - URL-safe lowercase slug
 //! - [`snake_case`], [`camel_case`], [`pascal_case`], [`kebab_case`], [`title_case`]
 //! - [`pluralize`], [`singularize`] - English rules with documented limits
+//!
+//! # Examples
+//!
+//! ```
+//! use serenade_string::{pluralize, slug, snake_case};
+//!
+//! assert_eq!(slug("Hello World!"), "hello-world");
+//! assert_eq!(snake_case("HelloWorld"), "hello_world");
+//! assert_eq!(pluralize("baby"), "babies");
+//! ```
 
 mod case;
 mod inflect;

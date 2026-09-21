@@ -2,10 +2,10 @@
 
 Serenade’s browser **profiler** is the analogue of Symfony’s Web Debug Toolbar + Profiler. It is **not** the console (`debug:container`, ratatui TUI).
 
-| Surface | Role |
-| --- | --- |
-| Console (`serenade-console` / CLI) | Operator commands offline |
-| Profiler (`serenade-profiler`) | Per-request browser debug in `dev` |
+| Surface                            | Role                               |
+| ---------------------------------- | ---------------------------------- |
+| Console (`serenade-console` / CLI) | Operator commands offline          |
+| Profiler (`serenade-profiler`)     | Per-request browser debug in `dev` |
 
 ## Enablement
 
@@ -31,12 +31,12 @@ Never leave the toolbar on by default in production configs.
 
 ## Panels
 
-| Panel | Source |
-| --- | --- |
-| Request / routing / timing | Middleware |
-| Logs | `ProfilerLogLayer` + request scope (`with_profile_scope` / `install_log_scope`) |
-| Database | App adapters → `record_query(store, token, QueryEvent)` |
-| Views | Placeholder until a view layer exists |
+| Panel                      | Source                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| Request / routing / timing | Middleware                                                                      |
+| Logs                       | `ProfilerLogLayer` + request scope (`with_profile_scope` / `install_log_scope`) |
+| Database                   | App adapters → `record_query(store, token, QueryEvent)`                         |
+| Views                      | No built-in view panel; apps own view timing if they record it                  |
 
 ## Observability bridge
 

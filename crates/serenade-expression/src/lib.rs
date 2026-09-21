@@ -5,6 +5,19 @@
 //! - [`evaluate`] / [`evaluate_bool`] - parse and run against [`ExpressionContext`]
 //! - [`Value`] - bool, int, string
 //! - Dotted paths resolve as flat context keys (`user.role`)
+//!
+//! # Examples
+//!
+//! ```
+//! use serenade_expression::{ExpressionContext, Value, evaluate_bool};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut ctx = ExpressionContext::new();
+//! ctx.insert("user.role", Value::string("admin"));
+//! assert!(evaluate_bool(r#"user.role == "admin""#, &ctx)?);
+//! # Ok(())
+//! # }
+//! ```
 
 mod context;
 mod error;

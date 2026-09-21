@@ -3,6 +3,19 @@
 //! Types: [`Notification`], [`Channel`], [`SmsMessage`], [`PushMessage`].
 //! Transports: [`NullTransport`], [`MemoryTransport`], [`SmsOnlyTransport`].
 //! DI: [`RegisterDefaultNotifierPass`] seeds [`DEFAULT_NOTIFIER_SERVICE`].
+//!
+//! # Examples
+//!
+//! ```
+//! use serenade_notifier::{MemoryTransport, Notification, Transport};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let transport = MemoryTransport::new();
+//! transport.send(&Notification::sms("+15551212", "hello"))?;
+//! assert_eq!(transport.sent().len(), 1);
+//! # Ok(())
+//! # }
+//! ```
 
 mod channel;
 mod compile_pass;

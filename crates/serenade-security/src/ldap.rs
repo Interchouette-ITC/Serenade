@@ -59,6 +59,25 @@ impl LdapBindConfig {
     /// # Errors
     ///
     /// Returns [`SecurityError::Ldap`] when `username` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use serenade_security::LdapBindConfig;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let config = LdapBindConfig::new(
+    ///     "ldaps://ldap.example.com",
+    ///     "dc=example,dc=com",
+    ///     "uid={username},ou=people,dc=example,dc=com",
+    /// );
+    /// assert_eq!(
+    ///     config.user_dn("alice")?,
+    ///     "uid=alice,ou=people,dc=example,dc=com"
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn user_dn(&self, username: &str) -> Result<String, SecurityError> {
         if username.is_empty() {
             return Err(SecurityError::Ldap {

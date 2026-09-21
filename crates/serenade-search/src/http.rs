@@ -221,6 +221,24 @@ impl SearchHttpPoster for MockSearchHttpPoster {
 }
 
 /// HTTP search adapter implementing [`DocumentIndex`].
+///
+/// # Examples
+///
+/// ```
+/// use serenade_search::{
+///     DocumentIndex, HttpSearchAdapter, HttpSearchConfig, MockSearchHttpPoster, SearchDocument,
+/// };
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let poster = MockSearchHttpPoster::ok_empty();
+/// let index = HttpSearchAdapter::new(
+///     HttpSearchConfig::new("https://search.example").api_key("tok"),
+///     poster,
+/// );
+/// index.upsert(SearchDocument::new("1").field("body", "hello"))?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone, Debug)]
 pub struct HttpSearchAdapter<P> {
     config: HttpSearchConfig,

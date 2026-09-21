@@ -10,6 +10,18 @@ use crate::guard::{Guard, TransitionContext, block};
 /// Context variables:
 /// - `subject_id`, `workflow`, `transition` (strings)
 /// - `place.<name>` = `true` for each place in the current marking
+///
+/// # Examples
+///
+/// ```
+/// use serenade_workflow::ExpressionGuard;
+///
+/// let guard = ExpressionGuard::new(r#"place.draft && !(subject_id == "guest")"#);
+/// assert_eq!(
+///     guard.expression(),
+///     r#"place.draft && !(subject_id == "guest")"#
+/// );
+/// ```
 #[derive(Debug, Clone)]
 pub struct ExpressionGuard {
     expression: String,

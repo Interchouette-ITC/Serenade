@@ -25,12 +25,12 @@ Serenade
 
 ### Tooling map (concepts, not a PHP port)
 
-| Symfony | Serenade |
-| --- | --- |
+| Symfony                                  | Serenade                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
 | Composer (`composer.json`, Flex recipes) | **Cargo** + Flex-like **recipes** ([`RECIPES.md`](RECIPES.md), `serenade` CLI) |
-| `php bin/console …` | Console application (clap; optional **ratatui** for rich TUI) |
-| `config/packages/*.yaml` | `config/packages/*.toml` preferred; YAML still loaded |
-| `.env` | `.env` / `.env.local` / `.env.{env}` via `load_dotenv` |
+| `php bin/console …`                      | Console application (clap; optional **ratatui** for rich TUI)                  |
+| `config/packages/*.yaml`                 | `config/packages/*.toml` preferred; YAML still loaded                          |
+| `.env`                                   | `.env` / `.env.local` / `.env.{env}` via `load_dotenv`                         |
 
 Do not invent a second package manager. Cargo owns dependencies; Serenade owns composition (bundles, recipes, console).
 
@@ -38,13 +38,13 @@ Symfony organizes its own features as bundles (`FrameworkBundle`, `SecurityBundl
 
 ## What Serenade is not
 
-| Not | Why |
-| --- | --- |
-| Rails / Django “batteries included” app server | No opinionated ORM + admin + templates in one box |
-| A commerce product | That is RustaShop (or other apps) |
-| A UI framework | Angular, rangular/Leptos, etc. stay in the application |
-| A single HTTP crate mandate | Actix, Axum, or Tower-only apps integrate via HTTP foundation adapters |
-| An admin CRUD generator in core | Same split as modern Symfony: framework owns Form / CSRF / security; back-office UIs are app-owned (see [KERNEL.md](KERNEL.md#admin-back-office)) |
+| Not                                            | Why                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rails / Django “batteries included” app server | No opinionated ORM + admin + templates in one box                                                                                                 |
+| A commerce product                             | That is RustaShop (or other apps)                                                                                                                 |
+| A UI framework                                 | Angular, rangular/Leptos, etc. stay in the application                                                                                            |
+| A single HTTP crate mandate                    | Actix, Axum, or Tower-only apps integrate via HTTP foundation adapters                                                                            |
+| An admin CRUD generator in core                | Same split as modern Symfony: framework owns Form / CSRF / security; back-office UIs are app-owned (see [KERNEL.md](KERNEL.md#admin-back-office)) |
 
 ## Persistence and HTTP: application choice
 
@@ -67,16 +67,16 @@ Serenade defines **contracts** (repository traits, unit of work hooks, request/r
 
 ## PrestaShop / Symfony parallel
 
-| PrestaShop / Symfony | Serenade / RustaShop |
-| --- | --- |
-| Symfony kernel + components | Serenade kernel + components |
-| Symfony bundles | Serenade bundles + RustaShop bundles |
-| PrestaShop domain (catalog, cart, …) | RustaShop domain modules |
-| Merchant modules / hooks | Product extension story (WIT, events, bundles) |
+| PrestaShop / Symfony                 | Serenade / RustaShop                           |
+| ------------------------------------ | ---------------------------------------------- |
+| Symfony kernel + components          | Serenade kernel + components                   |
+| Symfony bundles                      | Serenade bundles + RustaShop bundles           |
+| PrestaShop domain (catalog, cart, …) | RustaShop domain modules                       |
+| Merchant modules / hooks             | Product extension story (WIT, events, bundles) |
 
 RustaShop should feel “ Symfony-backed ” in **architecture**, not in PHP or in copying Symfony APIs literally.
 
-## Non-goals (early)
+## Non-goals
 
 - 1:1 Symfony PHP API port
 - Shipping every Symfony component before kernel + DI + events + HTTP foundation exist

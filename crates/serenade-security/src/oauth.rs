@@ -137,6 +137,23 @@ pub fn build_authorization_request(
 }
 
 /// Builds an authorization request with caller-supplied `state` and PKCE verifier.
+///
+/// # Examples
+///
+/// ```
+/// use serenade_security::{OAuthClientConfig, build_authorization_request_with};
+///
+/// let config = OAuthClientConfig::new(
+///     "client-1",
+///     "https://idp.example/authorize",
+///     "https://idp.example/token",
+///     "https://app.example/callback",
+/// );
+/// let req = build_authorization_request_with(&config, "state-1", "verifier-1");
+/// assert!(req.url().contains("client_id=client-1"));
+/// assert_eq!(req.state(), "state-1");
+/// assert_eq!(req.code_verifier(), "verifier-1");
+/// ```
 #[must_use]
 pub fn build_authorization_request_with(
     config: &OAuthClientConfig,

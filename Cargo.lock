@@ -5900,7 +5900,6 @@ dependencies = [
 name = "serenade-contracts"
 version = "0.1.0"
 dependencies = [
- "serde",
  "thiserror 2.0.20",
  "tokio",
 ]
@@ -5925,7 +5924,6 @@ name = "serenade-di"
 version = "0.1.0"
 dependencies = [
  "rstest",
- "serde",
  "thiserror 2.0.20",
 ]
 
@@ -5935,7 +5933,6 @@ version = "0.1.0"
 dependencies = [
  "insta",
  "mockall",
- "serde",
  "serenade-di",
  "thiserror 2.0.20",
 ]
