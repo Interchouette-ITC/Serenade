@@ -23,6 +23,7 @@ use serenade_http::{
     AsyncHttpKernel, HttpError, Method, ROUTE_ATTRIBUTE, Request, Response, Route, RouteCollection,
     UrlMatcher,
 };
+use serenade_notifier::{Notification, NullTransport, Transport};
 use serenade_observability::REQUEST;
 use serenade_profiler::{
     AsyncProfilerMiddleware, PROFILER_TOKEN_ATTRIBUTE, ProfileStore, ProfilerConfig,
@@ -63,6 +64,8 @@ struct AppState {
     translator: Translator,
     negotiator: LocaleNegotiator,
     profiler: Arc<ProfileStore>,
+    /// Wave 29 notifier dogfood (Null discards after validate).
+    notifier: NullTransport,
 }
 
 fn routes() -> Result<RouteCollection, HttpError> {
@@ -1030,6 +1033,10 @@ fn handle_admin_moderation(
     }
     if approve {
         let _ = state.store.approve_comment(id);
+        let _ = state.notifier.send(&Notification::sms(
+            "+10000000000",
+            format!("MyFeed: comment {id} approved"),
+        ));
     } else {
         let _ = state.store.remove_comment(id);
     }
@@ -1218,6 +1225,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         translator,
         negotiator,
         profiler: Arc::clone(&profiler_store),
+        notifier: NullTransport::new(),
     });
 
     let state_for_handler = Arc::clone(&state);

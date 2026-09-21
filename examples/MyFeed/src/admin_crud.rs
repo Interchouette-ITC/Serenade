@@ -79,7 +79,7 @@ impl AdminResourceHandler for CategoryHandler {
             .map_err(|message| AdminError::Persist {
                 message: message.to_owned(),
             })?;
-        let name = name.trim();
+        let name = serenade_string::slug(name.trim());
         let name: String = name.chars().take(40).collect();
         Ok(AdminRow::new(name.clone()).with("name", name))
     }
@@ -88,7 +88,7 @@ impl AdminResourceHandler for CategoryHandler {
         if !self.store.has_category(id) {
             return Err(AdminError::NotFound { id: id.to_owned() });
         }
-        let name = data.get("name").map_or("", String::as_str).trim();
+        let name = serenade_string::slug(data.get("name").map_or("", String::as_str).trim());
         if name.is_empty() {
             return Err(AdminError::Persist {
                 message: "Category name is required.".to_owned(),
@@ -97,7 +97,7 @@ impl AdminResourceHandler for CategoryHandler {
         if name != id {
             self.store.remove_category(id);
             self.store
-                .add_category(name)
+                .add_category(&name)
                 .map_err(|message| AdminError::Persist {
                     message: message.to_owned(),
                 })?;
@@ -464,17 +464,17 @@ mod tests {
         let created = handler
             .create(&HashMap::from([("name".to_owned(), "Dogs".to_owned())]))
             .expect("create");
-        assert_eq!(created.id(), "Dogs");
-        assert!(handler.get("Dogs").expect("get").is_some());
+        assert_eq!(created.id(), "dogs");
+        assert!(handler.get("dogs").expect("get").is_some());
         let updated = handler
             .update(
-                "Dogs",
+                "dogs",
                 &HashMap::from([("name".to_owned(), "Cats".to_owned())]),
             )
             .expect("update");
-        assert_eq!(updated.id(), "Cats");
-        assert!(handler.delete("Cats").expect("delete"));
-        assert!(handler.get("Cats").expect("missing").is_none());
+        assert_eq!(updated.id(), "cats");
+        assert!(handler.delete("cats").expect("delete"));
+        assert!(handler.get("cats").expect("missing").is_none());
     }
 
     #[test]
