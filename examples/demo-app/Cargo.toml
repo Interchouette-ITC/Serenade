@@ -22,6 +22,8 @@ serenade-event = { workspace = true }
 serenade-http = { workspace = true }
 serenade-kernel = { workspace = true }
 serenade-observability = { workspace = true }
+serenade-string = { workspace = true }
+serenade-workflow = { workspace = true }
 tracing = { workspace = true }
 
 [lints]
