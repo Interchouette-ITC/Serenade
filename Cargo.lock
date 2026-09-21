@@ -3822,6 +3822,8 @@ dependencies = [
  "emojis",
  "rusqlite",
  "serenade-admin",
+ "serenade-filesystem",
+ "serenade-finder",
  "serenade-form",
  "serenade-http",
  "serenade-http-actix",

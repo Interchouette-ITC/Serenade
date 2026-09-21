@@ -16,6 +16,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use serenade_filesystem::is_dir;
+use serenade_finder::Finder;
 use serenade_form::{Form, FormStatus};
 use serenade_http::{
     AsyncHttpKernel, HttpError, Method, ROUTE_ATTRIBUTE, Request, Response, Route, RouteCollection,
@@ -1174,6 +1176,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let index = MemorySearchAdapter::new();
     rebuild_search_index(&store, &index);
     let translations = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations");
+    if !is_dir(&translations) {
+        return Err(format!("translations dir missing: {}", translations.display()).into());
+    }
+    let catalogs = Finder::new()
+        .in_path(&translations)
+        .files()
+        .name("*.toml")
+        .collect()
+        .map_err(|err| format!("find translations: {err}"))?;
+    if catalogs.is_empty() {
+        return Err("no translation toml files found".into());
+    }
     let mut translator = Translator::new(Locale::new("en").expect("en"))
         .with_fallbacks(vec![Locale::new("en").expect("en")]);
     translator
