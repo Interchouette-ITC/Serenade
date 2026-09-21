@@ -518,10 +518,17 @@ mod tests {
 
     #[test]
     fn open_persists_across_reload() {
+        use serenade_filesystem::{exists, mkdir, remove, remove_tree};
+
         let dir = std::env::temp_dir().join(format!("myfeed-sqlite-{}", std::process::id()));
-        let _ = std::fs::create_dir_all(&dir);
+        if exists(&dir) {
+            let _ = remove_tree(&dir);
+        }
+        mkdir(&dir).expect("mkdir");
         let path = dir.join("feed.sqlite");
-        let _ = std::fs::remove_file(&path);
+        if exists(&path) {
+            let _ = remove(&path);
+        }
         {
             let store = FeedStore::open(&path);
             assert!(store.posts().is_empty());
@@ -535,7 +542,7 @@ mod tests {
         let store2 = FeedStore::open(&path);
         assert_eq!(store2.posts().len(), 1);
         assert!(store2.posts()[0].body.contains("kept"));
-        let _ = std::fs::remove_file(&path);
-        let _ = std::fs::remove_dir(&dir);
+        let _ = remove(&path);
+        let _ = remove_tree(&dir);
     }
 }
