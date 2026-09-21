@@ -1,6 +1,6 @@
 [package]
 name = "serenade-search"
-description = "Basic document search contracts and in-memory MemorySearchAdapter"
+description = "Basic document search contracts, MemorySearchAdapter, and optional HTTP stub"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,7 +8,12 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+## Enable HttpSearchAdapter (Meilisearch/ES-shaped REST; apps own the HTTP client).
+http = ["dep:serde_json"]
+
 [dependencies]
+serde_json = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
 [lints]
