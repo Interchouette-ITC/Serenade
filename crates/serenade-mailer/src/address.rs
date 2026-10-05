@@ -1,6 +1,7 @@
 //! Email address (mailbox) for Mime.
 
 use std::fmt;
+use std::str::FromStr;
 
 use crate::MailerError;
 
@@ -90,11 +91,19 @@ impl fmt::Display for Address {
     }
 }
 
+impl FromStr for Address {
+    type Err = MailerError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::parse(value)
+    }
+}
+
 impl TryFrom<&str> for Address {
     type Error = MailerError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::parse(value)
+        value.parse()
     }
 }
 
