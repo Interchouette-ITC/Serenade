@@ -89,9 +89,10 @@ impl RateLimiterStorage for RedisRateLimiterStorage {
             let window = state.expect("policy leaves window state after consume");
             let encoded = encode_state(&window, now, now_wall_ms);
             let cas_ok = apply_window(&mut conn, &key, observed.as_deref(), &encoded, ttl)?;
+            #[allow(clippy::incompatible_msrv)]
             let forced_fail = self
                 .cas_fail_budget
-                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_sub(1))
+                .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_sub(1))
                 .is_ok();
             if cas_ok && !forced_fail {
                 return Ok(result);
