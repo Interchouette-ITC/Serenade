@@ -183,6 +183,6 @@ mod encode_error_tests {
         let bytes = ToonEncoder
             .encode(&json!({ "ok": true }), FORMAT_TOON)
             .expect("encode");
-        assert!(!bytes.is_empty());
+        assert_ne!(bytes, [] as [u8; 0]);
     }
 }
