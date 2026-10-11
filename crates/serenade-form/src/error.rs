@@ -8,6 +8,12 @@ pub enum FormError {
     /// Request body is not valid `application/x-www-form-urlencoded`.
     #[error("invalid form body encoding")]
     InvalidEncoding,
+    /// Multipart body is invalid or exceeds configured limits.
+    #[error("invalid multipart form body: {0}")]
+    Multipart(String),
+    /// Uploaded file rejected (size, MIME type, or I/O).
+    #[error("uploaded file rejected: {0}")]
+    Upload(String),
     /// CSRF check failed.
     #[error(transparent)]
     Csrf(#[from] SecurityError),

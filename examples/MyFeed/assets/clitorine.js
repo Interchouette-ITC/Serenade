@@ -99,9 +99,8 @@
 
   function onImagePick(input) {
     const preview = byId("media-preview");
-    const hidden = byId("image_data");
     const file = input.files && input.files[0];
-    if (!file || !hidden) {
+    if (!file) {
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
@@ -114,18 +113,11 @@
       input.value = "";
       return;
     }
-    const reader = new FileReader();
-    reader.onload = function () {
-      const data = String(reader.result || "");
-      hidden.value = data;
-      if (preview) {
-        preview.innerHTML =
-          '<img class="img-fluid rounded border" alt="preview" src="' +
-          data.replace(/"/g, "&quot;") +
-          '" />';
-      }
-    };
-    reader.readAsDataURL(file);
+    if (preview) {
+      const url = URL.createObjectURL(file);
+      preview.innerHTML =
+        '<img class="img-fluid rounded border" alt="preview" src="' + url + '" />';
+    }
   }
 
   function ensureQuill() {
@@ -287,7 +279,7 @@
     bindAjaxForms();
     bindDeleteModal();
 
-    const imageInput = byId("media_upload");
+    const imageInput = byId("image");
     if (imageInput) {
       imageInput.addEventListener("change", function () {
         onImagePick(imageInput);

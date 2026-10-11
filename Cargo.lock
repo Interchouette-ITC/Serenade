@@ -3820,6 +3820,7 @@ name = "my_feed"
 version = "0.1.0"
 dependencies = [
  "ammonia",
+ "base64 0.22.1",
  "emojis",
  "rusqlite",
  "serenade-admin",
@@ -5964,6 +5965,7 @@ dependencies = [
  "serenade-http",
  "serenade-security",
  "serenade-validator",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 

@@ -4,14 +4,17 @@ use std::sync::Arc;
 use serenade_http::{Method, Request};
 use serenade_security::HmacCsrfTokenManager;
 use serenade_validator::NotBlank;
+use serenade_validator::{ConstraintViolationList, Violation};
 
 use super::{
     BoolToStringTransformer, COLLECTION_PROTOTYPE_INDEX, CheckboxOptions, ChoiceEntry,
-    ChoiceOptions, ChoiceToValueTransformer, CollectionPrototypeMeta, DataTransformer, FieldConfig,
-    FieldKind, Form, FormError, FormStatus, HiddenOptions, I64ToStringTransformer, NestedData,
-    NumberOptions, PasswordOptions, TextOptions, TextareaOptions, collection_field_name,
-    collection_indices, collection_prototype_field_name, escape_attr, escape_html, join_multi,
-    parse_urlencoded, parse_urlencoded_multi, split_multi, unflatten_form_data, version,
+    ChoiceOptions, ChoiceToValueTransformer, CollectionPrototypeMeta, DEFAULT_MAX_FILE_SIZE,
+    DataTransformer, FieldConfig, FieldKind, FileOptions, FileStorage, Form, FormError, FormStatus,
+    HiddenOptions, I64ToStringTransformer, NestedData, NumberOptions, PasswordOptions, TextOptions,
+    TextareaOptions, collection_field_name, collection_indices, collection_prototype_field_name,
+    escape_attr, escape_html, form_errors, form_label, form_row, form_widget, join_multi,
+    parse_multipart, parse_urlencoded, parse_urlencoded_multi, split_multi, unflatten_form_data,
+    version,
 };
 
 #[test]
@@ -652,4 +655,181 @@ fn form_patch_method_and_text_placeholder() {
     assert_eq!(form.get("title"), Some("Hi"));
     assert_eq!(form.fields()[0].value(), "Hi");
     assert_eq!(form.fields()[0].config().kind(), FieldKind::Text);
+}
+
+#[test]
+fn theme_helpers_escape_xss_payloads() {
+    let mut form = Form::builder("xss")
+        .csrf(false)
+        .field("body", vec![])
+        .build();
+    assert!(form.set("body", r#"<script>alert("x")</script>"#));
+    let field = &form.fields()[0];
+    let label = form_label(field);
+    assert!(label.contains(r#"for="body""#));
+    assert!(label.contains(">body</label>"));
+    let widget = form_widget(field).expect("widget");
+    assert!(!widget.contains("<script>"));
+    assert!(widget.contains("&lt;script&gt;"));
+    let mut violations = ConstraintViolationList::new();
+    violations.add(Violation::new("body", r#"bad <msg> & "quote""#, "NotBlank"));
+    let errors = form_errors(field, &violations);
+    assert!(errors.contains("form-errors"));
+    assert!(errors.contains("&lt;msg&gt;"));
+    assert!(!errors.contains("<msg>"));
+    let row = form_row(field, &violations).expect("row");
+    assert!(row.contains("form-row"));
+    assert!(row.contains("&lt;script&gt;"));
+}
+
+#[test]
+fn form_render_escapes_field_values_xss() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let mut form = Form::builder("xss").field("body", vec![]).build();
+    form.prepare_csrf(&mgr).expect("csrf");
+    assert!(form.set("body", "<img onerror=alert(1) src=x>"));
+    let html = form.render().expect("render").as_html().to_owned();
+    assert!(html.contains(r#"name="_token""#));
+    assert!(!html.contains("<img onerror"));
+    assert!(html.contains("&lt;img"));
+}
+
+#[test]
+fn multipart_file_bind_and_constraints() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let options = FileOptions {
+        accept: Some("image/*".into()),
+        max_size: 64,
+        mime_types: vec!["image/png".into(), "image/*".into()],
+        storage: FileStorage::Memory,
+    };
+    let mut form = Form::builder("upload")
+        .csrf(false)
+        .field_config("image", FieldConfig::File(options), vec![])
+        .field("caption", vec![])
+        .build();
+    assert_eq!(form.fields()[0].kind(), FieldKind::File);
+    let html = form.render().expect("render").as_html().to_owned();
+    assert!(html.contains(r#"enctype="multipart/form-data""#));
+    assert!(html.contains(r#"type="file""#));
+    assert!(html.contains(r#"accept="image/*""#));
+    assert_eq!(DEFAULT_MAX_FILE_SIZE, 2 * 1024 * 1024);
+
+    let boundary = "----SerenadeBoundary7";
+    let body = [
+        format!("--{boundary}\r\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"caption\"\r\n\r\n".to_vec(),
+        b"hello\r\n".to_vec(),
+        format!("--{boundary}\r\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"image\"; filename=\"pic.png\"\r\n".to_vec(),
+        b"Content-Type: image/png\r\n\r\n".to_vec(),
+        b"PNGDATA\r\n".to_vec(),
+        format!("--{boundary}--\r\n").into_bytes(),
+    ]
+    .concat();
+    let request = Request::new(Method::Post, "/")
+        .with_header(
+            "content-type",
+            format!("multipart/form-data; boundary={boundary}"),
+        )
+        .with_body(body);
+    assert_eq!(
+        form.handle_request(&request, &mgr).expect("bind"),
+        FormStatus::Bound
+    );
+    assert_eq!(form.get("caption"), Some("hello"));
+    assert_eq!(form.get("image"), Some("pic.png"));
+    let file = form.file("image").expect("file");
+    assert_eq!(file.filename(), Some("pic.png"));
+    assert_eq!(file.content_type(), Some("image/png"));
+    assert_eq!(file.as_bytes(), Some(b"PNGDATA".as_slice()));
+
+    let too_big = FileOptions {
+        max_size: 3,
+        mime_types: vec!["image/png".into()],
+        ..FileOptions::default()
+    };
+    let err = parse_multipart(
+        request.body(),
+        boundary,
+        &HashMap::from([(String::from("image"), too_big)]),
+        1024,
+    )
+    .expect_err("size");
+    assert!(matches!(err, FormError::Upload(_)));
+}
+
+#[test]
+fn multipart_tempfile_storage_and_csrf() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let mut form = Form::builder("upload")
+        .field_config(
+            "doc",
+            FieldConfig::File(FileOptions {
+                storage: FileStorage::TempFile,
+                max_size: 1024,
+                mime_types: vec!["text/plain".into()],
+                accept: None,
+            }),
+            vec![],
+        )
+        .build();
+    form.prepare_csrf(&mgr).expect("csrf");
+    let token = form
+        .render()
+        .expect("render")
+        .as_html()
+        .split("value=\"")
+        .nth(1)
+        .expect("value")
+        .split('"')
+        .next()
+        .expect("end")
+        .to_owned();
+
+    let boundary = "BoundTemp1";
+    let body = [
+        format!("--{boundary}\r\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"_token\"\r\n\r\n".to_vec(),
+        format!("{token}\r\n").into_bytes(),
+        format!("--{boundary}\r\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"doc\"; filename=\"note.txt\"\r\n".to_vec(),
+        b"Content-Type: text/plain\r\n\r\n".to_vec(),
+        b"notes\r\n".to_vec(),
+        format!("--{boundary}--\r\n").into_bytes(),
+    ]
+    .concat();
+    let request = Request::new(Method::Post, "/")
+        .with_header(
+            "content-type",
+            format!("multipart/form-data; boundary={boundary}"),
+        )
+        .with_body(body);
+    assert_eq!(
+        form.handle_request(&request, &mgr).expect("bind"),
+        FormStatus::Bound
+    );
+    let file = form.take_file("doc").expect("file");
+    assert!(file.path().is_some());
+    assert_eq!(file.into_bytes().expect("bytes"), b"notes");
+}
+
+#[test]
+fn multipart_csrf_rejection() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let mut form = Form::builder("upload")
+        .field_config("image", FieldConfig::File(FileOptions::default()), vec![])
+        .build();
+    let boundary = "BoundBad";
+    let body = format!(
+        "--{boundary}\r\nContent-Disposition: form-data; name=\"_token\"\r\n\r\nbad\r\n--{boundary}--\r\n"
+    );
+    let request = Request::new(Method::Post, "/")
+        .with_header(
+            "content-type",
+            format!("multipart/form-data; boundary={boundary}"),
+        )
+        .with_body(body.into_bytes());
+    let err = form.handle_request(&request, &mgr).expect_err("csrf");
+    assert!(matches!(err, FormError::Csrf(_)));
 }

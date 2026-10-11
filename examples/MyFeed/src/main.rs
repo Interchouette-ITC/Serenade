@@ -11,14 +11,18 @@ mod i18n;
 mod sanitize;
 mod store;
 
-use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 use serenade_filesystem::is_dir;
 use serenade_finder::Finder;
-use serenade_form::{Form, FormStatus};
+use serenade_form::{
+    ChoiceEntry, ChoiceOptions, FieldConfig, FileOptions, FileStorage, Form, FormStatus,
+    HiddenOptions, TextareaOptions, UploadedFile, form_csrf, form_widget,
+};
 use serenade_http::{
     AsyncHttpKernel, HttpError, Method, ROUTE_ATTRIBUTE, Request, Response, Route, RouteCollection,
     UrlMatcher,
@@ -55,6 +59,7 @@ const DEFAULT_CSRF: &str = "myfeed-dev-csrf-secret-change-me!!";
 const DEFAULT_ADMIN: &str = "myfeed-dev-admin";
 const ADMIN_COOKIE: &str = "myfeed_admin";
 const LOCALE_COOKIE: &str = "_locale";
+const MAX_IMAGE_BYTES: usize = 200 * 1024;
 const MAX_IMAGE_DATA: usize = 280_000;
 const MAX_BODY_CHARS: usize = 2000;
 
@@ -188,6 +193,50 @@ fn build_edit_form(
     )
 }
 
+fn image_file_options() -> FileOptions {
+    FileOptions {
+        accept: Some("image/*".into()),
+        max_size: MAX_IMAGE_BYTES as u64,
+        mime_types: vec![
+            "image/png".into(),
+            "image/jpeg".into(),
+            "image/jpg".into(),
+            "image/webp".into(),
+            "image/gif".into(),
+        ],
+        storage: FileStorage::Memory,
+    }
+}
+
+fn category_choice_options(categories: &[String]) -> ChoiceOptions {
+    let mut choices: Vec<ChoiceEntry> = categories.iter().map(ChoiceEntry::new).collect();
+    if choices.is_empty() {
+        choices.push(ChoiceEntry::new("Life"));
+    }
+    ChoiceOptions {
+        choices,
+        multiple: false,
+        expanded: false,
+    }
+}
+
+fn build_post_bind_form(name: impl Into<String>, categories: &[String]) -> Form {
+    Form::builder(name)
+        .field_config(
+            "body",
+            FieldConfig::Hidden(HiddenOptions::default()),
+            not_blank(),
+        )
+        .field("embed_url", vec![])
+        .field_config("image", FieldConfig::File(image_file_options()), vec![])
+        .field_config(
+            "category",
+            FieldConfig::Choice(category_choice_options(categories)),
+            vec![],
+        )
+        .build()
+}
+
 fn build_composer_form(
     csrf: &HmacCsrfTokenManager,
     categories: &[String],
@@ -199,40 +248,52 @@ fn build_composer_form(
 ) -> Result<String, HttpError> {
     let mut form = Form::builder(form_name)
         .action(action)
-        .field("body", not_blank())
+        .field_config(
+            "body",
+            FieldConfig::Hidden(HiddenOptions::default()),
+            not_blank(),
+        )
         .field("embed_url", vec![])
-        .field("image_data", vec![])
-        .field("category", vec![])
+        .field_config("image", FieldConfig::File(image_file_options()), vec![])
+        .field_config(
+            "category",
+            FieldConfig::Choice(category_choice_options(categories)),
+            vec![],
+        )
         .build();
+    if let Some(post) = post {
+        let _ = form.set("embed_url", post.embed_url.clone().unwrap_or_default());
+        let _ = form.set("category", post.category.clone());
+    } else if let Some(first) = categories.first() {
+        let _ = form.set("category", first.clone());
+    }
     form.prepare_csrf(csrf)
         .map_err(|err| HttpError::failed(err.to_string()))?;
-    let full = form
-        .render()
-        .map_err(|err| HttpError::failed(err.to_string()))?;
-    let csrf_field = extract_csrf_hidden(full.as_html());
+    let csrf_field = form_csrf(&form).map_err(|err| HttpError::failed(err.to_string()))?;
+    let image_field = form
+        .fields()
+        .iter()
+        .find(|field| field.name() == "image")
+        .ok_or_else(|| HttpError::failed("missing image field"))?;
+    let category_field = form
+        .fields()
+        .iter()
+        .find(|field| field.name() == "category")
+        .ok_or_else(|| HttpError::failed("missing category field"))?;
+    let image_widget =
+        form_widget(image_field).map_err(|err| HttpError::failed(err.to_string()))?;
+    let category_widget =
+        form_widget(category_field).map_err(|err| HttpError::failed(err.to_string()))?;
     let emojis = emoji_picker();
-    let selected_category = post.map_or("", |p| p.category.as_str());
-    let mut options = String::new();
-    for (index, name) in categories.iter().enumerate() {
-        let selected = if (!selected_category.is_empty() && name == selected_category)
-            || (selected_category.is_empty() && index == 0)
-        {
-            " selected"
-        } else {
-            ""
-        };
-        let _ = write!(
-            options,
-            r#"<option value="{value}"{selected}>{label}</option>"#,
-            value = escape_html(name),
-            label = escape_html(name),
-        );
-    }
-    if options.is_empty() {
-        options.push_str(r#"<option value="Life">Life</option>"#);
-    }
     let embed_value = post.and_then(|p| p.embed_url.as_deref()).unwrap_or("");
-    let image_value = post.and_then(|p| p.image_data.as_deref()).unwrap_or("");
+    let existing_preview =
+        post.and_then(|p| p.image_data.as_deref())
+            .map_or(String::new(), |data| {
+                format!(
+                    r#"<img class="img-fluid rounded border" alt="current media" src="{src}" />"#,
+                    src = escape_attr(data)
+                )
+            });
     let initial_attr = post.map_or(String::new(), |p| {
         format!(
             r#" data-initial-html="{html}""#,
@@ -249,10 +310,9 @@ fn build_composer_form(
             .to_owned()
     };
     Ok(format!(
-        r#"<form name="{form_name}" method="POST" action="{action}" class="composer-form">
+        r#"<form name="{form_name}" method="POST" action="{action}" class="composer-form" enctype="multipart/form-data">
 {csrf_field}
 <input type="hidden" id="body" name="body" value="" />
-<input type="hidden" id="image_data" name="image_data" value="{image_value}" />
 
 <div class="mb-3 composer-emoji-wrap">
   <div id="composer-quill"{initial_attr}></div>
@@ -263,18 +323,16 @@ fn build_composer_form(
 </div>
 
 <div class="mb-3">
-  <label class="form-label" for="media_upload">Media (image) - optional</label>
-  <input type="file" id="media_upload" class="form-control" accept="image/*" />
-  <div id="media-preview" class="mt-2"></div>
+  <label class="form-label" for="image">Media (image) - optional</label>
+  <div class="composer-file">{image_widget}</div>
+  <div id="media-preview" class="mt-2">{existing_preview}</div>
   <label class="form-label mt-3" for="embed_url">…or paste a link instead</label>
   <input type="url" class="form-control" id="embed_url" name="embed_url" value="{embed_value}" placeholder="https://… (.mp4, YouTube, .jpg)" />
 </div>
 
 <div class="mb-3">
   <label class="form-label" for="category">Category</label>
-  <select class="form-select" id="category" name="category">
-    {options}
-  </select>
+  <div class="composer-choice">{category_widget}</div>
 </div>
 
 <div class="d-flex gap-2 justify-content-end">
@@ -282,7 +340,6 @@ fn build_composer_form(
   <button type="submit" class="btn btn-primary px-4">{submit_label}</button>
 </div>
 </form>"#,
-        image_value = escape_html(image_value),
         embed_value = escape_html(embed_value),
         submit_label = escape_html(submit_label),
     ))
@@ -337,19 +394,29 @@ fn build_comment_form(
     let action = path(routes, "comment_create", &[("id", id.as_str())])?;
     let mut form = Form::builder(name)
         .action(action.clone())
-        .field("body", not_blank())
+        .field_config(
+            "body",
+            FieldConfig::Textarea(TextareaOptions {
+                placeholder: Some("Write a comment…".into()),
+                rows: Some(2),
+            }),
+            not_blank(),
+        )
         .build();
     form.prepare_csrf(csrf)
         .map_err(|err| HttpError::failed(err.to_string()))?;
-    let full = form
-        .render()
-        .map_err(|err| HttpError::failed(err.to_string()))?;
-    let csrf_field = extract_csrf_hidden(full.as_html());
+    let csrf_field = form_csrf(&form).map_err(|err| HttpError::failed(err.to_string()))?;
+    let body_field = form
+        .fields()
+        .iter()
+        .find(|field| field.name() == "body")
+        .ok_or_else(|| HttpError::failed("missing body field"))?;
+    let body_widget = form_widget(body_field).map_err(|err| HttpError::failed(err.to_string()))?;
     Ok(format!(
         r#"<form method="POST" action="{action}" class="mt-2" data-clitorine-ajax="comment">
 {csrf_field}
-<label class="form-label" for="cbody-{post_id}">Add a comment (needs approval)</label>
-<textarea class="form-control" id="cbody-{post_id}" name="body" maxlength="1000" rows="2" required></textarea>
+<label class="form-label" for="body">Add a comment (needs approval)</label>
+<div class="composer-textarea">{body_widget}</div>
 <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Submit comment</button>
 </form>"#,
         action = escape_attr(&action),
@@ -752,7 +819,28 @@ fn sanitize_image_data(raw: &str) -> Option<String> {
     Some(raw.to_owned())
 }
 
-fn parse_new_post(state: &AppState, form: &Form) -> Result<NewPost, &'static str> {
+fn uploaded_image_to_data_url(file: &UploadedFile) -> Result<String, &'static str> {
+    let bytes = file
+        .as_bytes()
+        .ok_or("Image upload rejected (type or size).")?;
+    if bytes.is_empty() || bytes.len() > MAX_IMAGE_BYTES {
+        return Err("Image upload rejected (type or size).");
+    }
+    let mime = file.content_type().unwrap_or("");
+    let mime = match mime {
+        "image/png" | "image/jpeg" | "image/jpg" | "image/webp" | "image/gif" => mime,
+        _ => return Err("Image upload rejected (type or size)."),
+    };
+    let encoded = BASE64.encode(bytes);
+    let data = format!("data:{mime};base64,{encoded}");
+    sanitize_image_data(&data).ok_or("Image upload rejected (type or size).")
+}
+
+fn parse_new_post(
+    state: &AppState,
+    form: &Form,
+    existing_image: Option<&str>,
+) -> Result<NewPost, &'static str> {
     let raw_body = form.get("body").unwrap_or("").trim();
     let body = sanitize_post_html(raw_body);
     if plain_len(&body) == 0 || plain_len(&body) > MAX_BODY_CHARS {
@@ -766,13 +854,12 @@ fn parse_new_post(state: &AppState, form: &Form) -> Result<NewPost, &'static str
     } else {
         return Err("Media URL must be YouTube, SoundCloud, image, or .mp4.");
     };
-    let image_raw = form.get("image_data").unwrap_or("");
-    let image_data = if image_raw.trim().is_empty() {
-        None
-    } else if let Some(data) = sanitize_image_data(image_raw) {
-        Some(data)
+    let image_data = if let Some(file) = form.file("image") {
+        Some(uploaded_image_to_data_url(file)?)
+    } else if let Some(existing) = existing_image {
+        sanitize_image_data(existing)
     } else {
-        return Err("Image upload rejected (type or size).");
+        None
     };
     let category = form.get("category").unwrap_or("").trim();
     let category = if state.store.has_category(category) {
@@ -794,14 +881,10 @@ fn parse_new_post(state: &AppState, form: &Form) -> Result<NewPost, &'static str
 }
 
 fn handle_post_create(state: &AppState, request: &Request) -> Result<Response, HttpError> {
-    let mut form = Form::builder("post")
-        .field("body", not_blank())
-        .field("embed_url", vec![])
-        .field("image_data", vec![])
-        .field("category", vec![])
-        .build();
+    let categories = state.store.categories();
+    let mut form = build_post_bind_form("post", &categories);
     match form.handle_request(request, &state.csrf) {
-        Ok(FormStatus::Bound) if form.is_valid() => match parse_new_post(state, &form) {
+        Ok(FormStatus::Bound) if form.is_valid() => match parse_new_post(state, &form, None) {
             Ok(new) => {
                 let post = state.store.add_post(new);
                 index_upsert(state, &post);
@@ -844,7 +927,16 @@ fn handle_comment_create(state: &AppState, request: &Request) -> Result<Response
         .and_then(|s| s.parse::<u64>().ok())
         .ok_or_else(|| HttpError::bad_request("bad post id"))?;
     let form_name = format!("comment-{post_id}");
-    let mut form = Form::builder(form_name).field("body", not_blank()).build();
+    let mut form = Form::builder(form_name)
+        .field_config(
+            "body",
+            FieldConfig::Textarea(TextareaOptions {
+                placeholder: None,
+                rows: Some(2),
+            }),
+            not_blank(),
+        )
+        .build();
     match form.handle_request(request, &state.csrf) {
         Ok(FormStatus::Bound) if form.is_valid() => {
             let body = form.get("body").unwrap_or("").trim().to_owned();
@@ -1129,37 +1221,40 @@ fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response
         return Err(HttpError::not_found("post missing"));
     };
     let form_name = format!("edit-{id}");
-    let mut form = Form::builder(form_name)
-        .field("body", not_blank())
-        .field("embed_url", vec![])
-        .field("image_data", vec![])
-        .field("category", vec![])
-        .build();
+    let categories = state.store.categories();
+    let mut form = build_post_bind_form(form_name, &categories);
+    let existing_image = post.image_data.clone();
     match form.handle_request(request, &state.csrf) {
-        Ok(FormStatus::Bound) if form.is_valid() => match parse_new_post(state, &form) {
-            Ok(new) => {
-                let _ = state.store.update_post(id, &new);
-                if let Some(post) = state.store.get_post(id) {
-                    index_upsert(state, &post);
+        Ok(FormStatus::Bound) if form.is_valid() => {
+            match parse_new_post(state, &form, existing_image.as_deref()) {
+                Ok(new) => {
+                    let _ = state.store.update_post(id, &new);
+                    if let Some(post) = state.store.get_post(id) {
+                        index_upsert(state, &post);
+                    }
+                    Ok(redirect(&format!("/#post-{id}")))
                 }
-                Ok(redirect(&format!("/#post-{id}")))
-            }
-            Err(msg) => {
-                let categories = state.store.categories();
-                let form_html =
-                    build_edit_form(&state.csrf, state.matcher.collection(), &categories, &post)?;
-                Ok(html_response(
-                    400,
-                    edit_post_page(
-                        &ui_for(state, request),
+                Err(msg) => {
+                    let categories = state.store.categories();
+                    let form_html = build_edit_form(
+                        &state.csrf,
                         state.matcher.collection(),
-                        id,
-                        &form_html,
-                        Some(msg),
-                    ),
-                ))
+                        &categories,
+                        &post,
+                    )?;
+                    Ok(html_response(
+                        400,
+                        edit_post_page(
+                            &ui_for(state, request),
+                            state.matcher.collection(),
+                            id,
+                            &form_html,
+                            Some(msg),
+                        ),
+                    ))
+                }
             }
-        },
+        }
         _ => Ok(redirect(&format!("/admin/posts/{id}/edit"))),
     }
 }

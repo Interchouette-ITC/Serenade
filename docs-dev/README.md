@@ -12,7 +12,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [CONSOLE.md](CONSOLE.md)     | Console Application, commands, `--env` / ratatui       |
 | [RECIPES.md](RECIPES.md)     | Flex-like recipes, `serenade new`, Cargo stays PM      |
 | [SECURITY.md](SECURITY.md)   | AuthN/Z, firewall, CSRF, password hashing, session login, OAuth/OIDC (`oauth`), LDAP bind (`ldap`) |
-| [FORMS.md](FORMS.md)         | HTML forms, CSRF default-on, XSS-safe render   |
+| [FORMS.md](FORMS.md)         | Forms, themes, multipart File, CSRF, XSS       |
 | [I18N.md](I18N.md)           | Translator, catalogues, locale, ICU helpers    |
 | [PROFILER.md](PROFILER.md)   | Web debug toolbar / per-request profiler       |
 | [VIEW.md](VIEW.md)           | path / asset / partial HTML helpers            |

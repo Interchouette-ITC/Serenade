@@ -1,5 +1,13 @@
 //! Field kinds and typed option structs.
 
+use crate::file::FileStorage;
+
+/// Default per-file size limit enforced when [`FileOptions::max_size`] is unset (2 MiB).
+pub const DEFAULT_MAX_FILE_SIZE: u64 = 2 * 1024 * 1024;
+
+/// Default multipart body size limit for [`crate::parse_multipart`] (8 MiB).
+pub const DEFAULT_MAX_MULTIPART_BODY: u64 = 8 * 1024 * 1024;
+
 /// HTML-oriented field kind used for bind and render.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FieldKind {
@@ -17,6 +25,8 @@ pub enum FieldKind {
     Choice,
     /// Numeric input (`input type="number"`).
     Number,
+    /// File upload (`input type="file"`); bind via multipart only.
+    File,
 }
 
 /// Options for [`FieldKind::Text`].
@@ -113,6 +123,30 @@ pub struct NumberOptions {
     pub step: Option<i64>,
 }
 
+/// Options for [`FieldKind::File`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileOptions {
+    /// Optional HTML `accept` attribute (for example `image/*`).
+    pub accept: Option<String>,
+    /// Maximum upload size in bytes (default [`DEFAULT_MAX_FILE_SIZE`]).
+    pub max_size: u64,
+    /// Allowed MIME types; empty means any type is accepted.
+    pub mime_types: Vec<String>,
+    /// Whether the payload stays in memory or spills to a tempfile.
+    pub storage: FileStorage,
+}
+
+impl Default for FileOptions {
+    fn default() -> Self {
+        Self {
+            accept: None,
+            max_size: DEFAULT_MAX_FILE_SIZE,
+            mime_types: Vec::new(),
+            storage: FileStorage::Memory,
+        }
+    }
+}
+
 /// Typed configuration for a field (kind + options).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldConfig {
@@ -130,6 +164,8 @@ pub enum FieldConfig {
     Choice(ChoiceOptions),
     /// [`FieldKind::Number`].
     Number(NumberOptions),
+    /// [`FieldKind::File`].
+    File(FileOptions),
 }
 
 impl Default for FieldConfig {
@@ -150,6 +186,7 @@ impl FieldConfig {
             Self::Checkbox(_) => FieldKind::Checkbox,
             Self::Choice(_) => FieldKind::Choice,
             Self::Number(_) => FieldKind::Number,
+            Self::File(_) => FieldKind::File,
         }
     }
 
@@ -176,6 +213,15 @@ impl FieldConfig {
     pub const fn as_number(&self) -> Option<&NumberOptions> {
         match self {
             Self::Number(options) => Some(options),
+            _ => None,
+        }
+    }
+
+    /// Returns file options when this is a file field.
+    #[must_use]
+    pub const fn as_file(&self) -> Option<&FileOptions> {
+        match self {
+            Self::File(options) => Some(options),
             _ => None,
         }
     }

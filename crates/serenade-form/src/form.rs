@@ -1,7 +1,6 @@
 //! Form builder, bind, and validation.
 
 use std::collections::HashMap;
-use std::fmt::Write as _;
 use std::sync::Arc;
 
 use serenade_http::{Method, Request};
@@ -9,11 +8,13 @@ use serenade_security::{CSRF_FIELD_NAME, CsrfToken, CsrfTokenManager, SecurityEr
 use serenade_validator::{Constraint, ConstraintViolationList, RecursiveValidator, Validator};
 
 use crate::collection::collection_field_name;
-use crate::kind::{ChoiceOptions, FieldConfig, FieldKind};
-use crate::parse::parse_urlencoded_multi;
+use crate::file::UploadedFile;
+use crate::kind::{FieldConfig, FieldKind, FileOptions};
+use crate::multipart::parse_form_body;
 use crate::render::RenderedForm;
+use crate::theme::{form_csrf, form_row};
 use crate::transformer::{DataTransformer, join_multi};
-use crate::{FormError, escape_attr, escape_html};
+use crate::{FormError, escape_attr};
 
 /// Outcome after [`Form::handle_request`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,10 +28,10 @@ pub enum FormStatus {
 /// One named form field with kind, optional constraints, and current string value.
 pub struct Field {
     name: String,
-    value: String,
+    pub(crate) value: String,
     constraints: Vec<Arc<dyn Constraint>>,
     config: FieldConfig,
-    transformer: Option<Arc<dyn DataTransformer>>,
+    pub(crate) transformer: Option<Arc<dyn DataTransformer>>,
 }
 
 impl Field {
@@ -84,6 +85,7 @@ pub struct Form {
     csrf_token: Option<CsrfToken>,
     submitted: bool,
     violations: ConstraintViolationList,
+    files: HashMap<String, UploadedFile>,
 }
 
 impl Form {
@@ -129,6 +131,17 @@ impl Form {
             .map(Field::value)
     }
 
+    /// Returns an uploaded file bound to `name`, when present.
+    #[must_use]
+    pub fn file(&self, name: &str) -> Option<&UploadedFile> {
+        self.files.get(name)
+    }
+
+    /// Removes and returns the uploaded file for `name`, when present.
+    pub fn take_file(&mut self, name: &str) -> Option<UploadedFile> {
+        self.files.remove(name)
+    }
+
     /// Sets a field value when the field exists (for example edit prefill).
     ///
     /// Returns `true` when `name` matched a field.
@@ -147,6 +160,12 @@ impl Form {
         &self.violations
     }
 
+    /// Whether CSRF protection is enabled (default `true`).
+    #[must_use]
+    pub const fn csrf_enabled(&self) -> bool {
+        self.csrf_enabled
+    }
+
     /// Issues a CSRF token when CSRF is enabled (call before render on GET).
     ///
     /// # Errors
@@ -160,11 +179,14 @@ impl Form {
         Ok(())
     }
 
-    /// Binds POST/PUT/PATCH `application/x-www-form-urlencoded` body and checks CSRF.
+    /// Binds POST/PUT/PATCH urlencoded or multipart body and checks CSRF.
+    ///
+    /// Multipart is used when `Content-Type` is `multipart/form-data`. File fields
+    /// require multipart; size and MIME limits come from each field's [`FileOptions`].
     ///
     /// # Errors
     ///
-    /// Returns parse, transform, or CSRF errors. Wrong method yields
+    /// Returns parse, upload, transform, or CSRF errors. Wrong method yields
     /// [`FormStatus::NotSubmitted`] without error.
     pub fn handle_request(
         &mut self,
@@ -173,12 +195,19 @@ impl Form {
     ) -> Result<FormStatus, FormError> {
         self.submitted = false;
         self.violations = ConstraintViolationList::new();
+        self.files.clear();
         if !matches!(request.method(), Method::Post | Method::Put | Method::Patch) {
             return Ok(FormStatus::NotSubmitted);
         }
-        let values = parse_urlencoded_multi(request.body())?;
+        let file_options = self.file_options_map();
+        let parsed = parse_form_body(
+            request.headers().get("content-type"),
+            request.body(),
+            &file_options,
+        )?;
         if self.csrf_enabled {
-            let submitted = values
+            let submitted = parsed
+                .fields
                 .get(CSRF_FIELD_NAME)
                 .and_then(|v| v.last())
                 .map_or("", String::as_str);
@@ -189,8 +218,17 @@ impl Form {
             self.csrf_token = Some(token);
         }
         for field in &mut self.fields {
-            bind_field(field, &values)?;
+            if matches!(field.config(), FieldConfig::File(_)) {
+                if let Some(upload) = parsed.files.get(field.name()) {
+                    field.value = upload.filename().unwrap_or("").to_owned();
+                } else {
+                    field.value.clear();
+                }
+            } else {
+                bind_field(field, &parsed.fields)?;
+            }
         }
+        self.files = parsed.files;
         self.submitted = true;
         Ok(FormStatus::Bound)
     }
@@ -199,6 +237,9 @@ impl Form {
     pub fn validate(&mut self, validator: &dyn Validator) -> bool {
         let mut violations = ConstraintViolationList::new();
         for field in &self.fields {
+            if matches!(field.config(), FieldConfig::File(_)) {
+                continue;
+            }
             let refs: Vec<&dyn Constraint> = field.constraints.iter().map(AsRef::as_ref).collect();
             let field_violations = validator.validate_value(&field.value, &field.name, &refs);
             for v in field_violations.as_slice() {
@@ -218,30 +259,25 @@ impl Form {
 
     /// Renders a full HTML form (escaped values, CSRF hidden field when enabled).
     ///
+    /// Adds `enctype="multipart/form-data"` when the form declares a [`FieldKind::File`] field.
+    ///
     /// # Errors
     ///
     /// Returns [`FormError::Csrf`] when CSRF is enabled but no token was prepared or bound,
     /// or [`FormError::Transform`] when a field transformer rejects the model value.
     pub fn render(&self) -> Result<RenderedForm, FormError> {
-        let csrf_html = if self.csrf_enabled {
-            let token = self
-                .csrf_token
-                .as_ref()
-                .ok_or(SecurityError::InvalidCsrfToken)?;
-            format!(
-                r#"<input type="hidden" name="{}" value="{}" />"#,
-                escape_attr(CSRF_FIELD_NAME),
-                escape_attr(token.value())
-            )
-        } else {
-            String::new()
-        };
+        let csrf_html = form_csrf(self)?;
         let mut fields_html = String::new();
         for field in &self.fields {
-            fields_html.push_str(&render_field_widget(field)?);
+            fields_html.push_str(&form_row(field, &self.violations)?);
         }
+        let enctype = if self.has_file_field() {
+            r#" enctype="multipart/form-data""#
+        } else {
+            ""
+        };
         let html = format!(
-            r#"<form name="{name}" method="{method}" action="{action}">{csrf}{fields}</form>"#,
+            r#"<form name="{name}" method="{method}" action="{action}"{enctype}>{csrf}{fields}</form>"#,
             name = escape_attr(&self.name),
             method = escape_attr(self.method.as_str()),
             action = escape_attr(&self.action),
@@ -249,6 +285,44 @@ impl Form {
             fields = fields_html,
         );
         Ok(RenderedForm { html })
+    }
+
+    /// Renders the CSRF hidden input when CSRF is enabled (empty when disabled).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FormError::Csrf`] when CSRF is enabled but no token was prepared or bound.
+    pub fn csrf_html(&self) -> Result<String, FormError> {
+        if !self.csrf_enabled {
+            return Ok(String::new());
+        }
+        let token = self
+            .csrf_token
+            .as_ref()
+            .ok_or(SecurityError::InvalidCsrfToken)?;
+        Ok(format!(
+            r#"<input type="hidden" name="{}" value="{}" />"#,
+            escape_attr(CSRF_FIELD_NAME),
+            escape_attr(token.value())
+        ))
+    }
+
+    fn has_file_field(&self) -> bool {
+        self.fields
+            .iter()
+            .any(|field| matches!(field.config(), FieldConfig::File(_)))
+    }
+
+    fn file_options_map(&self) -> HashMap<String, FileOptions> {
+        self.fields
+            .iter()
+            .filter_map(|field| {
+                field
+                    .config()
+                    .as_file()
+                    .map(|options| (field.name().to_owned(), options.clone()))
+            })
+            .collect()
     }
 }
 
@@ -275,132 +349,6 @@ fn bind_field(field: &mut Field, values: &HashMap<String, Vec<String>>) -> Resul
         view
     };
     Ok(())
-}
-
-fn view_value(field: &Field) -> Result<String, FormError> {
-    field
-        .transformer
-        .as_ref()
-        .map_or_else(|| Ok(field.value.clone()), |t| t.transform(&field.value))
-}
-
-fn render_field_widget(field: &Field) -> Result<String, FormError> {
-    let id = escape_attr(field.name());
-    let label = escape_html(field.name());
-    let name = escape_attr(field.name());
-    let view = view_value(field)?;
-    let value = escape_attr(&view);
-    let html = match field.config() {
-        FieldConfig::Textarea(options) => {
-            let rows = options
-                .rows
-                .map_or(String::new(), |r| format!(r#" rows="{r}""#));
-            let placeholder = placeholder_attr(options.placeholder.as_deref());
-            format!(
-                r#"<label for="{id}">{label}</label><textarea id="{id}" name="{name}"{rows}{placeholder}>{text}</textarea>"#,
-                text = escape_html(&view),
-            )
-        }
-        FieldConfig::Hidden(_) => {
-            format!(r#"<input type="hidden" id="{id}" name="{name}" value="{value}" />"#)
-        }
-        FieldConfig::Password(options) => {
-            let placeholder = placeholder_attr(options.placeholder.as_deref());
-            format!(
-                r#"<label for="{id}">{label}</label><input type="password" id="{id}" name="{name}" value="{value}"{placeholder} />"#
-            )
-        }
-        FieldConfig::Checkbox(options) => {
-            let checked = if field.value() == options.checked_value
-                || matches!(field.value(), "1" | "true")
-            {
-                " checked"
-            } else {
-                ""
-            };
-            let checked_value = escape_attr(&options.checked_value);
-            format!(
-                r#"<label for="{id}">{label}</label><input type="checkbox" id="{id}" name="{name}" value="{checked_value}"{checked} />"#
-            )
-        }
-        FieldConfig::Choice(options) => render_choice_widget(field, options, &id, &label, &name),
-        FieldConfig::Number(options) => {
-            let min = options
-                .min
-                .map_or(String::new(), |m| format!(r#" min="{m}""#));
-            let max = options
-                .max
-                .map_or(String::new(), |m| format!(r#" max="{m}""#));
-            let step = options
-                .step
-                .map_or(String::new(), |s| format!(r#" step="{s}""#));
-            format!(
-                r#"<label for="{id}">{label}</label><input type="number" id="{id}" name="{name}" value="{value}"{min}{max}{step} />"#
-            )
-        }
-        FieldConfig::Text(options) => {
-            let placeholder = placeholder_attr(options.placeholder.as_deref());
-            format!(
-                r#"<label for="{id}">{label}</label><input type="text" id="{id}" name="{name}" value="{value}"{placeholder} />"#
-            )
-        }
-    };
-    Ok(html)
-}
-
-fn placeholder_attr(placeholder: Option<&str>) -> String {
-    placeholder.map_or(String::new(), |p| {
-        format!(r#" placeholder="{}""#, escape_attr(p))
-    })
-}
-
-fn render_choice_widget(
-    field: &Field,
-    options: &ChoiceOptions,
-    id: &str,
-    label: &str,
-    name: &str,
-) -> String {
-    let selected = crate::transformer::split_multi(field.value());
-    if options.expanded {
-        let mut html = format!(r"<fieldset><legend>{label}</legend>");
-        for (i, choice) in options.choices.iter().enumerate() {
-            let input_id = format!("{id}_{i}");
-            let checked = if selected.contains(&choice.value.as_str()) {
-                " checked"
-            } else {
-                ""
-            };
-            let input_type = if options.multiple {
-                "checkbox"
-            } else {
-                "radio"
-            };
-            let _ = write!(
-                html,
-                r#"<label for="{input_id}"><input type="{input_type}" id="{input_id}" name="{name}" value="{value}"{checked} />{choice_label}</label>"#,
-                value = escape_attr(&choice.value),
-                choice_label = escape_html(&choice.label),
-            );
-        }
-        html.push_str("</fieldset>");
-        return html;
-    }
-    let multiple = if options.multiple { " multiple" } else { "" };
-    let mut html =
-        format!(r#"<label for="{id}">{label}</label><select id="{id}" name="{name}"{multiple}>"#);
-    for choice in &options.choices {
-        let is_selected = selected.contains(&choice.value.as_str());
-        let selected_attr = if is_selected { " selected" } else { "" };
-        let _ = write!(
-            html,
-            r#"<option value="{value}"{selected_attr}>{label}</option>"#,
-            value = escape_attr(&choice.value),
-            label = escape_html(&choice.label),
-        );
-    }
-    html.push_str("</select>");
-    html
 }
 
 /// Builds a [`Form`].
@@ -550,6 +498,7 @@ impl FormBuilder {
             csrf_token: None,
             submitted: false,
             violations: ConstraintViolationList::new(),
+            files: HashMap::new(),
         }
     }
 }
