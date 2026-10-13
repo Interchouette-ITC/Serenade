@@ -1335,3 +1335,41 @@ fn theme_checkbox_true_and_expanded_multi() {
     assert!(row.contains("form-row"));
     assert!(row.contains("<fieldset>"));
 }
+
+#[test]
+fn parse_multipart_empty_part_blank_header_and_no_trailing_crlf() {
+    let empty_opts: HashMap<String, FileOptions> = HashMap::new();
+    let boundary = "Edge3";
+
+    // Empty part between delimiters (stripped to empty) is skipped.
+    let with_empty_part = format!(
+        "--{boundary}\r\n\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nok\r\n--{boundary}--\r\n"
+    );
+    let data = parse_multipart(with_empty_part.as_bytes(), boundary, &empty_opts, 4096)
+        .expect("empty part");
+    assert_eq!(
+        data.fields.get("a").map(Vec::as_slice),
+        Some([String::from("ok")].as_slice())
+    );
+
+    // Blank header line before LF terminator is ignored.
+    let blank_header = format!(
+        "--{boundary}\nContent-Disposition: form-data; name=\"b\"\n\r\n\nval\n--{boundary}--\n"
+    );
+    let data =
+        parse_multipart(blank_header.as_bytes(), boundary, &empty_opts, 4096).expect("blank hdr");
+    assert_eq!(
+        data.fields.get("b").map(Vec::as_slice),
+        Some([String::from("val")].as_slice())
+    );
+
+    // Part body with no trailing CRLF before the next delimiter.
+    let no_trail = format!(
+        "--{boundary}\r\nContent-Disposition: form-data; name=\"c\"\r\n\r\nraw--{boundary}--\r\n"
+    );
+    let data = parse_multipart(no_trail.as_bytes(), boundary, &empty_opts, 4096).expect("no trail");
+    assert_eq!(
+        data.fields.get("c").map(Vec::as_slice),
+        Some([String::from("raw")].as_slice())
+    );
+}
