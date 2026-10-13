@@ -25,7 +25,7 @@ Never leave the toolbar on by default in production configs.
 ## Request flow
 
 1. Middleware allocates a token, stores it on the request as `_profiler_token`.
-2. Controllers run; apps may call `record_query` for SQL panels.
+2. Controllers run; apps may call `record_query`, `record_debug`, and `record_view`.
 3. On the way out, HTML responses gain a fixed toolbar linking to `/_profiler/{token}`.
 4. `try_handle_profiler` serves the index and detail pages.
 
@@ -36,7 +36,23 @@ Never leave the toolbar on by default in production configs.
 | Request / routing / timing | Middleware                                                                      |
 | Logs                       | `ProfilerLogLayer` + request scope (`with_profile_scope` / `install_log_scope`) |
 | Database                   | App adapters → `record_query(store, token, QueryEvent)`                         |
-| Views                      | No built-in view panel; apps own view timing if they record it                  |
+| Debug                      | App → `record_debug(store, token, label, value)`                                |
+| Views                      | App → `record_view(store, token, name, duration)`                               |
+
+## Symfony map (DebugBundle / VarDumper)
+
+| Symfony                         | Serenade                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| `DebugBundle` (dev dumps)       | `record_debug` + Debug panel (dev-only via `ProfilerConfig`)                      |
+| `dump()` / VarDumper            | Plain labeled strings on the Debug panel (no object-graph walker, no dump server) |
+| Twig / template timing panel    | `record_view` + Views panel (apps name their own views)                           |
+| Web Profiler toolbar            | `inject_toolbar` + `/_profiler/{token}`                                           |
+
+Keep dumps out of production: leave the profiler disabled outside local/dev configs.
+
+## Performance tooling
+
+Request-scoped panels above are for **dev inspection**. Optional app-level hotpath / micro-benchmark recipes live in `PERF.md` when that guide lands; they complement the profiler and do not replace it.
 
 ## Observability bridge
 

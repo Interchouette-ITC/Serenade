@@ -43,6 +43,35 @@ pub struct LogLine {
     pub message: String,
 }
 
+/// One labeled debug dump recorded by the app (plain text, not a `VarDumper` clone).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DebugDump {
+    /// Short label shown in the Debug panel.
+    pub label: String,
+    /// String form of the dumped value (apps redact secrets).
+    pub value: String,
+}
+
+/// One rendered view / template reported by the app.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ViewEvent {
+    /// View or template name.
+    pub name: String,
+    /// Render duration.
+    pub duration: Duration,
+}
+
+impl ViewEvent {
+    /// Builds a view event.
+    #[must_use]
+    pub fn new(name: impl Into<String>, duration: Duration) -> Self {
+        Self {
+            name: name.into(),
+            duration,
+        }
+    }
+}
+
 /// Collected data for one HTTP request.
 #[derive(Clone, Debug)]
 pub struct ProfileData {
@@ -62,6 +91,10 @@ pub struct ProfileData {
     pub queries: Vec<QueryEvent>,
     /// Log lines captured while the request scope was active.
     pub logs: Vec<LogLine>,
+    /// Debug dumps pushed by the app.
+    pub debugs: Vec<DebugDump>,
+    /// View / template events pushed by the app.
+    pub views: Vec<ViewEvent>,
 }
 
 impl ProfileData {
@@ -75,6 +108,8 @@ impl ProfileData {
             route: None,
             queries: Vec::new(),
             logs: Vec::new(),
+            debugs: Vec::new(),
+            views: Vec::new(),
         }
     }
 }

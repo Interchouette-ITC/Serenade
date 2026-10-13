@@ -27,7 +27,7 @@ use serenade_notifier::{Notification, NullTransport, Transport};
 use serenade_observability::REQUEST;
 use serenade_profiler::{
     AsyncProfilerMiddleware, PROFILER_TOKEN_ATTRIBUTE, ProfileStore, ProfilerConfig,
-    ProfilerLogLayer, QueryEvent, record_query, try_handle_profiler,
+    ProfilerLogLayer, QueryEvent, record_query, record_view, try_handle_profiler,
 };
 use serenade_security::HmacCsrfTokenManager;
 use serenade_translation::{Locale, LocaleNegotiator, Translator};
@@ -536,21 +536,28 @@ fn feed_with_flash(
             ));
         }
     }
-    Ok(html_response(
-        if is_err { 400 } else { 200 },
-        feed_page(&FeedView {
-            ui: &ui,
-            store: &state.store,
-            post_form_html: &post_form,
-            comment_forms: &comment_forms,
-            like_forms: &like_forms,
-            admin_forms: &admin_forms,
-            flash,
-            flash_err: is_err,
-            composer_open,
-            routes: state.matcher.collection(),
-        }),
-    ))
+    let view_started = Instant::now();
+    let body = feed_page(&FeedView {
+        ui: &ui,
+        store: &state.store,
+        post_form_html: &post_form,
+        comment_forms: &comment_forms,
+        like_forms: &like_forms,
+        admin_forms: &admin_forms,
+        flash,
+        flash_err: is_err,
+        composer_open,
+        routes: state.matcher.collection(),
+    });
+    if let Some(token) = request.attributes().get::<String>(PROFILER_TOKEN_ATTRIBUTE) {
+        record_view(
+            &state.profiler,
+            token,
+            "feed",
+            view_started.elapsed().max(Duration::from_micros(1)),
+        );
+    }
+    Ok(html_response(if is_err { 400 } else { 200 }, body))
 }
 
 fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError> {

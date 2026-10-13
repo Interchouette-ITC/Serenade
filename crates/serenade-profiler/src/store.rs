@@ -5,7 +5,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
-use crate::data::{LogLine, ProfileData, QueryEvent};
+use crate::data::{DebugDump, LogLine, ProfileData, QueryEvent, ViewEvent};
 
 /// Thread-safe ring of recent [`ProfileData`] values.
 #[derive(Debug)]
@@ -91,6 +91,28 @@ impl ProfileStore {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         if let Some(profile) = guard.by_token.get_mut(token) {
             profile.logs.push(line);
+        }
+    }
+
+    /// Appends a debug dump to a profile.
+    pub fn push_debug(&self, token: &str, dump: DebugDump) {
+        let mut guard = self
+            .inner
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some(profile) = guard.by_token.get_mut(token) {
+            profile.debugs.push(dump);
+        }
+    }
+
+    /// Appends a view event to a profile.
+    pub fn push_view(&self, token: &str, event: ViewEvent) {
+        let mut guard = self
+            .inner
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some(profile) = guard.by_token.get_mut(token) {
+            profile.views.push(event);
         }
     }
 

@@ -10,9 +10,9 @@ use tracing_subscriber::prelude::*;
 
 use crate::{
     AsyncProfilerMiddleware, FORCE_TOKEN_FALLBACK, PROFILER_TOKEN_ATTRIBUTE, ProfileStore,
-    ProfilerConfig, ProfilerLogLayer, ProfilerMiddleware, QueryEvent, generate_token,
-    inject_toolbar, profiler_detail_html, profiler_index_html, record_query, try_handle_profiler,
-    version, with_profile_scope,
+    ProfilerConfig, ProfilerLogLayer, ProfilerMiddleware, QueryEvent, ViewEvent, generate_token,
+    inject_toolbar, profiler_detail_html, profiler_index_html, record_debug, record_query,
+    record_view, try_handle_profiler, version, with_profile_scope,
 };
 
 #[test]
@@ -55,6 +55,34 @@ fn store_evicts_oldest_and_records_query() {
     let profile = store.get("t2").expect("t2");
     assert_eq!(profile.queries.len(), 1);
     assert_eq!(profile.queries[0].sql, "select 1");
+}
+
+#[test]
+fn store_records_debug_and_view() {
+    let store = Arc::new(ProfileStore::new(4));
+    store.ensure(crate::ProfileData::new(
+        "dbg".into(),
+        "GET".into(),
+        "/feed".into(),
+    ));
+    record_debug(&store, "dbg", "post_count", "3");
+    record_view(&store, "dbg", "feed", Duration::from_millis(4));
+    store.push_view("dbg", ViewEvent::new("partial", Duration::from_micros(500)));
+    let profile = store.get("dbg").expect("dbg");
+    assert_eq!(profile.debugs.len(), 1);
+    assert_eq!(profile.debugs[0].label, "post_count");
+    assert_eq!(profile.debugs[0].value, "3");
+    assert_eq!(profile.views.len(), 2);
+    assert_eq!(profile.views[0].name, "feed");
+    assert_eq!(profile.views[0].duration, Duration::from_millis(4));
+    store.push_debug(
+        "missing",
+        crate::DebugDump {
+            label: "x".into(),
+            value: "y".into(),
+        },
+    );
+    store.push_view("missing", ViewEvent::new("gone", Duration::ZERO));
 }
 
 #[test]
@@ -197,6 +225,12 @@ fn try_handle_covers_index_detail_and_404() {
     });
     data.queries
         .push(QueryEvent::new("select 1", Duration::from_millis(1)).with_binds("[]"));
+    data.debugs.push(crate::DebugDump {
+        label: "user".into(),
+        value: "alice".into(),
+    });
+    data.views
+        .push(ViewEvent::new("home", Duration::from_millis(2)));
     store.insert(data);
 
     let index = try_handle_profiler(
@@ -221,9 +255,14 @@ fn try_handle_covers_index_detail_and_404() {
         &Request::new(Method::Get, "/_profiler/deadbeef"),
     )
     .expect("detail");
-    assert!(detail.body_str().unwrap().contains("select 1"));
-    assert!(detail.body_str().unwrap().contains("hello"));
-    assert!(detail.body_str().unwrap().contains("binds"));
+    let detail_body = detail.body_str().unwrap();
+    assert!(detail_body.contains("select 1"));
+    assert!(detail_body.contains("hello"));
+    assert!(detail_body.contains("binds"));
+    assert!(detail_body.contains("Debug"));
+    assert!(detail_body.contains("user"));
+    assert!(detail_body.contains("alice"));
+    assert!(detail_body.contains("<code>home</code>"));
 
     let missing = try_handle_profiler(
         &store,
@@ -265,6 +304,8 @@ fn ui_empty_panels_and_escape() {
     let detail = profiler_detail_html(&data, "/_profiler");
     assert!(detail.contains("No queries recorded."));
     assert!(detail.contains("No log lines captured."));
+    assert!(detail.contains("No debug dumps recorded."));
+    assert!(detail.contains("No views recorded."));
     assert!(detail.contains("&lt;"));
     assert!(detail.contains("&amp;"));
     assert!(detail.contains("&quot;"));

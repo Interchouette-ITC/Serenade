@@ -4,23 +4,27 @@
 
 mod config;
 mod data;
+mod debug;
 mod logs;
 mod middleware;
 mod query;
 mod store;
 mod toolbar;
 mod ui;
+mod view;
 
 use std::fmt::Write as _;
 
 pub use config::ProfilerConfig;
-pub use data::{LogLine, ProfileData, QueryEvent};
+pub use data::{DebugDump, LogLine, ProfileData, QueryEvent, ViewEvent};
+pub use debug::record_debug;
 pub use logs::{ProfilerLogLayer, install_log_scope, with_profile_scope};
 pub use middleware::{AsyncProfilerMiddleware, ProfilerMiddleware};
 pub use query::record_query;
 pub use store::ProfileStore;
 pub use toolbar::inject_toolbar;
 pub use ui::{profiler_detail_html, profiler_index_html, try_handle_profiler};
+pub use view::record_view;
 
 /// Attribute key for the active profile token on a [`serenade_http::Request`].
 pub const PROFILER_TOKEN_ATTRIBUTE: &str = "_profiler_token";

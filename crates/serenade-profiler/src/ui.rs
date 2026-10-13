@@ -83,36 +83,6 @@ pub fn profiler_detail_html(profile: &ProfileData, prefix: &str) -> String {
         .route
         .as_deref()
         .map_or_else(|| "-".to_owned(), escape);
-    let mut queries = String::new();
-    if profile.queries.is_empty() {
-        queries.push_str("<li>No queries recorded.</li>");
-    } else {
-        for query in &profile.queries {
-            queries.push_str(&format!(
-                "<li><code>{}</code> · {} ms{}</li>",
-                escape(&query.sql),
-                query.duration.as_millis(),
-                query
-                    .binds_summary
-                    .as_ref()
-                    .map(|b| format!(" · binds: {}", escape(b)))
-                    .unwrap_or_default()
-            ));
-        }
-    }
-    let mut logs = String::new();
-    if profile.logs.is_empty() {
-        logs.push_str("<li>No log lines captured.</li>");
-    } else {
-        for line in &profile.logs {
-            logs.push_str(&format!(
-                "<li><strong>{}</strong> [{}] {}</li>",
-                escape(&line.level),
-                escape(&line.target),
-                escape(&line.message)
-            ));
-        }
-    }
     format!(
         r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Profile {token}</title>
 <style>body{{font:14px/1.4 system-ui,sans-serif;margin:1.5rem;max-width:960px;}}code{{background:#f4f4f4;padding:1px 4px;}}section{{margin:1.25rem 0;}}h2{{margin-bottom:0.4rem;}}</style>
@@ -130,7 +100,8 @@ pub fn profiler_detail_html(profile: &ProfileData, prefix: &str) -> String {
 <section><h2>Timing</h2><p>{ms} ms wall time inside profiler middleware.</p></section>
 <section><h2>Logs</h2><ul>{logs}</ul></section>
 <section><h2>Database</h2><ul>{queries}</ul></section>
-<section><h2>Views</h2><p>No view collector yet.</p></section>
+<section><h2>Debug</h2><ul>{debugs}</ul></section>
+<section><h2>Views</h2><ul>{views}</ul></section>
 </body></html>"#,
         prefix = escape(prefix),
         token = escape(&profile.token),
@@ -139,9 +110,77 @@ pub fn profiler_detail_html(profile: &ProfileData, prefix: &str) -> String {
         status = profile.status,
         ms = profile.duration.as_millis(),
         route = route,
-        logs = logs,
-        queries = queries,
+        logs = render_logs(profile),
+        queries = render_queries(profile),
+        debugs = render_debugs(profile),
+        views = render_views(profile),
     )
+}
+
+fn render_queries(profile: &ProfileData) -> String {
+    if profile.queries.is_empty() {
+        return "<li>No queries recorded.</li>".to_owned();
+    }
+    let mut out = String::new();
+    for query in &profile.queries {
+        out.push_str(&format!(
+            "<li><code>{}</code> · {} ms{}</li>",
+            escape(&query.sql),
+            query.duration.as_millis(),
+            query
+                .binds_summary
+                .as_ref()
+                .map(|b| format!(" · binds: {}", escape(b)))
+                .unwrap_or_default()
+        ));
+    }
+    out
+}
+
+fn render_logs(profile: &ProfileData) -> String {
+    if profile.logs.is_empty() {
+        return "<li>No log lines captured.</li>".to_owned();
+    }
+    let mut out = String::new();
+    for line in &profile.logs {
+        out.push_str(&format!(
+            "<li><strong>{}</strong> [{}] {}</li>",
+            escape(&line.level),
+            escape(&line.target),
+            escape(&line.message)
+        ));
+    }
+    out
+}
+
+fn render_debugs(profile: &ProfileData) -> String {
+    if profile.debugs.is_empty() {
+        return "<li>No debug dumps recorded.</li>".to_owned();
+    }
+    let mut out = String::new();
+    for dump in &profile.debugs {
+        out.push_str(&format!(
+            "<li><strong>{}</strong>: <code>{}</code></li>",
+            escape(&dump.label),
+            escape(&dump.value)
+        ));
+    }
+    out
+}
+
+fn render_views(profile: &ProfileData) -> String {
+    if profile.views.is_empty() {
+        return "<li>No views recorded.</li>".to_owned();
+    }
+    let mut out = String::new();
+    for view in &profile.views {
+        out.push_str(&format!(
+            "<li><code>{}</code> · {} ms</li>",
+            escape(&view.name),
+            view.duration.as_millis()
+        ));
+    }
+    out
 }
 
 fn escape(input: &str) -> String {
