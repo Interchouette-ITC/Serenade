@@ -189,3 +189,42 @@ fn insert_path(
         NestedData::Value(_) => Err(FormError::NestedConflict(first.clone())),
     }
 }
+
+#[cfg(test)]
+mod insert_path_tests {
+    use super::*;
+
+    #[test]
+    fn empty_segments_are_noop() {
+        let mut map = BTreeMap::new();
+        insert_path(&mut map, &[], String::from("x")).expect("empty");
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn leaf_then_child_conflicts() {
+        let mut map = BTreeMap::new();
+        insert_path(&mut map, &[String::from("geo")], String::from("leaf")).expect("leaf");
+        let err = insert_path(
+            &mut map,
+            &[String::from("geo"), String::from("lat")],
+            String::from("1"),
+        )
+        .expect_err("conflict");
+        assert!(matches!(err, FormError::NestedConflict(path) if path == "geo"));
+    }
+
+    #[test]
+    fn child_then_leaf_conflicts() {
+        let mut map = BTreeMap::new();
+        insert_path(
+            &mut map,
+            &[String::from("geo"), String::from("lat")],
+            String::from("1"),
+        )
+        .expect("child");
+        let err = insert_path(&mut map, &[String::from("geo")], String::from("leaf"))
+            .expect_err("conflict");
+        assert!(matches!(err, FormError::NestedConflict(path) if path == "geo"));
+    }
+}

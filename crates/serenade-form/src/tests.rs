@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use serenade_http::{Method, Request};
@@ -7,11 +7,11 @@ use serenade_validator::NotBlank;
 
 use super::{
     BoolToStringTransformer, COLLECTION_PROTOTYPE_INDEX, CheckboxOptions, ChoiceEntry,
-    ChoiceOptions, ChoiceToValueTransformer, CollectionPrototypeMeta, FieldConfig, FieldKind, Form,
-    FormError, FormStatus, HiddenOptions, I64ToStringTransformer, NumberOptions, PasswordOptions,
-    TextareaOptions, collection_field_name, collection_indices, collection_prototype_field_name,
-    escape_attr, escape_html, parse_urlencoded, parse_urlencoded_multi, unflatten_form_data,
-    version,
+    ChoiceOptions, ChoiceToValueTransformer, CollectionPrototypeMeta, DataTransformer, FieldConfig,
+    FieldKind, Form, FormError, FormStatus, HiddenOptions, I64ToStringTransformer, NestedData,
+    NumberOptions, PasswordOptions, TextOptions, TextareaOptions, collection_field_name,
+    collection_indices, collection_prototype_field_name, escape_attr, escape_html, join_multi,
+    parse_urlencoded, parse_urlencoded_multi, split_multi, unflatten_form_data, version,
 };
 
 #[test]
@@ -426,4 +426,230 @@ fn unflatten_conflict_errors() {
     flat.insert("address.street".into(), "y".into());
     let err = unflatten_form_data(&flat).expect_err("conflict");
     assert!(matches!(err, FormError::NestedConflict(_)));
+}
+
+#[test]
+fn field_config_kind_and_accessors() {
+    assert_eq!(
+        FieldConfig::Text(TextOptions::default()).kind(),
+        FieldKind::Text
+    );
+    assert_eq!(
+        FieldConfig::Textarea(TextareaOptions::default()).kind(),
+        FieldKind::Textarea
+    );
+    assert_eq!(
+        FieldConfig::Hidden(HiddenOptions::default()).kind(),
+        FieldKind::Hidden
+    );
+    assert_eq!(
+        FieldConfig::Password(PasswordOptions::default()).kind(),
+        FieldKind::Password
+    );
+    assert_eq!(
+        FieldConfig::Checkbox(CheckboxOptions::default()).kind(),
+        FieldKind::Checkbox
+    );
+    let choice = FieldConfig::Choice(ChoiceOptions::default());
+    assert_eq!(choice.kind(), FieldKind::Choice);
+    assert!(choice.as_choice().is_some());
+    assert!(choice.as_checkbox().is_none());
+    assert!(choice.as_number().is_none());
+
+    let checkbox = FieldConfig::Checkbox(CheckboxOptions {
+        checked_value: String::from("yes"),
+    });
+    assert!(checkbox.as_checkbox().is_some());
+    assert!(checkbox.as_choice().is_none());
+    assert!(checkbox.as_number().is_none());
+
+    let number = FieldConfig::Number(NumberOptions {
+        min: Some(1),
+        max: Some(9),
+        step: Some(1),
+    });
+    assert_eq!(number.kind(), FieldKind::Number);
+    assert!(number.as_number().is_some());
+    assert!(number.as_choice().is_none());
+    assert!(number.as_checkbox().is_none());
+
+    assert!(FieldConfig::default().as_choice().is_none());
+    assert!(FieldConfig::default().as_checkbox().is_none());
+    assert!(FieldConfig::default().as_number().is_none());
+}
+
+#[test]
+fn choice_entry_constructors() {
+    let same = ChoiceEntry::new("red");
+    assert_eq!(same.value, "red");
+    assert_eq!(same.label, "red");
+    let labeled = ChoiceEntry::with_label("r", "Rouge");
+    assert_eq!(labeled.value, "r");
+    assert_eq!(labeled.label, "Rouge");
+}
+
+#[test]
+fn transformers_error_and_empty_paths() {
+    let bool_t = BoolToStringTransformer;
+    assert_eq!(bool_t.transform("0").expect("falsy"), "");
+    assert_eq!(bool_t.transform("yes").expect("truthy"), "1");
+    assert_eq!(bool_t.reverse_transform("YES").expect("case"), "1");
+
+    let i64_t = I64ToStringTransformer;
+    assert_eq!(i64_t.transform("").expect("empty model"), "");
+    assert_eq!(i64_t.reverse_transform("").expect("empty view"), "");
+    assert!(matches!(
+        i64_t.transform("nope"),
+        Err(FormError::Transform(_))
+    ));
+    assert_eq!(i64_t.transform("-7").expect("neg"), "-7");
+
+    let single = ChoiceToValueTransformer::new(ChoiceOptions {
+        choices: vec![ChoiceEntry::new("a"), ChoiceEntry::new("b")],
+        multiple: false,
+        expanded: false,
+    });
+    assert_eq!(single.transform("").expect("empty"), "");
+    assert_eq!(single.transform("a").expect("ok"), "a");
+    assert!(matches!(
+        single.transform("z"),
+        Err(FormError::Transform(_))
+    ));
+    assert!(matches!(
+        single.reverse_transform("z"),
+        Err(FormError::Transform(_))
+    ));
+
+    let multi = ChoiceToValueTransformer::new(ChoiceOptions {
+        choices: vec![ChoiceEntry::new("a"), ChoiceEntry::new("b")],
+        multiple: true,
+        expanded: false,
+    });
+    assert!(matches!(
+        multi.transform("a z"),
+        Err(FormError::Transform(_))
+    ));
+    assert_eq!(multi.transform("a b").expect("ok"), "a b");
+    assert_eq!(split_multi("  a  b "), vec!["a", "b"]);
+    assert_eq!(join_multi(&[String::from("a"), String::from("b")]), "a b");
+}
+
+#[test]
+fn nested_data_accessors_and_unflatten_edges() {
+    let leaf = NestedData::Value(String::from("x"));
+    assert_eq!(leaf.as_str(), Some("x"));
+    assert!(leaf.as_map().is_none());
+
+    let map = NestedData::Map(BTreeMap::default());
+    assert!(map.as_str().is_none());
+    assert!(map.as_map().is_some());
+
+    let mut flat = HashMap::new();
+    flat.insert(String::new(), String::from("ignored"));
+    flat.insert("solo".into(), String::from("v"));
+    let nested = unflatten_form_data(&flat).expect("ok");
+    assert_eq!(nested.get("solo").and_then(NestedData::as_str), Some("v"));
+    assert!(!nested.contains_key(""));
+
+    let mut indices_flat = HashMap::new();
+    indices_flat.insert("items[0][name]".into(), "a".into());
+    indices_flat.insert("items[__name__][name]".into(), "proto".into());
+    indices_flat.insert("items[2][name]".into(), "c".into());
+    indices_flat.insert("other[1][x]".into(), "z".into());
+    assert_eq!(collection_indices(&indices_flat, "items"), vec![0, 2]);
+}
+
+#[test]
+fn compound_and_collection_field_transformed() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let mut form = Form::builder("shop")
+        .csrf(false)
+        .compound("flags", |c| {
+            c.field_transformed(
+                "active",
+                FieldConfig::Checkbox(CheckboxOptions::default()),
+                vec![],
+                Arc::new(BoolToStringTransformer),
+            )
+        })
+        .collection("items", 1, |entry| {
+            entry.field_transformed(
+                "qty",
+                FieldConfig::Number(NumberOptions::default()),
+                vec![],
+                Arc::new(I64ToStringTransformer),
+            )
+        })
+        .build();
+
+    assert_eq!(form.fields()[0].config().kind(), FieldKind::Checkbox);
+    assert_eq!(form.fields()[1].name(), "items[0][qty]");
+
+    let body = b"flags.active=on&items%5B0%5D%5Bqty%5D=3";
+    let request = Request::new(Method::Post, "/").with_body(body.to_vec());
+    assert_eq!(
+        form.handle_request(&request, &mgr).expect("bind"),
+        FormStatus::Bound
+    );
+    assert_eq!(form.get("flags.active"), Some("1"));
+    assert_eq!(form.get("items[0][qty]"), Some("3"));
+}
+
+#[test]
+fn choice_expanded_radio_renders_unchecked() {
+    let choice = ChoiceOptions {
+        choices: vec![
+            ChoiceEntry::with_label("a", "Alpha"),
+            ChoiceEntry::with_label("b", "Beta"),
+        ],
+        multiple: false,
+        expanded: true,
+    };
+    let mut form = Form::builder("poll")
+        .csrf(false)
+        .field_config("pick", FieldConfig::Choice(choice), vec![])
+        .build();
+    form.set("pick", "a");
+    let html = form.render().expect("render").as_html().to_owned();
+    assert!(html.contains(r#"type="radio""#));
+    assert!(html.contains("checked"));
+    assert!(html.contains(r#"value="b""#));
+    assert!(!html.contains(r#"value="b" checked"#));
+}
+
+#[test]
+fn form_patch_method_and_text_placeholder() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let mut form = Form::builder("edit")
+        .csrf(false)
+        .method(Method::Patch)
+        .action("/edit")
+        .field_config(
+            "title",
+            FieldConfig::Text(TextOptions {
+                placeholder: Some("Title".into()),
+            }),
+            vec![],
+        )
+        .field_config(
+            "secret",
+            FieldConfig::Password(PasswordOptions {
+                placeholder: Some("pw".into()),
+            }),
+            vec![],
+        )
+        .build();
+    let html = form.render().expect("render").as_html().to_owned();
+    assert!(html.contains("method=\"PATCH\""));
+    assert!(html.contains(r#"placeholder="Title""#));
+    assert!(html.contains(r#"placeholder="pw""#));
+
+    let request = Request::new(Method::Patch, "/").with_body(b"title=Hi&secret=x".to_vec());
+    assert_eq!(
+        form.handle_request(&request, &mgr).expect("bind"),
+        FormStatus::Bound
+    );
+    assert_eq!(form.get("title"), Some("Hi"));
+    assert_eq!(form.fields()[0].value(), "Hi");
+    assert_eq!(form.fields()[0].config().kind(), FieldKind::Text);
 }
