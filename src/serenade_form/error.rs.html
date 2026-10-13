@@ -8,11 +8,23 @@
 <a href=#8 id=8 data-nosnippet>8</a>    <span class="doccomment">/// Request body is not valid `application/x-www-form-urlencoded`.
 <a href=#9 id=9 data-nosnippet>9</a>    </span><span class="attr">#[error(<span class="string">"invalid form body encoding"</span>)]
 <a href=#10 id=10 data-nosnippet>10</a>    </span>InvalidEncoding,
-<a href=#11 id=11 data-nosnippet>11</a>    <span class="doccomment">/// CSRF check failed.
-<a href=#12 id=12 data-nosnippet>12</a>    </span><span class="attr">#[error(transparent)]
-<a href=#13 id=13 data-nosnippet>13</a>    </span>Csrf(<span class="attr">#[from] </span>SecurityError),
-<a href=#14 id=14 data-nosnippet>14</a>    <span class="doccomment">/// Form was not submitted (wrong method or empty bind).
-<a href=#15 id=15 data-nosnippet>15</a>    </span><span class="attr">#[error(<span class="string">"form not submitted"</span>)]
-<a href=#16 id=16 data-nosnippet>16</a>    </span>NotSubmitted,
-<a href=#17 id=17 data-nosnippet>17</a>}
+<a href=#11 id=11 data-nosnippet>11</a>    <span class="doccomment">/// Multipart body is invalid or exceeds configured limits.
+<a href=#12 id=12 data-nosnippet>12</a>    </span><span class="attr">#[error(<span class="string">"invalid multipart form body: {0}"</span>)]
+<a href=#13 id=13 data-nosnippet>13</a>    </span>Multipart(String),
+<a href=#14 id=14 data-nosnippet>14</a>    <span class="doccomment">/// Uploaded file rejected (size, MIME type, or I/O).
+<a href=#15 id=15 data-nosnippet>15</a>    </span><span class="attr">#[error(<span class="string">"uploaded file rejected: {0}"</span>)]
+<a href=#16 id=16 data-nosnippet>16</a>    </span>Upload(String),
+<a href=#17 id=17 data-nosnippet>17</a>    <span class="doccomment">/// CSRF check failed.
+<a href=#18 id=18 data-nosnippet>18</a>    </span><span class="attr">#[error(transparent)]
+<a href=#19 id=19 data-nosnippet>19</a>    </span>Csrf(<span class="attr">#[from] </span>SecurityError),
+<a href=#20 id=20 data-nosnippet>20</a>    <span class="doccomment">/// Form was not submitted (wrong method or empty bind).
+<a href=#21 id=21 data-nosnippet>21</a>    </span><span class="attr">#[error(<span class="string">"form not submitted"</span>)]
+<a href=#22 id=22 data-nosnippet>22</a>    </span>NotSubmitted,
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="doccomment">/// View ↔ model transform failed.
+<a href=#24 id=24 data-nosnippet>24</a>    </span><span class="attr">#[error(<span class="string">"form transform failed: {0}"</span>)]
+<a href=#25 id=25 data-nosnippet>25</a>    </span>Transform(String),
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="doccomment">/// Flat key path conflicts (leaf vs map) while nesting form data.
+<a href=#27 id=27 data-nosnippet>27</a>    </span><span class="attr">#[error(<span class="string">"nested form data conflict at {0}"</span>)]
+<a href=#28 id=28 data-nosnippet>28</a>    </span>NestedConflict(String),
+<a href=#29 id=29 data-nosnippet>29</a>}
 </code></pre></div></section></main></body></html>
