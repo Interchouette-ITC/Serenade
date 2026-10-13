@@ -12,6 +12,7 @@ rust-version.workspace = true
 serenade-http = { workspace = true }
 serenade-security = { workspace = true }
 serenade-validator = { workspace = true }
+tempfile = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]

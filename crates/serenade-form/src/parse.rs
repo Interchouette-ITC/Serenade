@@ -10,6 +10,19 @@ use crate::FormError;
 ///
 /// Returns [`FormError::InvalidEncoding`] when percent-decoding fails.
 pub fn parse_urlencoded(body: &[u8]) -> Result<HashMap<String, String>, FormError> {
+    let multi = parse_urlencoded_multi(body)?;
+    Ok(multi
+        .into_iter()
+        .map(|(key, values)| (key, values.into_iter().next_back().unwrap_or_default()))
+        .collect())
+}
+
+/// Parses a URL-encoded body keeping every value for each key (submission order).
+///
+/// # Errors
+///
+/// Returns [`FormError::InvalidEncoding`] when percent-decoding fails.
+pub fn parse_urlencoded_multi(body: &[u8]) -> Result<HashMap<String, Vec<String>>, FormError> {
     let text = std::str::from_utf8(body).map_err(|_| FormError::InvalidEncoding)?;
     let mut map = HashMap::new();
     if text.is_empty() {
@@ -22,7 +35,7 @@ pub fn parse_urlencoded(body: &[u8]) -> Result<HashMap<String, String>, FormErro
         let (raw_key, raw_value) = pair.split_once('=').unwrap_or((pair, ""));
         let key = percent_decode(raw_key)?;
         let value = percent_decode(raw_value)?;
-        map.insert(key, value);
+        map.entry(key).or_insert_with(Vec::new).push(value);
     }
     Ok(map)
 }
