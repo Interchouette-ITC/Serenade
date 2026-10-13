@@ -11,8 +11,9 @@ use super::{
     ChoiceOptions, ChoiceToValueTransformer, CollectionPrototypeMeta, DEFAULT_MAX_FILE_SIZE,
     DataTransformer, FieldConfig, FieldKind, FileOptions, FileStorage, Form, FormError, FormStatus,
     HiddenOptions, I64ToStringTransformer, NestedData, NumberOptions, PasswordOptions, TextOptions,
-    TextareaOptions, collection_field_name, collection_indices, collection_prototype_field_name,
-    escape_attr, escape_html, form_errors, form_label, form_row, form_widget, join_multi,
+    TextareaOptions, UploadedFile, collection_field_name, collection_indices,
+    collection_prototype_field_name, escape_attr, escape_html, form_csrf, form_errors, form_label,
+    form_row, form_widget, is_multipart, join_multi, multipart_boundary, parse_form_body,
     parse_multipart, parse_urlencoded, parse_urlencoded_multi, split_multi, unflatten_form_data,
     version,
 };
@@ -832,4 +833,505 @@ fn multipart_csrf_rejection() {
         .with_body(body.into_bytes());
     let err = form.handle_request(&request, &mgr).expect_err("csrf");
     assert!(matches!(err, FormError::Csrf(_)));
+}
+
+#[test]
+fn multipart_boundary_and_is_multipart() {
+    assert!(!is_multipart(None));
+    assert!(!is_multipart(Some("application/x-www-form-urlencoded")));
+    assert!(is_multipart(Some("multipart/form-data")));
+    assert!(is_multipart(Some(
+        "Multipart/Form-Data; boundary=abc; charset=utf-8"
+    )));
+    assert_eq!(
+        multipart_boundary("multipart/form-data; boundary=plain"),
+        Some("plain")
+    );
+    assert_eq!(
+        multipart_boundary(r#"multipart/form-data; boundary="quoted""#),
+        Some("quoted")
+    );
+    assert_eq!(
+        multipart_boundary("multipart/form-data; charset=utf-8; boundary=late"),
+        Some("late")
+    );
+    assert_eq!(
+        multipart_boundary("multipart/form-data; nosplit; boundary=ok"),
+        Some("ok")
+    );
+    assert!(multipart_boundary("text/plain; boundary=nope").is_none());
+    assert!(multipart_boundary("multipart/form-data").is_none());
+}
+
+#[test]
+fn parse_form_body_urlencoded_and_multipart() {
+    let empty_opts: HashMap<String, FileOptions> = HashMap::new();
+    let urlencoded = parse_form_body(
+        Some("application/x-www-form-urlencoded"),
+        b"a=1&a=2&b=hi",
+        &empty_opts,
+    )
+    .expect("urlencoded");
+    assert_eq!(
+        urlencoded.fields.get("a").map(Vec::as_slice),
+        Some([String::from("1"), String::from("2")].as_slice())
+    );
+    assert!(urlencoded.files.is_empty());
+
+    let none_ct = parse_form_body(None, b"solo=x", &empty_opts).expect("none");
+    assert_eq!(
+        none_ct.fields.get("solo").map(Vec::as_slice),
+        Some([String::from("x")].as_slice())
+    );
+
+    let missing =
+        parse_form_body(Some("multipart/form-data"), b"--x--", &empty_opts).expect_err("boundary");
+    assert!(matches!(missing, FormError::Multipart(_)));
+
+    let boundary = "B1";
+    let body = [
+        format!("--{boundary}\r\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"msg\"\r\n\r\n".to_vec(),
+        b"ok\r\n".to_vec(),
+        format!("--{boundary}--\r\n").into_bytes(),
+    ]
+    .concat();
+    let multi = parse_form_body(
+        Some(&format!("multipart/form-data; boundary={boundary}")),
+        &body,
+        &empty_opts,
+    )
+    .expect("multi");
+    assert_eq!(
+        multi.fields.get("msg").map(Vec::as_slice),
+        Some([String::from("ok")].as_slice())
+    );
+}
+
+#[test]
+fn parse_multipart_errors_and_edge_cases() {
+    let empty_opts: HashMap<String, FileOptions> = HashMap::new();
+    let boundary = "Edge";
+
+    assert!(matches!(
+        parse_multipart(b"xx", boundary, &empty_opts, 1),
+        Err(FormError::Multipart(_))
+    ));
+    assert!(matches!(
+        parse_multipart(b"--x--", "", &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+    assert!(matches!(
+        parse_multipart(b"no boundary here", boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+
+    let unterminated =
+        format!("--{boundary}\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nv");
+    assert!(matches!(
+        parse_multipart(unterminated.as_bytes(), boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+
+    let no_headers = format!("--{boundary}\r\njust-body\r\n--{boundary}--\r\n");
+    assert!(matches!(
+        parse_multipart(no_headers.as_bytes(), boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+
+    let bad_header = format!("--{boundary}\r\nNotAHeader\r\n\r\nbody\r\n--{boundary}--\r\n");
+    assert!(matches!(
+        parse_multipart(bad_header.as_bytes(), boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+
+    let no_disposition =
+        format!("--{boundary}\r\nContent-Type: text/plain\r\n\r\nbody\r\n--{boundary}--\r\n");
+    assert!(matches!(
+        parse_multipart(no_disposition.as_bytes(), boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+
+    let no_name = format!(
+        "--{boundary}\r\nContent-Disposition: form-data; filename=\"x\"\r\n\r\ndata\r\n--{boundary}--\r\n"
+    );
+    assert!(matches!(
+        parse_multipart(no_name.as_bytes(), boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+
+    let mut non_utf8_text = Vec::new();
+    non_utf8_text.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+    non_utf8_text.extend_from_slice(b"Content-Disposition: form-data; name=\"bin\"\r\n\r\n");
+    non_utf8_text.push(0xff);
+    non_utf8_text.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+    assert!(matches!(
+        parse_multipart(&non_utf8_text, boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+
+    let mut non_utf8_headers = Vec::new();
+    non_utf8_headers.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+    non_utf8_headers.extend_from_slice(b"Content-Disposition: form-data; name=\"x\"\r\n");
+    non_utf8_headers.push(0xff);
+    non_utf8_headers.extend_from_slice(b"\r\n\r\nbody\r\n");
+    non_utf8_headers.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    assert!(matches!(
+        parse_multipart(&non_utf8_headers, boundary, &empty_opts, 1024),
+        Err(FormError::Multipart(_))
+    ));
+}
+
+#[test]
+fn parse_multipart_lf_preamble_empty_file_and_mime() {
+    let boundary = "Lf1";
+    // Preamble before first delimiter, LF-only separators, empty file input skipped,
+    // named empty filename with body, MIME wildcard allow/deny, default options.
+    let body = [
+        b"preamble\n".to_vec(),
+        format!("--{boundary}\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"note\"; unused\n\n".to_vec(),
+        b"hi\n".to_vec(),
+        format!("--{boundary}\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"empty\"; filename=\"\"\n\n".to_vec(),
+        b"\n".to_vec(),
+        format!("--{boundary}\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"anon\"; filename=\"\"\n".to_vec(),
+        b"Content-Type: application/octet-stream\n\n".to_vec(),
+        b"XYZ\n".to_vec(),
+        format!("--{boundary}\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"pic\"; filename=\"a.png\"\n".to_vec(),
+        b"Content-Type: image/jpeg\n\n".to_vec(),
+        b"IMG\n".to_vec(),
+        format!("--{boundary}--\n").into_bytes(),
+    ]
+    .concat();
+
+    let opts = HashMap::from([(
+        String::from("pic"),
+        FileOptions {
+            mime_types: vec!["image/*".into()],
+            max_size: 64,
+            ..FileOptions::default()
+        },
+    )]);
+    let data = parse_multipart(&body, boundary, &opts, 4096).expect("parse");
+    assert_eq!(
+        data.fields.get("note").map(Vec::as_slice),
+        Some([String::from("hi")].as_slice())
+    );
+    assert!(!data.files.contains_key("empty"));
+    let anon = data.files.get("anon").expect("anon");
+    assert!(anon.filename().is_none());
+    assert_eq!(anon.as_bytes(), Some(b"XYZ".as_slice()));
+    let pic = data.files.get("pic").expect("pic");
+    assert_eq!(pic.content_type(), Some("image/jpeg"));
+
+    let deny = HashMap::from([(
+        String::from("pic"),
+        FileOptions {
+            mime_types: vec!["image/png".into()],
+            max_size: 64,
+            ..FileOptions::default()
+        },
+    )]);
+    let err = parse_multipart(&body, boundary, &deny, 4096).expect_err("mime");
+    assert!(matches!(err, FormError::Upload(_)));
+
+    let missing_mime = [
+        format!("--{boundary}\r\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"pic\"; filename=\"a.bin\"\r\n\r\n".to_vec(),
+        b"BIN\r\n".to_vec(),
+        format!("--{boundary}--\r\n").into_bytes(),
+    ]
+    .concat();
+    let require_png = HashMap::from([(
+        String::from("pic"),
+        FileOptions {
+            mime_types: vec!["image/png".into()],
+            ..FileOptions::default()
+        },
+    )]);
+    let err = parse_multipart(&missing_mime, boundary, &require_png, 4096).expect_err("no mime");
+    assert!(matches!(err, FormError::Upload(_)));
+}
+
+#[test]
+fn uploaded_file_memory_and_tempfile_api() {
+    let mem = UploadedFile::from_bytes(
+        Some(String::from("a.txt")),
+        Some(String::from("text/plain")),
+        b"hi".to_vec(),
+    );
+    assert_eq!(mem.filename(), Some("a.txt"));
+    assert_eq!(mem.content_type(), Some("text/plain"));
+    assert_eq!(mem.len(), 2);
+    assert!(!mem.is_empty());
+    assert_eq!(mem.as_bytes(), Some(b"hi".as_slice()));
+    assert!(mem.path().is_none());
+    assert_eq!(mem.into_bytes().expect("bytes"), b"hi");
+
+    let empty = UploadedFile::from_bytes(None, None, Vec::new());
+    assert!(empty.filename().is_none());
+    assert!(empty.content_type().is_none());
+    assert!(empty.is_empty());
+    assert_eq!(empty.len(), 0);
+
+    let temp = UploadedFile::from_tempfile(
+        Some(String::from("b.bin")),
+        Some(String::from("application/octet-stream")),
+        b"temp-data",
+    )
+    .expect("temp");
+    assert_eq!(temp.filename(), Some("b.bin"));
+    assert_eq!(temp.content_type(), Some("application/octet-stream"));
+    assert_eq!(temp.len(), 9);
+    assert!(!temp.is_empty());
+    assert!(temp.as_bytes().is_none());
+    assert!(temp.path().is_some());
+    assert_eq!(temp.into_bytes().expect("read"), b"temp-data");
+
+    let empty_temp = UploadedFile::from_tempfile(None, None, b"").expect("empty temp");
+    assert!(empty_temp.is_empty());
+    assert_eq!(empty_temp.len(), 0);
+}
+
+#[test]
+fn theme_widgets_text_hidden_password_checkbox() {
+    let mut form = Form::builder("theme_basic")
+        .csrf(false)
+        .field_config(
+            "title",
+            FieldConfig::Text(TextOptions {
+                placeholder: Some("Name <here>".into()),
+            }),
+            vec![],
+        )
+        .field_config(
+            "body",
+            FieldConfig::Textarea(TextareaOptions {
+                placeholder: Some("Say \"hi\"".into()),
+                rows: Some(4),
+            }),
+            vec![],
+        )
+        .field_config("nid", FieldConfig::Hidden(HiddenOptions::default()), vec![])
+        .field_config(
+            "secret",
+            FieldConfig::Password(PasswordOptions {
+                placeholder: Some("pass".into()),
+            }),
+            vec![],
+        )
+        .field_config(
+            "on",
+            FieldConfig::Checkbox(CheckboxOptions {
+                checked_value: String::from("yes"),
+            }),
+            vec![],
+        )
+        .field_config(
+            "flag",
+            FieldConfig::Checkbox(CheckboxOptions::default()),
+            vec![],
+        )
+        .build();
+
+    assert!(form.set("title", r#"Tom & "Jerry""#));
+    assert!(form.set("body", "line\n2"));
+    assert!(form.set("nid", "42"));
+    assert!(form.set("secret", "s3cret"));
+    assert!(form.set("on", "yes"));
+    assert!(form.set("flag", "0"));
+
+    let fields: HashMap<_, _> = form
+        .fields()
+        .iter()
+        .map(|f| (f.name().to_owned(), f))
+        .collect();
+
+    assert_eq!(form_label(fields["nid"]), "");
+    assert!(form_label(fields["title"]).contains(r#"for="title""#));
+
+    let title = form_widget(fields["title"]).expect("title");
+    assert!(title.contains(r#"type="text""#));
+    assert!(title.contains("placeholder="));
+    assert!(title.contains("&amp;") || title.contains("&quot;"));
+
+    let body = form_widget(fields["body"]).expect("body");
+    assert!(body.contains("<textarea"));
+    assert!(body.contains(r#"rows="4""#));
+    assert!(body.contains("placeholder="));
+
+    let hidden = form_widget(fields["nid"]).expect("hidden");
+    assert!(hidden.contains(r#"type="hidden""#));
+    assert!(hidden.contains(r#"value="42""#));
+
+    let secret = form_widget(fields["secret"]).expect("secret");
+    assert!(secret.contains(r#"type="password""#));
+    assert!(secret.contains(r#"placeholder="pass""#));
+
+    let on = form_widget(fields["on"]).expect("on");
+    assert!(on.contains(" checked"));
+    assert!(on.contains(r#"value="yes""#));
+
+    let flag = form_widget(fields["flag"]).expect("flag");
+    assert!(!flag.contains(" checked"));
+
+    assert_eq!(
+        form_errors(fields["title"], &ConstraintViolationList::new()),
+        ""
+    );
+    assert_eq!(form_csrf(&form).expect("csrf off"), "");
+}
+
+#[test]
+fn theme_widgets_choice_number_file_csrf() {
+    let mut form = Form::builder("theme_choice")
+        .csrf(false)
+        .field_config(
+            "pick",
+            FieldConfig::Choice(ChoiceOptions {
+                choices: vec![
+                    ChoiceEntry::with_label("a", "Alpha <A>"),
+                    ChoiceEntry::with_label("b", "Beta"),
+                ],
+                multiple: false,
+                expanded: false,
+            }),
+            vec![],
+        )
+        .field_config(
+            "tags",
+            FieldConfig::Choice(ChoiceOptions {
+                choices: vec![ChoiceEntry::new("x"), ChoiceEntry::new("y")],
+                multiple: true,
+                expanded: false,
+            }),
+            vec![],
+        )
+        .field_config(
+            "color",
+            FieldConfig::Choice(ChoiceOptions {
+                choices: vec![
+                    ChoiceEntry::with_label("r", "Red"),
+                    ChoiceEntry::with_label("g", "Green"),
+                ],
+                multiple: false,
+                expanded: true,
+            }),
+            vec![],
+        )
+        .field_config(
+            "qty",
+            FieldConfig::Number(NumberOptions {
+                min: Some(1),
+                max: Some(9),
+                step: Some(2),
+            }),
+            vec![],
+        )
+        .field_config(
+            "plain_qty",
+            FieldConfig::Number(NumberOptions::default()),
+            vec![],
+        )
+        .field_config(
+            "doc",
+            FieldConfig::File(FileOptions {
+                accept: Some("text/plain".into()),
+                ..FileOptions::default()
+            }),
+            vec![],
+        )
+        .field_config("raw", FieldConfig::File(FileOptions::default()), vec![])
+        .build();
+
+    assert!(form.set("pick", "b"));
+    assert!(form.set("tags", "x y"));
+    assert!(form.set("color", "g"));
+    assert!(form.set("qty", "3"));
+    assert!(form.set("plain_qty", "0"));
+
+    let fields: HashMap<_, _> = form
+        .fields()
+        .iter()
+        .map(|f| (f.name().to_owned(), f))
+        .collect();
+
+    assert_eq!(form_label(fields["color"]), "");
+
+    let pick = form_widget(fields["pick"]).expect("pick");
+    assert!(pick.contains("<select"));
+    assert!(pick.contains(" selected"));
+    assert!(pick.contains("&lt;A&gt;") || pick.contains("Alpha"));
+
+    let tags = form_widget(fields["tags"]).expect("tags");
+    assert!(tags.contains(" multiple"));
+    assert!(tags.matches(" selected").count() >= 2);
+
+    let color = form_widget(fields["color"]).expect("color");
+    assert!(color.contains("<fieldset>"));
+    assert!(color.contains(r#"type="radio""#));
+    assert!(color.contains(" checked"));
+
+    let qty = form_widget(fields["qty"]).expect("qty");
+    assert!(qty.contains(r#"type="number""#));
+    assert!(qty.contains(r#"min="1""#));
+    assert!(qty.contains(r#"max="9""#));
+    assert!(qty.contains(r#"step="2""#));
+
+    let plain_qty = form_widget(fields["plain_qty"]).expect("plain");
+    assert!(plain_qty.contains(r#"type="number""#));
+    assert!(!plain_qty.contains(" min="));
+
+    let doc = form_widget(fields["doc"]).expect("doc");
+    assert!(doc.contains(r#"type="file""#));
+    assert!(doc.contains(r#"accept="text/plain""#));
+
+    let raw = form_widget(fields["raw"]).expect("raw");
+    assert!(raw.contains(r#"type="file""#));
+    assert!(!raw.contains("accept="));
+
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let mut csrf_form = Form::builder("csrf_theme").field("x", vec![]).build();
+    csrf_form.prepare_csrf(&mgr).expect("prepare");
+    let csrf = form_csrf(&csrf_form).expect("csrf");
+    assert!(csrf.contains(r#"name="_token""#));
+}
+
+#[test]
+fn theme_checkbox_true_and_expanded_multi() {
+    let mut form = Form::builder("checks")
+        .csrf(false)
+        .field_config(
+            "ok",
+            FieldConfig::Checkbox(CheckboxOptions::default()),
+            vec![],
+        )
+        .field_config(
+            "many",
+            FieldConfig::Choice(ChoiceOptions {
+                choices: vec![ChoiceEntry::new("a"), ChoiceEntry::new("b")],
+                multiple: true,
+                expanded: true,
+            }),
+            vec![],
+        )
+        .build();
+    assert!(form.set("ok", "true"));
+    assert!(form.set("many", "a b"));
+    let fields: HashMap<_, _> = form
+        .fields()
+        .iter()
+        .map(|f| (f.name().to_owned(), f))
+        .collect();
+    let ok = form_widget(fields["ok"]).expect("ok");
+    assert!(ok.contains(" checked"));
+    let many = form_widget(fields["many"]).expect("many");
+    assert!(many.contains(r#"type="checkbox""#));
+    assert_eq!(many.matches(" checked").count(), 2);
+    let row = form_row(fields["many"], &ConstraintViolationList::new()).expect("row");
+    assert!(row.contains("form-row"));
+    assert!(row.contains("<fieldset>"));
 }
