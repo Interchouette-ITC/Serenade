@@ -761,6 +761,45 @@ fn multipart_file_bind_and_constraints() {
 }
 
 #[test]
+fn file_field_missing_upload_clears_and_skips_validate() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    assert!(Form::builder("on").build().csrf_enabled());
+    assert!(!Form::builder("off").csrf(false).build().csrf_enabled());
+
+    let mut form = Form::builder("upload")
+        .csrf(false)
+        .field_config("image", FieldConfig::File(FileOptions::default()), vec![])
+        .field(
+            "caption",
+            vec![Arc::new(NotBlank) as Arc<dyn serenade_validator::Constraint>],
+        )
+        .build();
+    assert!(form.set("image", "stale.png"));
+
+    let boundary = "----SerenadeNoFile";
+    let body = [
+        format!("--{boundary}\r\n").into_bytes(),
+        b"Content-Disposition: form-data; name=\"caption\"\r\n\r\n".to_vec(),
+        b"ok\r\n".to_vec(),
+        format!("--{boundary}--\r\n").into_bytes(),
+    ]
+    .concat();
+    let request = Request::new(Method::Post, "/")
+        .with_header(
+            "content-type",
+            format!("multipart/form-data; boundary={boundary}"),
+        )
+        .with_body(body);
+    assert_eq!(
+        form.handle_request(&request, &mgr).expect("bind"),
+        FormStatus::Bound
+    );
+    assert_eq!(form.get("image"), Some(""));
+    assert!(form.file("image").is_none());
+    assert!(form.is_valid());
+}
+
+#[test]
 fn multipart_tempfile_storage_and_csrf() {
     let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
     let mut form = Form::builder("upload")
