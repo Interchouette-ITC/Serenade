@@ -123,13 +123,14 @@ doc-clean:
 
 ## Requires `cargo install cargo-audit`.
 ## RUSTSEC-2026-0258: actix-http 3.x pins h2 0.3; fix is only on h2 >= 0.4.16.
-## Wasmer stack advisories: same ignores as deny.toml for serenade-sandbox.
+## Wasmer / serde_yaml stack advisories: same ignores as deny.toml.
 audit:
 	cd $(ROOT) && $(CARGO) audit \
 		--ignore RUSTSEC-2026-0258 \
 		--ignore RUSTSEC-2024-0436 \
 		--ignore RUSTSEC-2026-0173 \
-		--ignore RUSTSEC-2025-0141
+		--ignore RUSTSEC-2025-0141 \
+		--ignore RUSTSEC-2024-0449
 
 ## Requires `cargo install cargo-deny`.
 deny:
