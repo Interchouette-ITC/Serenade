@@ -339,6 +339,21 @@ fn plural_message_edges() {
         format_message("{count, select, orphan}", &[("count", "1")], &locale, None),
         "orphan"
     );
+    // Arms present, no match and no `other` → expand_select keeps raw body.
+    assert_eq!(
+        format_message(
+            "{gender, select, female {She} male {He}}",
+            &[("gender", "unknown")],
+            &locale,
+            None
+        ),
+        "female {She} male {He}"
+    );
+    // Comma placeholder that is neither plural nor select → plain param lookup.
+    assert_eq!(
+        format_message("{name, custom}", &[("name, custom", "Ada")], &locale, None),
+        "Ada"
+    );
     assert_eq!(
         format_message("{count, plural, one {a}", &[], &locale, Some(1)),
         "{count, plural, one {a}"
