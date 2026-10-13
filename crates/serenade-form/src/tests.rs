@@ -761,6 +761,22 @@ fn multipart_file_bind_and_constraints() {
 }
 
 #[test]
+fn handle_request_propagates_multipart_parse_error() {
+    let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
+    let mut form = Form::builder("upload")
+        .csrf(false)
+        .field_config("image", FieldConfig::File(FileOptions::default()), vec![])
+        .build();
+    let request = Request::new(Method::Post, "/")
+        .with_header("content-type", "multipart/form-data")
+        .with_body(b"--x--");
+    let err = form
+        .handle_request(&request, &mgr)
+        .expect_err("missing boundary");
+    assert!(matches!(err, FormError::Multipart(_)));
+}
+
+#[test]
 fn file_field_missing_upload_clears_and_skips_validate() {
     let mgr = HmacCsrfTokenManager::new(b"unit-test-secret-key!!!!!!!!!!!!");
     assert!(Form::builder("on").build().csrf_enabled());
