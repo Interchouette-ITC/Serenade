@@ -21,7 +21,10 @@ pub use error::TranslationError;
 pub use extension::{
     TRANSLATION_BUNDLE, TRANSLATOR_SERVICE, TranslationBundle, TranslationExtension,
 };
-pub use format::{format_currency, format_date, format_number, format_number_f64};
+pub use format::{
+    format_currency, format_date, format_number, format_number_f64, is_currency_code,
+    language_display_name, normalize_currency_code, region_display_name,
+};
 pub use loader::{
     CatalogueFileName, CatalogueLoader, JsonCatalogueLoader, TomlCatalogueLoader, load_directory,
     load_paths,

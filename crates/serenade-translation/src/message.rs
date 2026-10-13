@@ -1,4 +1,4 @@
-//! ICU `MessageFormat` subset: `{name}` placeholders and `{count, plural, …}`.
+//! ICU `MessageFormat` subset: placeholders, plural, and select.
 
 use crate::Locale;
 
@@ -8,9 +8,11 @@ use crate::Locale;
 /// - Simple placeholders: `Hello {name}`
 /// - ICU plural blocks: `{count, plural, one {# item} other {# items}}`
 /// - Exact matches: `=0 {none}` inside a plural block
+/// - ICU select blocks (including gender): `{gender, select, female {She} male {He} other {They}}`
 ///
 /// Unknown placeholders are left unchanged. `#` inside a plural arm is replaced
-/// with the absolute plural number.
+/// with the absolute plural number. Select keys are matched case-insensitively
+/// against the argument value; unmatched values use the `other` arm when present.
 #[must_use]
 pub fn format_message(
     template: &str,
@@ -78,13 +80,24 @@ fn expand_placeholder(
                 .unwrap_or(0);
             return expand_plural(plural_body, number, parameters, locale);
         }
+        return rest.strip_prefix("select").map_or_else(
+            || {
+                param(parameters, trimmed)
+                    .map_or_else(|| format!("{{{trimmed}}}"), ToOwned::to_owned)
+            },
+            |select_body| {
+                let select_body = select_body.trim().trim_start_matches(',').trim();
+                let value = param(parameters, name).unwrap_or("");
+                expand_select(select_body, value, parameters, locale, plural_number)
+            },
+        );
     }
     param(parameters, trimmed).map_or_else(|| format!("{{{trimmed}}}"), ToOwned::to_owned)
 }
 
 fn expand_plural(body: &str, number: i64, parameters: &[(&str, &str)], locale: &Locale) -> String {
     let category = plural_category(locale, number);
-    let arms = parse_plural_arms(body);
+    let arms = parse_message_arms(body);
     let exact = format!("={number}");
     let chosen = arms
         .iter()
@@ -97,9 +110,29 @@ fn expand_plural(body: &str, number: i64, parameters: &[(&str, &str)], locale: &
     format_message(&with_hash, parameters, locale, Some(number))
 }
 
-/// Parses ICU plural arms (`one {…} other {…}`).
+fn expand_select(
+    body: &str,
+    value: &str,
+    parameters: &[(&str, &str)],
+    locale: &Locale,
+    plural_number: Option<i64>,
+) -> String {
+    let arms = parse_message_arms(body);
+    if arms.is_empty() {
+        return format_message(body, parameters, locale, plural_number);
+    }
+    let needle = value.trim();
+    let chosen = arms
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case(needle))
+        .or_else(|| arms.iter().find(|(key, _)| key == "other"))
+        .map_or(body, |(_, text)| text.as_str());
+    format_message(chosen, parameters, locale, plural_number)
+}
+
+/// Parses ICU plural / select arms (`one {…} other {…}` or `female {…} other {…}`).
 #[must_use]
-pub fn parse_plural_arms(body: &str) -> Vec<(String, String)> {
+pub fn parse_message_arms(body: &str) -> Vec<(String, String)> {
     let mut arms = Vec::new();
     let mut rest = body.trim();
     while !rest.is_empty() {

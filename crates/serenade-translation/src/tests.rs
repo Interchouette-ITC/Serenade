@@ -15,8 +15,9 @@ use crate::{
     DEFAULT_LOCALE_QUERY, INTL_DOMAIN_SUFFIX, JsonCatalogueLoader, Locale, LocaleMiddleware,
     LocaleNegotiator, MessageCatalogue, TRANSLATION_BUNDLE, TRANSLATOR_SERVICE,
     TomlCatalogueLoader, TranslationBundle, TranslationExtension, Translator, TranslatorInterface,
-    format_currency, format_date, format_message, format_number, format_number_f64, load_directory,
-    load_paths, request_locale, version,
+    format_currency, format_date, format_message, format_number, format_number_f64,
+    is_currency_code, language_display_name, load_directory, load_paths, normalize_currency_code,
+    region_display_name, request_locale, version,
 };
 
 #[test]
@@ -300,12 +301,58 @@ fn plural_message_edges() {
     );
     assert_eq!(
         format_message(
-            "{count, select, other {x}}",
-            &[("count", "1")],
+            "{gender, select, female {She} male {He} other {They}}",
+            &[("gender", "female")],
             &locale,
             None
         ),
-        "{count, select, other {x}}"
+        "She"
+    );
+    assert_eq!(
+        format_message(
+            "{gender, select, female {She} male {He} other {They}}",
+            &[("gender", "Male")],
+            &locale,
+            None
+        ),
+        "He"
+    );
+    assert_eq!(
+        format_message(
+            "{gender, select, female {She} male {He} other {They}}",
+            &[("gender", "unknown")],
+            &locale,
+            None
+        ),
+        "They"
+    );
+    assert_eq!(
+        format_message(
+            "{gender, select, female {She liked {name}} other {{name} liked it}}",
+            &[("gender", "female"), ("name", "Ada")],
+            &locale,
+            None
+        ),
+        "She liked Ada"
+    );
+    assert_eq!(
+        format_message("{count, select, orphan}", &[("count", "1")], &locale, None),
+        "orphan"
+    );
+    // Arms present, no match and no `other` → expand_select keeps raw body.
+    assert_eq!(
+        format_message(
+            "{gender, select, female {She} male {He}}",
+            &[("gender", "unknown")],
+            &locale,
+            None
+        ),
+        "female {She} male {He}"
+    );
+    // Comma placeholder that is neither plural nor select → plain param lookup.
+    assert_eq!(
+        format_message("{name, custom}", &[("name, custom", "Ada")], &locale, None),
+        "Ada"
     );
     assert_eq!(
         format_message("{count, plural, one {a}", &[], &locale, Some(1)),
@@ -320,14 +367,17 @@ fn plural_message_edges() {
         format_message("{count, plural, orphan}", &[], &locale, Some(1)),
         "orphan"
     );
-    let partial = crate::message::parse_plural_arms("one {a} {unclosed");
+    let partial = crate::message::parse_message_arms("one {a} {unclosed");
     assert_eq!(partial.len(), 1);
     assert_eq!(partial[0].0, "one");
     assert_eq!(partial[0].1, "a");
-    assert_eq!(crate::message::parse_plural_arms("one {a}   ").len(), 1);
+    assert_eq!(crate::message::parse_message_arms("one {a}   ").len(), 1);
 
     assert!(crate::loader::flatten_toml(&toml::Value::Boolean(true), Path::new("x.toml")).is_err());
+}
 
+#[test]
+fn plural_message_locale_categories() {
     let ar = Locale::new("ar").unwrap();
     let ar_template = "{count, plural, zero {z} one {o} two {t} few {f} many {m} other {x}}";
     assert_eq!(format_message(ar_template, &[], &ar, Some(0)), "z");
@@ -441,6 +491,7 @@ fn locale_middleware_sets_attribute() {
 #[test]
 fn format_helpers_smoke() {
     let en = Locale::new("en").unwrap();
+    let en_us = Locale::new("en-US").unwrap();
     let fr = Locale::new("fr").unwrap();
     let bad = Locale::new("aaaaaaaaaa").unwrap();
     assert_ne!(format_number(1_234, &en), "");
@@ -450,9 +501,50 @@ fn format_helpers_smoke() {
     assert_eq!(format_number_f64(1.5, &bad, 1), "1.5");
     assert_eq!(format_number_f64(2.0, &bad, 0), "2");
     assert_ne!(format_currency(12.5, "EUR", &fr), "");
+    assert_ne!(format_currency(12.5, "usd", &en_us), "");
+    assert!(format_currency(1.0, "NOPE", &en).contains("NOPE"));
+    assert!(is_currency_code("eur"));
+    assert!(is_currency_code("USD"));
+    assert!(!is_currency_code("US"));
+    assert!(!is_currency_code("EURO"));
+    assert!(!is_currency_code("12A"));
+    assert_eq!(normalize_currency_code(" eur ").as_deref(), Some("EUR"));
+    assert_eq!(normalize_currency_code("no"), None);
     assert_ne!(format_date(2026, 9, 8, &fr), "");
     assert_eq!(format_date(2026, 2, 30, &en), "2026-02-30");
     assert_eq!(format_date(2026, 9, 8, &bad), "2026-09-08");
+}
+
+#[test]
+fn display_names_and_currency_locale_patterns() {
+    let en = Locale::new("en").unwrap();
+    let fr = Locale::new("fr").unwrap();
+    let en_us = Locale::new("en-US").unwrap();
+
+    #[cfg(feature = "icu")]
+    {
+        assert_eq!(language_display_name("fr", &en).as_deref(), Some("French"));
+        assert_eq!(language_display_name("en", &fr).as_deref(), Some("anglais"));
+        assert_eq!(
+            region_display_name("US", &en).as_deref(),
+            Some("United States")
+        );
+        assert_eq!(region_display_name("FR", &fr).as_deref(), Some("France"));
+        assert!(language_display_name("zzzz", &en).is_none());
+        let usd = format_currency(1234.5, "USD", &en_us);
+        assert!(usd.contains('1') && usd.contains('2'), "got {usd}");
+        let eur = format_currency(12.5, "EUR", &fr);
+        assert_ne!(eur, "");
+        assert_ne!(eur, "12.50 EUR");
+    }
+
+    #[cfg(not(feature = "icu"))]
+    {
+        assert!(language_display_name("fr", &en).is_none());
+        assert!(region_display_name("US", &en).is_none());
+        assert_eq!(format_currency(12.5, "EUR", &fr), "12.50 EUR");
+        let _ = en_us;
+    }
 }
 
 #[test]

@@ -159,6 +159,8 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
       <span class="mx-1">·</span>
       {footer_stack}
       <span class="mx-1">·</span>
+      {footer_demo_price}
+      <span class="mx-1">·</span>
       {footer_scroll}
     </p>
   </footer>
@@ -181,6 +183,7 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         post_form_html = view.post_form_html,
         footer_about = escape_html(&ui.t("footer_about")),
         footer_stack = escape_html(&ui.t("footer_stack")),
+        footer_demo_price = escape_html(&ui.demo_price()),
         footer_scroll = escape_html(&ui.t("footer_scroll")),
         delete_modal = if view.admin_forms.is_empty() {
             String::new()
