@@ -15,6 +15,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [FORMS.md](FORMS.md)         | HTML forms, CSRF default-on, XSS-safe render   |
 | [I18N.md](I18N.md)           | Translator, catalogues, locale, ICU helpers    |
 | [PROFILER.md](PROFILER.md)   | Web debug toolbar / per-request profiler       |
+| [PERF.md](PERF.md)           | Profiler vs hotpath; optional app perf features |
 | [VIEW.md](VIEW.md)           | path / asset / partial HTML helpers            |
 | [SERIALIZER.md](SERIALIZER.md) | JSON + optional TOON (agent context export)  |
 | [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/MyFeed`) |

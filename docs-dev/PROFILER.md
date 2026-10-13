@@ -61,3 +61,11 @@ Install `ProfilerLogLayer` on your `tracing` subscriber (alongside `serenade-obs
 ## Console vs profiler
 
 Documented also in `KERNEL.md` and `OBSERVABILITY.md`: CLI debug commands inspect the container and config; the profiler inspects **one HTTP request** in the browser.
+
+## Debug notes (KISS)
+
+Apps may call `record_debug` to attach label/value strings to the current profile (Symfony DebugBundle / VarDumper habit: dump facts for this request, not a PHP object graph walker). See the Debug panel on `/_profiler/{token}` when the profiler is enabled.
+
+## Performance tooling
+
+Function-level timing and allocation reports are **not** the toolbar. See [PERF.md](PERF.md) for optional [hotpath](https://hotpath.rs/) app features.

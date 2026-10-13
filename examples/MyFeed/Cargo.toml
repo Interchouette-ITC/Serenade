@@ -13,7 +13,14 @@ publish = false
 name = "myfeed"
 path = "src/main.rs"
 
+[features]
+default = []
+# Optional local performance reports (see docs-dev/PERF.md). Not used by default CI.
+hotpath = ["dep:hotpath"]
+hotpath-alloc = ["hotpath", "hotpath/hotpath-alloc"]
+
 [dependencies]
+hotpath = { version = "0.28.6", optional = true, default-features = false }
 emojis = "0.9"
 ammonia = "4"
 rusqlite = { version = "0.32", features = ["bundled"] }

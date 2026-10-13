@@ -13,6 +13,16 @@ cargo run -p my_feed
 
 Open <http://127.0.0.1:8090/>.
 
+### Optional performance profiling
+
+Default builds (and CI) do **not** enable hotpath. For a local function-timing report:
+
+```bash
+cargo run -p my_feed --features hotpath
+```
+
+See [`docs-dev/PERF.md`](../../docs-dev/PERF.md) and [hotpath.rs](https://hotpath.rs/).
+
 | Env                  | Default            | Role                                 |
 | -------------------- | ------------------ | ------------------------------------ |
 | `MYFEED_BIND`        | `127.0.0.1:8090`   | Listen address                       |

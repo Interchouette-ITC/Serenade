@@ -685,6 +685,7 @@ const fn from_hex(byte: u8) -> Option<u8> {
     }
 }
 
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn snippet_for(post: &Post) -> String {
     let plain = plain_text(&post.body);
     let trimmed: String = plain.chars().take(160).collect();
