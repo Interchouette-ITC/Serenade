@@ -374,7 +374,10 @@ fn plural_message_edges() {
     assert_eq!(crate::message::parse_message_arms("one {a}   ").len(), 1);
 
     assert!(crate::loader::flatten_toml(&toml::Value::Boolean(true), Path::new("x.toml")).is_err());
+}
 
+#[test]
+fn plural_message_locale_categories() {
     let ar = Locale::new("ar").unwrap();
     let ar_template = "{count, plural, zero {z} one {o} two {t} few {f} many {m} other {x}}";
     assert_eq!(format_message(ar_template, &[], &ar, Some(0)), "z");

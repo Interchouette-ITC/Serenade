@@ -80,13 +80,17 @@ fn expand_placeholder(
                 .unwrap_or(0);
             return expand_plural(plural_body, number, parameters, locale);
         }
-        return if let Some(select_body) = rest.strip_prefix("select") {
-            let select_body = select_body.trim().trim_start_matches(',').trim();
-            let value = param(parameters, name).unwrap_or("");
-            expand_select(select_body, value, parameters, locale, plural_number)
-        } else {
-            param(parameters, trimmed).map_or_else(|| format!("{{{trimmed}}}"), ToOwned::to_owned)
-        };
+        return rest.strip_prefix("select").map_or_else(
+            || {
+                param(parameters, trimmed)
+                    .map_or_else(|| format!("{{{trimmed}}}"), ToOwned::to_owned)
+            },
+            |select_body| {
+                let select_body = select_body.trim().trim_start_matches(',').trim();
+                let value = param(parameters, name).unwrap_or("");
+                expand_select(select_body, value, parameters, locale, plural_number)
+            },
+        );
     }
     param(parameters, trimmed).map_or_else(|| format!("{{{trimmed}}}"), ToOwned::to_owned)
 }
