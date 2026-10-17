@@ -25,7 +25,7 @@ make ci
 
 | Gate | Command |
 | --- | --- |
-| Format + Clippy | `make lint` |
+| Format + Clippy + sweep | `make lint` (nightly fmt/clippy; `make sweep` for dashes / forbidden allows) |
 | Tests | `make test` |
 | Coverage (lcov / Codecov) | `make coverage` (needs `cargo llvm-cov`) |
 | Coverage summary | `make coverage-summary` |

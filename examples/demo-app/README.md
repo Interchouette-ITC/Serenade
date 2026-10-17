@@ -21,7 +21,7 @@ cargo run -p serenade-demo-app --bin console -- demo:workflow
 cargo run -p serenade-demo-app --bin console -- debug:container --plain
 ```
 
-## Wave 29–34 dogfood
+## Component dogfood
 
 | Crate | How this sample uses it |
 | --- | --- |
