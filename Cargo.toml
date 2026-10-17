@@ -141,3 +141,7 @@ missing_docs = "deny"
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
+
+# Faster local rebuilds; enough for backtraces in tests.
+[profile.dev]
+debug = "line-tables-only"

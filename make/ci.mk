@@ -8,28 +8,28 @@ COVERAGE_FEATURES := --features serenade-cache/redis,serenade-lock/redis,serenad
 COVERAGE_IGNORE := examples/|crates/serenade-cli/|serenade-console/src/(interactive\.rs|commands/)|/serenade-contracts/src/tests\.rs
 
 check:
-	cd $(ROOT) && $(CARGO) check --workspace
+	cd $(ROOT) && $(CARGO_STABLE) check --workspace --locked
 
 test:
-	cd $(ROOT) && $(CARGO) test --workspace
+	cd $(ROOT) && $(CARGO_STABLE) test --workspace --locked
 
 ## Requires `cargo install cargo-llvm-cov`. Writes `coverage/lcov.info` (CI / Codecov).
 ## Uses the stable toolchain so llvm-cov finds instrumented objects.
 coverage:
-	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --locked --lcov \
+	cd $(ROOT) && mkdir -p coverage && $(CARGO_STABLE) llvm-cov --workspace --locked --lcov \
 		$(COVERAGE_FEATURES) \
 		--ignore-filename-regex '$(COVERAGE_IGNORE)' \
 		--output-path coverage/lcov.info
 
 ## Terminal summary only (fast local check). Same features / ignores as `coverage`.
 coverage-summary:
-	cd $(ROOT) && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --locked --summary-only \
+	cd $(ROOT) && $(CARGO_STABLE) llvm-cov --workspace --locked --summary-only \
 		$(COVERAGE_FEATURES) \
 		--ignore-filename-regex '$(COVERAGE_IGNORE)'
 
 ## HTML report → `coverage/html/` (open coverage/html/index.html).
 coverage-html:
-	cd $(ROOT) && mkdir -p coverage && RUSTUP_TOOLCHAIN=stable $(CARGO) llvm-cov --workspace --locked --html \
+	cd $(ROOT) && mkdir -p coverage && $(CARGO_STABLE) llvm-cov --workspace --locked --html \
 		$(COVERAGE_FEATURES) \
 		--ignore-filename-regex '$(COVERAGE_IGNORE)' \
 		--output-dir coverage/html
@@ -37,7 +37,7 @@ coverage-html:
 ## Alternate local coverage via tarpaulin (not used by CI; Codecov stays on llvm-cov).
 ## Requires `cargo install cargo-tarpaulin`. Writes under `coverage/tarpaulin/`.
 tarpaulin:
-	cd $(ROOT) && mkdir -p coverage/tarpaulin && $(CARGO) tarpaulin --workspace --locked \
+	cd $(ROOT) && mkdir -p coverage/tarpaulin && $(CARGO_STABLE) tarpaulin --workspace --locked \
 		$(COVERAGE_FEATURES) \
 		--exclude-files 'examples/*' 'crates/serenade-cli/*' \
 		'serenade-console/src/interactive.rs' 'serenade-console/src/commands/*' \
@@ -68,20 +68,20 @@ geiger:
 	cd $(ROOT) && $(CARGO) geiger --workspace
 
 format:
-	cd $(ROOT) && $(CARGO) fmt
+	cd $(ROOT) && $(CARGO_NIGHTLY) fmt
 
 format-check:
-	cd $(ROOT) && $(CARGO) fmt --check
+	cd $(ROOT) && $(CARGO_NIGHTLY) fmt --check
 
 lint: format-check
-	cd $(ROOT) && $(CARGO) clippy --workspace --all-targets -- $(CLIPPY_FLAGS)
+	cd $(ROOT) && $(CARGO_NIGHTLY) clippy --workspace --all-targets --locked -- $(CLIPPY_FLAGS)
 
 ## rustdoc → `docs/api-rust/` (GitHub Pages publish folder).
 DOC_OUT ?= $(ROOT)/target/doc
 DOC_CRATE ?= serenade_kernel
 
 doc:
-	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO) doc --workspace --no-deps --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth,serenade-security/ldap,serenade-mailer/esp,serenade-search/http
+	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO_STABLE) doc --workspace --no-deps --locked --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth,serenade-security/ldap,serenade-mailer/esp,serenade-search/http
 	@test -d "$(DOC_OUT)" || (echo "missing $(DOC_OUT)"; exit 1)
 	@rm -rf $(ROOT)/docs/api-rust
 	@mkdir -p $(ROOT)/docs/api-rust
@@ -126,7 +126,7 @@ doc-clean:
 ## Wasmer / serde_yaml stack advisories: same ignores as deny.toml.
 ## zip 3.x is a build-dep of utoipa-swagger-ui 9; no release yet accepts zip >=9.
 audit:
-	cd $(ROOT) && $(CARGO) audit \
+	cd $(ROOT) && $(CARGO_STABLE) audit \
 		--ignore RUSTSEC-2026-0258 \
 		--ignore RUSTSEC-2024-0436 \
 		--ignore RUSTSEC-2026-0173 \
@@ -138,9 +138,9 @@ audit:
 
 ## Requires `cargo install cargo-deny`.
 deny:
-	cd $(ROOT) && $(CARGO) deny check
+	cd $(ROOT) && $(CARGO_STABLE) deny check
 
 ci: lint test doc audit deny
 
 clean:
-	cd $(ROOT) && $(CARGO) clean
+	cd $(ROOT) && $(CARGO_STABLE) clean

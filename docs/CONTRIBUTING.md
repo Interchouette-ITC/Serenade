@@ -16,7 +16,8 @@ make ci
 
 ## Toolchain
 
-- Rust stable (see `rust-version` in the workspace `Cargo.toml`).
+- **Lint / format:** Rust **nightly** (`make lint`, `make format`). Install with `rustup component add rustfmt clippy --toolchain nightly`.
+- **Test / doc / coverage / supply-chain:** Rust **stable** (see `rust-version` in the workspace `Cargo.toml`). Prefer `make test` / `make doc` so `--locked` stays on.
 - Integration branch: `dev` on the org repo.
 - Feature branches land via PR from the worker fork.
 
