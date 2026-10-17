@@ -16,3 +16,7 @@ serenade-di = { git = "https://github.com/Interchouette-ITC/Serenade.git", branc
 serenade-event = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
 serenade-http = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
 serenade-kernel = { git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" }
+
+# Scaffold keeps these for recipe wiring even when the default main does not import them yet.
+[package.metadata.cargo-machete]
+ignored = ["serenade-di", "serenade-event", "serenade-http"]

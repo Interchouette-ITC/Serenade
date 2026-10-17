@@ -36,7 +36,7 @@ help:
 	@echo "  make format       cargo +nightly fmt"
 	@echo "  make audit        cargo audit"
 	@echo "  make deny         cargo deny check"
-	@echo "  make ci           lint + test + doc + audit + deny"
+	@echo "  make ci           lint + test + doc + audit + deny + machete"
 	@echo "  make clean        cargo clean"
 	@echo ""
 	@echo "CLI / demo (make/cli.mk) - prefer these over cargo run -p ...:"

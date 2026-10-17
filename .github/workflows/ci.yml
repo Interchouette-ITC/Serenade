@@ -272,6 +272,26 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: make audit && make deny
 
+  deps:
+    name: unused deps
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Markdown-only
+        if: needs.changes.outputs.code != 'true'
+        run: echo "markdown-only; skipping machete"
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
+      - uses: taiki-e/install-action@v2
+        if: needs.changes.outputs.code == 'true'
+        with:
+          tool: cargo-machete@0.9.2
+      - name: Machete
+        if: needs.changes.outputs.code == 'true'
+        run: make machete
+
   coverage:
     name: coverage
     needs: changes

@@ -6330,7 +6330,6 @@ dependencies = [
  "icu_experimental",
  "icu_locale",
  "icu_plurals",
- "serde",
  "serde_json",
  "serenade-bundle",
  "serenade-config",
