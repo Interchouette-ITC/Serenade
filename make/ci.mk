@@ -46,7 +46,7 @@ tarpaulin:
 
 ## Unused workspace dependencies. Requires `cargo install cargo-machete`.
 machete:
-	cd $(ROOT) && $(CARGO) machete
+	cd $(ROOT) && $(CARGO_STABLE) machete
 
 ## Outdated crates report. Requires `cargo install cargo-outdated`.
 outdated:
@@ -140,7 +140,7 @@ audit:
 deny:
 	cd $(ROOT) && $(CARGO_STABLE) deny check
 
-ci: lint test doc audit deny
+ci: lint test doc audit deny machete
 
 clean:
 	cd $(ROOT) && $(CARGO_STABLE) clean

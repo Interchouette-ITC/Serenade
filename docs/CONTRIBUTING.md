@@ -31,12 +31,12 @@ make ci
 | Coverage summary | `make coverage-summary` |
 | Coverage HTML | `make coverage-html` |
 | Tarpaulin (local) | `make tarpaulin` (needs `cargo tarpaulin`; CI stays on llvm-cov) |
-| Unused deps | `make machete` (needs `cargo machete`) |
-| Outdated deps | `make outdated` (needs `cargo outdated`) |
+| Unused deps | `make machete` (needs `cargo machete`; also part of `make ci` and the CI `deps` job) |
+| Outdated deps | `make outdated` (needs `cargo outdated`; local report only) |
 | Fuzz (local) | `make fuzz` (needs nightly + `cargo fuzz`; default `parse-urlencoded`) |
 | Geiger (local) | `make geiger` (needs `cargo geiger`) |
 | Rustdoc | `make doc` |
-| Full CI slice | `make ci` |
+| Full CI slice | `make ci` (lint + test + doc + audit + deny + machete) |
 
 Clippy uses `-D warnings` with the pedantic and nursery groups. Do not add `#[allow(clippy::too_many_arguments)]`, `too_many_lines`, or `dead_code`.
 
