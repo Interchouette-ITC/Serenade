@@ -1,6 +1,6 @@
 # CI / quality gates.
 
-.PHONY: check test lint format format-check doc doc-open doc-clean clean ci audit deny \
+.PHONY: check test lint format format-check sweep doc doc-open doc-clean clean ci audit deny \
 	coverage coverage-summary coverage-html tarpaulin machete outdated fuzz fuzz-build geiger
 
 # Keep in sync with codecov.yml ignore paths and CI coverage.
@@ -97,7 +97,11 @@ format:
 format-check:
 	cd $(ROOT) && $(CARGO_NIGHTLY) fmt --check
 
-lint: format-check
+## Em/en dash + forbidden clippy allows. Invoked from `make lint`.
+sweep:
+	@$(ROOT)/make/sweep.sh
+
+lint: format-check sweep
 	cd $(ROOT) && $(CARGO_NIGHTLY) clippy --workspace --all-targets --locked -- $(CLIPPY_FLAGS)
 
 ## rustdoc → `docs/api-rust/` (GitHub Pages publish folder).

@@ -57,7 +57,7 @@ Open `/admin`, enter the token (default `myfeed-dev-admin`). Approve comments, m
 
 See epic [#112](https://github.com/Interchouette-ITC/Serenade/issues/112) and `docs-dev/MYFEED.md`.
 
-## Wave 29–34 dogfood
+## Component dogfood
 
 | Crate | How this sample uses it |
 | --- | --- |
