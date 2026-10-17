@@ -124,13 +124,17 @@ doc-clean:
 ## Requires `cargo install cargo-audit`.
 ## RUSTSEC-2026-0258: actix-http 3.x pins h2 0.3; fix is only on h2 >= 0.4.16.
 ## Wasmer / serde_yaml stack advisories: same ignores as deny.toml.
+## zip 3.x is a build-dep of utoipa-swagger-ui 9; no release yet accepts zip >=9.
 audit:
 	cd $(ROOT) && $(CARGO) audit \
 		--ignore RUSTSEC-2026-0258 \
 		--ignore RUSTSEC-2024-0436 \
 		--ignore RUSTSEC-2026-0173 \
 		--ignore RUSTSEC-2025-0141 \
-		--ignore RUSTSEC-2024-0449
+		--ignore RUSTSEC-2024-0449 \
+		--ignore RUSTSEC-2026-0367 \
+		--ignore RUSTSEC-2026-0368 \
+		--ignore RUSTSEC-2026-0369
 
 ## Requires `cargo install cargo-deny`.
 deny:
