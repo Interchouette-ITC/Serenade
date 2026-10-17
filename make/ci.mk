@@ -63,9 +63,33 @@ fuzz-build:
 fuzz:
 	cd $(ROOT) && cargo +nightly fuzz run $(FUZZ_TARGET) -- -max_total_time=$(FUZZ_TIME)
 
-## Unsafe Rust surface in deps + workspace. Requires `cargo install cargo-geiger`.
+## Unsafe Rust surface for the MyFeed demo tree (fat framework consumer).
+## Requires `cargo-geiger` and `jq`. Fails when red packages exceed
+## `.geiger-budget.toml` (`max_red_packages`). Fresh target dir avoids stale `.d`
+## files from rust-cache breaking the scan.
+GEIGER_MANIFEST ?= $(ROOT)/examples/MyFeed/Cargo.toml
 geiger:
-	cd $(ROOT) && $(CARGO) geiger --workspace
+	@mkdir -p $(ROOT)/target/geiger
+	@rm -rf $(ROOT)/target/geiger-scan
+	cd $(ROOT) && $(CARGO_STABLE) fetch --locked
+	cd $(ROOT) && CARGO_TARGET_DIR="$(ROOT)/target/geiger-scan" $(CARGO_STABLE) geiger \
+		--locked --manifest-path "$(GEIGER_MANIFEST)" --output-format Json --quiet \
+		>$(ROOT)/target/geiger/report.json
+	@command -v jq >/dev/null || { echo "jq is required for make geiger" >&2; exit 2; }
+	@budget=$$(awk -F= '/^[[:space:]]*max_red_packages[[:space:]]*=/{gsub(/[[:space:]]/,"",$$2); print $$2; exit}' $(ROOT)/.geiger-budget.toml); \
+	test -n "$$budget" || { echo ".geiger-budget.toml: missing max_red_packages" >&2; exit 2; }; \
+	report=$(ROOT)/target/geiger/report.json; \
+	total=$$(jq '.packages | length' "$$report"); \
+	red=$$(jq '[.packages[] | (.unsafety.used // {}) as $$u | (($$u.functions.unsafe_ // 0) + ($$u.exprs.unsafe_ // 0) + ($$u.item_impls.unsafe_ // 0) + ($$u.item_traits.unsafe_ // 0) + ($$u.methods.unsafe_ // 0)) as $$n | select($$n > 0)] | length' "$$report"); \
+	{ \
+	  echo "## cargo-geiger"; echo; \
+	  echo "- Packages scanned: **$$total**"; \
+	  echo "- Red (used unsafe > 0): **$$red**"; \
+	  echo "- Budget (\`max_red_packages\`): **$$budget**"; echo; \
+	  if [ "$$red" -gt "$$budget" ]; then echo "**FAIL:** red count $$red exceeds budget $$budget."; \
+	  else echo "OK: red count $$red within budget $$budget."; fi; \
+	} | tee $(ROOT)/target/geiger/summary.md; \
+	if [ "$$red" -gt "$$budget" ]; then echo "geiger budget exceeded: $$red red packages > $$budget" >&2; exit 1; fi
 
 format:
 	cd $(ROOT) && $(CARGO_NIGHTLY) fmt

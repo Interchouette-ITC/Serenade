@@ -292,6 +292,46 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: make machete
 
+  geiger:
+    name: geiger
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Markdown-only
+        if: needs.changes.outputs.code != 'true'
+        run: echo "markdown-only; skipping geiger"
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
+      - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.code == 'true'
+      - name: Install jq
+        if: needs.changes.outputs.code == 'true'
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - uses: taiki-e/install-action@v2
+        if: needs.changes.outputs.code == 'true'
+        with:
+          tool: cargo-geiger@0.13.0
+      - name: Geiger budget
+        if: needs.changes.outputs.code == 'true'
+        run: make geiger
+      - name: Job summary
+        if: always() && needs.changes.outputs.code == 'true'
+        run: |
+          if [ -f target/geiger/summary.md ]; then
+            cat target/geiger/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload geiger report
+        if: always() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: geiger-report
+          path: |
+            target/geiger/report.json
+            target/geiger/summary.md
+          if-no-files-found: warn
+
   coverage:
     name: coverage
     needs: changes

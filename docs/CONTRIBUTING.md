@@ -34,7 +34,7 @@ make ci
 | Unused deps | `make machete` (needs `cargo machete`; also part of `make ci` and the CI `deps` job) |
 | Outdated deps | `make outdated` (needs `cargo outdated`; local report only) |
 | Fuzz (local) | `make fuzz` (needs nightly + `cargo fuzz`; default `parse-urlencoded`) |
-| Geiger (local) | `make geiger` (needs `cargo geiger`) |
+| Geiger | `make geiger` (needs `cargo geiger` + `jq`; CI job; fails over `.geiger-budget.toml`) |
 | Rustdoc | `make doc` |
 | Full CI slice | `make ci` (lint + test + doc + audit + deny + machete) |
 

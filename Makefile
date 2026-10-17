@@ -29,7 +29,7 @@ help:
 	@echo "  make outdated         cargo outdated --workspace"
 	@echo "  make fuzz             cargo +nightly fuzz run $(FUZZ_TARGET) (FUZZ_TIME=$(FUZZ_TIME)s)"
 	@echo "  make fuzz-build       cargo +nightly fuzz build"
-	@echo "  make geiger           cargo geiger (unsafe dependency audit)"
+	@echo "  make geiger           cargo geiger vs .geiger-budget.toml (CI job)"
 	@echo "  make lint         nightly fmt check + clippy (workspace)"
 	@echo "  make doc          rustdoc → docs/api-rust/ (-D warnings, stable)"
 	@echo "  make doc-open     build docs and open docs/api-rust/index.html"
