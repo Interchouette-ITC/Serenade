@@ -1,0 +1,8 @@
+# Max packages with used unsafe in the MyFeed cargo-geiger tree
+# (`examples/MyFeed`, the fat framework consumer).
+# Counted as: any package whose used unsafe_ totals (functions/exprs/impls/traits/methods) > 0.
+# Ratchet: CI fails when the live count goes above this number. Lower when the tree gets cleaner.
+#
+# History (red packages):
+# - 175: first geiger gate (172 observed; headroom 3)
+max_red_packages = 175
