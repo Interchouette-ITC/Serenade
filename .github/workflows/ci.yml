@@ -45,10 +45,12 @@ jobs:
       - name: Markdown-only
         if: needs.changes.outputs.code != 'true'
         run: echo "markdown-only; skipping heavy lint"
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         if: needs.changes.outputs.code == 'true'
         with:
           components: rustfmt, clippy
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
       - uses: Swatinem/rust-cache@v2
         if: needs.changes.outputs.code == 'true'
       - name: Lint
@@ -57,62 +59,62 @@ jobs:
       - name: Lint serenade-cache redis feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-cache --all-targets --features redis
+          cargo +nightly clippy -p serenade-cache --all-targets --locked --features redis
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-lock redis feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-lock --all-targets --features redis
+          cargo +nightly clippy -p serenade-lock --all-targets --locked --features redis
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-messenger redis feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-messenger --all-targets --features redis
+          cargo +nightly clippy -p serenade-messenger --all-targets --locked --features redis
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-rate-limiter redis feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-rate-limiter --all-targets --features redis
+          cargo +nightly clippy -p serenade-rate-limiter --all-targets --locked --features redis
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-serializer toon feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-serializer --all-targets --features toon
+          cargo +nightly clippy -p serenade-serializer --all-targets --locked --features toon
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-scheduler messenger feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-scheduler --all-targets --features messenger
+          cargo +nightly clippy -p serenade-scheduler --all-targets --locked --features messenger
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-observability otel feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-observability --all-targets --features otel
+          cargo +nightly clippy -p serenade-observability --all-targets --locked --features otel
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-openapi actix feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-openapi --all-targets --features actix
+          cargo +nightly clippy -p serenade-openapi --all-targets --locked --features actix
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-security oauth feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-security --all-targets --features oauth
+          cargo +nightly clippy -p serenade-security --all-targets --locked --features oauth
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-security ldap feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-security --all-targets --features ldap
+          cargo +nightly clippy -p serenade-security --all-targets --locked --features ldap
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-mailer esp feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-mailer --all-targets --features esp
+          cargo +nightly clippy -p serenade-mailer --all-targets --locked --features esp
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
       - name: Lint serenade-search http feature
         if: needs.changes.outputs.code == 'true'
         run: >-
-          cargo clippy -p serenade-search --all-targets --features http
+          cargo +nightly clippy -p serenade-search --all-targets --locked --features http
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
 
   test:
@@ -134,25 +136,25 @@ jobs:
         run: make test
       - name: Test serenade-scheduler with messenger
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-scheduler --features messenger
+        run: cargo +stable test -p serenade-scheduler --locked --features messenger
       - name: Test serenade-observability with otel
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-observability --features otel
+        run: cargo +stable test -p serenade-observability --locked --features otel
       - name: Test serenade-openapi with actix
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-openapi --features actix
+        run: cargo +stable test -p serenade-openapi --locked --features actix
       - name: Test serenade-security with oauth
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-security --features oauth
+        run: cargo +stable test -p serenade-security --locked --features oauth
       - name: Test serenade-security with ldap
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-security --features ldap
+        run: cargo +stable test -p serenade-security --locked --features ldap
       - name: Test serenade-mailer with esp
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-mailer --features esp
+        run: cargo +stable test -p serenade-mailer --locked --features esp
       - name: Test serenade-search with http
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-search --features http
+        run: cargo +stable test -p serenade-search --locked --features http
 
   cache-redis:
     name: cache redis
@@ -182,22 +184,22 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         env:
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: cargo test -p serenade-cache --features redis
+        run: cargo +stable test -p serenade-cache --locked --features redis
       - name: Test serenade-lock with redis
         if: needs.changes.outputs.code == 'true'
         env:
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: cargo test -p serenade-lock --features redis
+        run: cargo +stable test -p serenade-lock --locked --features redis
       - name: Test serenade-messenger with redis
         if: needs.changes.outputs.code == 'true'
         env:
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: cargo test -p serenade-messenger --features redis
+        run: cargo +stable test -p serenade-messenger --locked --features redis
       - name: Test serenade-rate-limiter with redis
         if: needs.changes.outputs.code == 'true'
         env:
           REDIS_URL: redis://127.0.0.1:6379/0
-        run: cargo test -p serenade-rate-limiter --features redis
+        run: cargo +stable test -p serenade-rate-limiter --locked --features redis
 
   serializer-toon:
     name: serializer toon
@@ -215,7 +217,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
       - name: Test serenade-serializer with toon
         if: needs.changes.outputs.code == 'true'
-        run: cargo test -p serenade-serializer --features toon
+        run: cargo +stable test -p serenade-serializer --locked --features toon
 
   doc:
     name: rustdoc
@@ -262,11 +264,10 @@ jobs:
         if: needs.changes.outputs.code == 'true'
       - uses: Swatinem/rust-cache@v2
         if: needs.changes.outputs.code == 'true'
-      - name: Install cargo-audit and cargo-deny
+      - uses: taiki-e/install-action@v2
         if: needs.changes.outputs.code == 'true'
-        run: |
-          cargo install --locked cargo-audit --version 0.22.0
-          cargo install --locked cargo-deny --version 0.20.2
+        with:
+          tool: cargo-audit@0.22.0,cargo-deny@0.20.2
       - name: Cargo audit and deny
         if: needs.changes.outputs.code == 'true'
         run: make audit && make deny
@@ -301,7 +302,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov
+          tool: cargo-llvm-cov@0.9.1
       - name: Coverage
         if: needs.changes.outputs.code == 'true'
         env:
