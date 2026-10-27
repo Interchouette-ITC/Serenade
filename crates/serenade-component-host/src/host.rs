@@ -41,7 +41,7 @@ pub fn load_component(
     let path = path.as_ref();
     Component::from_file(engine, path).map_err(|source| ComponentHostError::LoadPath {
         path: path.display().to_string(),
-        source: source.into(),
+        source,
     })
 }
 
