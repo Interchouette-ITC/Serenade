@@ -59,7 +59,7 @@ impl Environment {
 
     /// Stable lowercase name used on the wire and in logs.
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::Dev => "dev",
             Self::Test => "test",

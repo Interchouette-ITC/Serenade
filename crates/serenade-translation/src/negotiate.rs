@@ -92,10 +92,10 @@ impl LocaleNegotiator {
     /// Resolves without mutating attributes.
     #[must_use]
     pub fn resolve(&self, request: &Request) -> Locale {
-        if let Some(existing) = request.attributes().get::<Locale>(LOCALE_ATTRIBUTE) {
-            if self.is_allowed(existing) {
-                return existing.clone();
-            }
+        if let Some(existing) = request.attributes().get::<Locale>(LOCALE_ATTRIBUTE)
+            && self.is_allowed(existing)
+        {
+            return existing.clone();
         }
         if let Some(from_query) = self.locale_from_query(request) {
             return from_query;
@@ -153,10 +153,10 @@ impl LocaleNegotiator {
             let Some((name, value)) = part.split_once('=') else {
                 continue;
             };
-            if name.trim() == self.cookie_name {
-                if let Ok(locale) = Locale::new(value.trim()) {
-                    return self.match_allowed(&locale);
-                }
+            if name.trim() == self.cookie_name
+                && let Ok(locale) = Locale::new(value.trim())
+            {
+                return self.match_allowed(&locale);
             }
         }
         None

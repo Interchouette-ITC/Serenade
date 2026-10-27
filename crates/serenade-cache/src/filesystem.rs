@@ -101,9 +101,7 @@ impl FilesystemAdapter {
         let Some(bytes) = read_file(path)? else {
             return Ok(Vec::new());
         };
-        Ok(parse_record(&bytes)
-            .map(|(_, tags, _)| tags)
-            .unwrap_or_default())
+        Ok(parse_record(&bytes).map_or_default(|(_, tags, _)| tags))
     }
 
     fn unlink_key_from_tags(&self, key: &str, tags: &[String]) -> Result<(), CacheError> {

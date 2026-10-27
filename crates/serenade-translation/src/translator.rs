@@ -143,10 +143,10 @@ impl Translator {
 
     fn resolve_template(&self, id: &str, domain: &str, locale: &Locale) -> Option<String> {
         for candidate in self.lookup_chain(locale) {
-            if let Some(catalogue) = self.catalogues.get(candidate.as_str()) {
-                if let Some(template) = catalogue.get(id, domain) {
-                    return Some(template.to_owned());
-                }
+            if let Some(catalogue) = self.catalogues.get(candidate.as_str())
+                && let Some(template) = catalogue.get(id, domain)
+            {
+                return Some(template.to_owned());
             }
         }
         None

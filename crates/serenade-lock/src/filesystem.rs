@@ -110,12 +110,12 @@ impl FilesystemLockStore {
 impl LockStore for FilesystemLockStore {
     fn save(&self, resource: &str, token: &str, ttl: Option<Duration>) -> Result<(), LockError> {
         validate_resource(resource)?;
-        if let Some((_expires, held)) = self.read_entry(resource)? {
-            if held != token {
-                return Err(LockError::Conflict {
-                    key: resource.to_owned(),
-                });
-            }
+        if let Some((_expires, held)) = self.read_entry(resource)?
+            && held != token
+        {
+            return Err(LockError::Conflict {
+                key: resource.to_owned(),
+            });
         }
         self.write_entry(resource, token, ttl)
     }

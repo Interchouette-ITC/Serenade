@@ -81,7 +81,7 @@ pub enum NestedData {
 impl NestedData {
     /// Returns the leaf string when this node is a value.
     #[must_use]
-    pub fn as_str(&self) -> Option<&str> {
+    pub const fn as_str(&self) -> Option<&str> {
         match self {
             Self::Value(v) => Some(v.as_str()),
             Self::Map(_) => None,

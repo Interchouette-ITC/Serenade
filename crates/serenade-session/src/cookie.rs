@@ -145,12 +145,12 @@ impl CookieSession {
     pub fn open(&self, cookie_header: Option<&str>) -> Result<Session, SessionError> {
         if let Some(id) =
             cookie_header.and_then(|header| parse_cookie_value(header, self.options.name()))
+            && let Some(attributes) = self.store.load(&id)?
         {
-            if let Some(attributes) = self.store.load(&id)? {
-                return Ok(Session::existing(id, attributes));
-            }
-            // Unknown id: start a fresh bag under a new id (avoids fixation on stale cookies).
+            return Ok(Session::existing(id, attributes));
         }
+        // Unknown id: start a fresh bag under a new id (avoids fixation on stale cookies).
+
         Ok(Session::new(generate_session_id()?))
     }
 

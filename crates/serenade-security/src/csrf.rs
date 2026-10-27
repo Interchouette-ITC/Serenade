@@ -3,7 +3,7 @@
 //! Tokens are HMAC-signed and **stateless**: validation recomputes the MAC.
 //! Forms embed the value in `_token`; no server session store is required for v0.
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 
@@ -74,7 +74,7 @@ impl HmacCsrfTokenManager {
 
     fn sign(&self, token_id: &str, nonce_hex: &str) -> String {
         // HMAC-SHA256 accepts any key length (including empty).
-        let mut mac = HmacSha256::new_from_slice(&self.secret)
+        let mut mac = Hmac::<Sha256>::new_from_slice(&self.secret)
             .unwrap_or_else(|_| HmacSha256::new_from_slice(&[0_u8; 32]).expect("fallback key"));
         mac.update(token_id.as_bytes());
         mac.update(b":");

@@ -46,6 +46,6 @@ pub fn deserialize_value<T: DeserializeOwned>(
 
 /// Returns whether the serde bridge supports `format` in this crate version.
 #[must_use]
-pub fn serde_supports_format(format: &str) -> bool {
+pub const fn serde_supports_format(format: &str) -> bool {
     format.eq_ignore_ascii_case(FORMAT_JSON)
 }

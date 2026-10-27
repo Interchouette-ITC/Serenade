@@ -47,13 +47,13 @@ impl ConstraintViolationList {
 
     /// Returns `true` when no violations were recorded.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
     /// Number of violations.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.items.len()
     }
 

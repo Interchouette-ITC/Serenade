@@ -45,12 +45,13 @@ impl LockStore for InMemoryLockStore {
         validate_resource(resource)?;
         let now = Instant::now();
         self.with_map(|map| {
-            if let Some(entry) = map.get(resource) {
-                if !entry.is_expired(now) && entry.token != token {
-                    return Err(LockError::Conflict {
-                        key: resource.to_owned(),
-                    });
-                }
+            if let Some(entry) = map.get(resource)
+                && !entry.is_expired(now)
+                && entry.token != token
+            {
+                return Err(LockError::Conflict {
+                    key: resource.to_owned(),
+                });
             }
             map.insert(
                 resource.to_owned(),

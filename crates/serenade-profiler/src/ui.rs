@@ -130,8 +130,7 @@ fn render_queries(profile: &ProfileData) -> String {
             query
                 .binds_summary
                 .as_ref()
-                .map(|b| format!(" · binds: {}", escape(b)))
-                .unwrap_or_default()
+                .map_or_default(|b| format!(" · binds: {}", escape(b)))
         ));
     }
     out

@@ -73,10 +73,10 @@ impl Locale {
     #[must_use]
     pub fn parent_chain(&self) -> Vec<Self> {
         let mut chain = Vec::new();
-        if self.region().is_some() {
-            if let Ok(parent) = Self::new(self.language()) {
-                chain.push(parent);
-            }
+        if self.region().is_some()
+            && let Ok(parent) = Self::new(self.language())
+        {
+            chain.push(parent);
         }
         chain
     }

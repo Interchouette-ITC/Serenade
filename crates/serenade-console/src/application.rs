@@ -93,8 +93,7 @@ impl Application {
         let command_name = matches.get_one::<String>("command").map(String::as_str);
         let trailing: Vec<String> = matches
             .get_many::<String>("args")
-            .map(|values| values.cloned().collect())
-            .unwrap_or_default();
+            .map_or_default(|values| values.cloned().collect());
 
         match command_name {
             None | Some("list") => {

@@ -25,10 +25,10 @@ pub fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<(), Filesyst
             path: from.to_path_buf(),
         });
     }
-    if let Some(parent) = to.parent() {
-        if !parent.as_os_str().is_empty() {
-            mkdir(parent)?;
-        }
+    if let Some(parent) = to.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        mkdir(parent)?;
     }
     fs::copy(from, to).map_err(|source| FilesystemError::io("copy", from, source))?;
     Ok(())
