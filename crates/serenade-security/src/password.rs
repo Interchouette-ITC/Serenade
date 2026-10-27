@@ -1,7 +1,10 @@
 //! Password hashing (Symfony `PasswordHasherInterface` analogue).
 
 use argon2::Argon2;
-use argon2::password_hash::{PasswordHash, PasswordHasher as _, PasswordVerifier, SaltString};
+use argon2::password_hash::{
+    PasswordHasher as _, PasswordVerifier,
+    phc::{PasswordHash, SaltString},
+};
 
 use crate::SecurityError;
 
@@ -41,7 +44,7 @@ impl PasswordHasher for Argon2idPasswordHasher {
                 message: String::from("password must not be empty"),
             });
         }
-        hash_password_with_salt(plain, &random_salt())
+        Ok(hash_password_with_salt(plain, &random_salt()))
     }
 
     fn verify(&self, hashed: &str, plain: &str) -> Result<bool, SecurityError> {
@@ -55,23 +58,19 @@ impl PasswordHasher for Argon2idPasswordHasher {
 }
 
 fn random_salt() -> SaltString {
-    let mut bytes = [0_u8; 16];
-    getrandom::fill(&mut bytes).expect("OS RNG must provide salt bytes");
-    SaltString::encode_b64(&bytes).expect("16 random bytes always encode as salt")
+    SaltString::generate()
 }
 
-fn hash_password_with_salt(plain: &str, salt: &SaltString) -> Result<String, SecurityError> {
+fn hash_password_with_salt(plain: &str, salt: &SaltString) -> String {
     Argon2::default()
-        .hash_password(plain.as_bytes(), salt)
-        .map(|hash| hash.to_string())
-        .map_err(|error| SecurityError::Password {
-            message: error.to_string(),
-        })
+        .hash_password_with_salt(plain.as_bytes(), salt.as_bytes())
+        .expect("Argon2 hashing with a valid salt must succeed")
+        .to_string()
 }
 
 #[cfg(test)]
 mod tests {
-    use argon2::password_hash::SaltString;
+    use argon2::{PasswordHash, password_hash::phc::SaltString};
 
     use super::{Argon2idPasswordHasher, PasswordHasher, hash_password_with_salt};
     use crate::SecurityError;
@@ -100,12 +99,12 @@ mod tests {
     }
 
     #[test]
-    fn hash_maps_argon2_errors_for_short_salt() {
-        // SaltString allows 4+ bytes; Argon2 rejects salts shorter than 8 bytes.
-        let salt = SaltString::from_b64("AAAAAAAA").expect("6-byte salt");
-        assert!(matches!(
-            hash_password_with_salt("secret", &salt),
-            Err(SecurityError::Password { .. })
-        ));
+    fn hash_password_with_salt_produces_argon2_hash() {
+        let salt = SaltString::generate();
+
+        let hash = hash_password_with_salt("secret", &salt);
+
+        assert!(hash.starts_with("$argon2id$"));
+        assert!(PasswordHash::new(&hash).is_ok());
     }
 }

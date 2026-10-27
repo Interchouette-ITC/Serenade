@@ -28,8 +28,8 @@ wasix = [
 [dependencies]
 anyhow = { workspace = true }
 bytes = { version = "1", optional = true }
-reqwest = { version = "0.12", optional = true, default-features = false, features = [
-    "rustls-tls",
+reqwest = { version = "0.13.5", optional = true, default-features = false, features = [
+    "rustls",
 ] }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
@@ -40,14 +40,14 @@ tokio = { workspace = true, optional = true, features = [
     "net",
     "io-util",
 ] }
-virtual-fs = { version = "0.704.0", optional = true, default-features = false }
+virtual-fs = { version = "0.705.0", optional = true, default-features = false }
 wasmer = { version = "7.4.0", optional = true, default-features = false, features = [
     "cranelift",
     "sys",
 ] }
 wasmer-types = { version = "7.4.0", optional = true }
-wasmer-package = { version = "0.704.0", optional = true, default-features = false }
-wasmer-wasix = { version = "0.704.0", optional = true, default-features = false, features = [
+wasmer-package = { version = "0.705.0", optional = true, default-features = false }
+wasmer-wasix = { version = "0.705.0", optional = true, default-features = false, features = [
     "sys-default",
 ] }
 

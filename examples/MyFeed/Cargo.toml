@@ -24,7 +24,7 @@ hotpath = { version = "0.28.6", optional = true, default-features = false }
 emojis = "0.9"
 ammonia = "4"
 base64 = { workspace = true }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
 serenade-admin = { workspace = true }
 serenade-form = { workspace = true }
 serenade-http = { workspace = true }

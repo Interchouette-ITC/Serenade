@@ -156,10 +156,6 @@ doc-clean:
 audit:
 	cd $(ROOT) && $(CARGO_STABLE) audit \
 		--ignore RUSTSEC-2026-0258 \
-		--ignore RUSTSEC-2024-0436 \
-		--ignore RUSTSEC-2026-0173 \
-		--ignore RUSTSEC-2025-0141 \
-		--ignore RUSTSEC-2024-0449 \
 		--ignore RUSTSEC-2026-0367 \
 		--ignore RUSTSEC-2026-0368 \
 		--ignore RUSTSEC-2026-0369

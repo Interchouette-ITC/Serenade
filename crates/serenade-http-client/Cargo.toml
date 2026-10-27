@@ -16,8 +16,8 @@ reqwest = ["dep:reqwest"]
 [dependencies]
 serenade-di = { workspace = true }
 thiserror = { workspace = true }
-reqwest = { version = "0.12", optional = true, default-features = false, features = [
-    "rustls-tls",
+reqwest = { version = "0.13.5", optional = true, default-features = false, features = [
+    "rustls",
     "json",
 ] }
 
