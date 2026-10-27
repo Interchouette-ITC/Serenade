@@ -16,11 +16,11 @@ pub enum ComponentHostError {
         path: String,
         /// Underlying wasmtime / IO error.
         #[source]
-        source: anyhow::Error,
+        source: wasmtime::Error,
     },
     /// Failed to load a component from in-memory bytes.
     #[error("load component from bytes: {0}")]
-    LoadBytes(#[source] anyhow::Error),
+    LoadBytes(#[source] wasmtime::Error),
 }
 
 /// Builds a default wasmtime [`Engine`] with Component Model support.
@@ -41,7 +41,7 @@ pub fn load_component(
     let path = path.as_ref();
     Component::from_file(engine, path).map_err(|source| ComponentHostError::LoadPath {
         path: path.display().to_string(),
-        source,
+        source: source.into(),
     })
 }
 

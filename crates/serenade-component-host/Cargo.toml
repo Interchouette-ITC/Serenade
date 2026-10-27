@@ -16,7 +16,7 @@ wasmtime = ["dep:wasmtime"]
 [dependencies]
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-wasmtime = { version = "36", optional = true, default-features = false, features = [
+wasmtime = { version = "50.0.0", optional = true, default-features = false, features = [
     "component-model",
     "cranelift",
     "runtime",

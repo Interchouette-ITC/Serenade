@@ -14,8 +14,11 @@ default = []
 messenger = ["dep:serenade-messenger"]
 
 [dependencies]
-chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-cron = "0.15"
+chrono = { version = "0.4", default-features = false, features = [
+    "clock",
+    "std",
+] }
+cron = "0.17"
 serenade-console = { workspace = true }
 serenade-di = { workspace = true }
 serenade-kernel = { workspace = true }

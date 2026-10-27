@@ -210,26 +210,30 @@ fn icu_format_number(value: f64, locale: &Locale, fraction_digits: u8) -> String
 
 #[cfg(feature = "icu")]
 fn icu_format_currency(amount: f64, currency: &str, locale: &Locale) -> Option<String> {
-    use icu_experimental::dimension::currency::CurrencyCode;
+    use icu_experimental::dimension::currency::CurrencyType;
     use icu_experimental::dimension::currency::formatter::CurrencyFormatter;
     use icu_experimental::dimension::currency::options::CurrencyFormatterOptions;
     use icu_locale::Locale as IcuLocale;
-    use tinystr::TinyAsciiStr;
     use writeable::Writeable;
 
     let code = normalize_currency_code(currency)?;
-    let tiny = TinyAsciiStr::<3>::try_from_str(&code).ok()?;
     let icu_locale = locale.as_str().parse::<IcuLocale>().ok()?;
     let decimal = decimal_from_f64(amount, 2);
-    let currency_fmt =
-        CurrencyFormatter::try_new(icu_locale.into(), CurrencyFormatterOptions::default()).ok()?;
-    let text = currency_fmt.format_fixed_decimal(&decimal, CurrencyCode(tiny));
+    let currency_type = CurrencyType::try_from_str(&code).ok()?;
+    let currency_fmt = CurrencyFormatter::try_new_symbol(
+        icu_locale.into(),
+        currency_type,
+        CurrencyFormatterOptions::default(),
+    )
+    .ok()?;
+
+    let text = currency_fmt.format_fixed_decimal(&decimal);
     Some(text.write_to_string().into_owned())
 }
 
 #[cfg(feature = "icu")]
 fn icu_language_display_name(language: &str, display_locale: &Locale) -> Option<String> {
-    use icu_experimental::displaynames::{DisplayNamesOptions, LanguageDisplayNames};
+    use icu_experimental::displaynames::{DisplayNamesOptions, multi::LanguageDisplayNames};
     use icu_locale::Locale as IcuLocale;
     use icu_locale::subtags::Language;
 
@@ -242,7 +246,7 @@ fn icu_language_display_name(language: &str, display_locale: &Locale) -> Option<
 
 #[cfg(feature = "icu")]
 fn icu_region_display_name(region: &str, display_locale: &Locale) -> Option<String> {
-    use icu_experimental::displaynames::{DisplayNamesOptions, RegionDisplayNames};
+    use icu_experimental::displaynames::{DisplayNamesOptions, multi::RegionDisplayNames};
     use icu_locale::Locale as IcuLocale;
     use icu_locale::subtags::Region;
 
