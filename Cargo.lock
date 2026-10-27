@@ -5939,7 +5939,6 @@ dependencies = [
 name = "serenade-component-host"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "thiserror 2.0.21",
  "wasmtime",
 ]
@@ -6304,7 +6303,6 @@ dependencies = [
  "serenade-kernel",
  "tempfile",
  "thiserror 2.0.21",
- "tinystr",
  "toml",
  "writeable",
 ]
