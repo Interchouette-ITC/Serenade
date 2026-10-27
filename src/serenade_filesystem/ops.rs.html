@@ -71,10 +71,10 @@
 <a href=#71 id=71 data-nosnippet>71</a>            path: from.to_path_buf(),
 <a href=#72 id=72 data-nosnippet>72</a>        });
 <a href=#73 id=73 data-nosnippet>73</a>    }
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = to.parent() {
-<a href=#75 id=75 data-nosnippet>75</a>        <span class="kw">if </span>!parent.as_os_str().is_empty() {
-<a href=#76 id=76 data-nosnippet>76</a>            mkdir(parent)<span class="question-mark">?</span>;
-<a href=#77 id=77 data-nosnippet>77</a>        }
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = to.parent()
+<a href=#75 id=75 data-nosnippet>75</a>        &amp;&amp; !parent.as_os_str().is_empty()
+<a href=#76 id=76 data-nosnippet>76</a>    {
+<a href=#77 id=77 data-nosnippet>77</a>        mkdir(parent)<span class="question-mark">?</span>;
 <a href=#78 id=78 data-nosnippet>78</a>    }
 <a href=#79 id=79 data-nosnippet>79</a>    fs::rename(from, to).map_err(|source| FilesystemError::io(<span class="string">"rename"</span>, from, source))
 <a href=#80 id=80 data-nosnippet>80</a>}

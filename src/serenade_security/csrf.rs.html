@@ -3,7 +3,7 @@
 <a href=#3 id=3 data-nosnippet>3</a>//! Tokens are HMAC-signed and **stateless**: validation recomputes the MAC.
 <a href=#4 id=4 data-nosnippet>4</a>//! Forms embed the value in `_token`; no server session store is required for v0.
 <a href=#5 id=5 data-nosnippet>5</a>
-<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">use </span>hmac::{Hmac, Mac};
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">use </span>hmac::{Hmac, KeyInit, Mac};
 <a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>sha2::Sha256;
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>subtle::ConstantTimeEq;
 <a href=#9 id=9 data-nosnippet>9</a>
@@ -74,7 +74,7 @@
 <a href=#74 id=74 data-nosnippet>74</a>
 <a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, token_id: <span class="kw-2">&amp;</span>str, nonce_hex: <span class="kw-2">&amp;</span>str) -&gt; String {
 <a href=#76 id=76 data-nosnippet>76</a>        <span class="comment">// HMAC-SHA256 accepts any key length (including empty).
-<a href=#77 id=77 data-nosnippet>77</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>mac = HmacSha256::new_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.secret)
+<a href=#77 id=77 data-nosnippet>77</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>mac = Hmac::&lt;Sha256&gt;::new_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.secret)
 <a href=#78 id=78 data-nosnippet>78</a>            .unwrap_or_else(|<span class="kw">_</span>| HmacSha256::new_from_slice(<span class="kw-2">&amp;</span>[<span class="number">0_u8</span>; <span class="number">32</span>]).expect(<span class="string">"fallback key"</span>));
 <a href=#79 id=79 data-nosnippet>79</a>        mac.update(token_id.as_bytes());
 <a href=#80 id=80 data-nosnippet>80</a>        mac.update(<span class="string">b":"</span>);

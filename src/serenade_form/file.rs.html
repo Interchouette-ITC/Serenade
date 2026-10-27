@@ -98,7 +98,7 @@
 <a href=#98 id=98 data-nosnippet>98</a>
 <a href=#99 id=99 data-nosnippet>99</a>    <span class="doccomment">/// In-memory bytes when storage is [`FileStorage::Memory`].
 <a href=#100 id=100 data-nosnippet>100</a>    </span><span class="attr">#[must_use]
-<a href=#101 id=101 data-nosnippet>101</a>    </span><span class="kw">pub fn </span>as_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
+<a href=#101 id=101 data-nosnippet>101</a>    </span><span class="kw">pub const fn </span>as_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
 <a href=#102 id=102 data-nosnippet>102</a>        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.payload {
 <a href=#103 id=103 data-nosnippet>103</a>            FilePayload::Bytes(bytes) =&gt; <span class="prelude-val">Some</span>(bytes.as_slice()),
 <a href=#104 id=104 data-nosnippet>104</a>            FilePayload::Temp(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,

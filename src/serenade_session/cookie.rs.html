@@ -145,13 +145,13 @@
 <a href=#145 id=145 data-nosnippet>145</a>    </span><span class="kw">pub fn </span>open(<span class="kw-2">&amp;</span><span class="self">self</span>, cookie_header: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Session, SessionError&gt; {
 <a href=#146 id=146 data-nosnippet>146</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) =
 <a href=#147 id=147 data-nosnippet>147</a>            cookie_header.and_then(|header| parse_cookie_value(header, <span class="self">self</span>.options.name()))
-<a href=#148 id=148 data-nosnippet>148</a>        {
-<a href=#149 id=149 data-nosnippet>149</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(attributes) = <span class="self">self</span>.store.load(<span class="kw-2">&amp;</span>id)<span class="question-mark">? </span>{
-<a href=#150 id=150 data-nosnippet>150</a>                <span class="kw">return </span><span class="prelude-val">Ok</span>(Session::existing(id, attributes));
-<a href=#151 id=151 data-nosnippet>151</a>            }
-<a href=#152 id=152 data-nosnippet>152</a>            <span class="comment">// Unknown id: start a fresh bag under a new id (avoids fixation on stale cookies).
-<a href=#153 id=153 data-nosnippet>153</a>        </span>}
-<a href=#154 id=154 data-nosnippet>154</a>        <span class="prelude-val">Ok</span>(Session::new(generate_session_id()<span class="question-mark">?</span>))
+<a href=#148 id=148 data-nosnippet>148</a>            &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(attributes) = <span class="self">self</span>.store.load(<span class="kw-2">&amp;</span>id)<span class="question-mark">?
+<a href=#149 id=149 data-nosnippet>149</a>        </span>{
+<a href=#150 id=150 data-nosnippet>150</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(Session::existing(id, attributes));
+<a href=#151 id=151 data-nosnippet>151</a>        }
+<a href=#152 id=152 data-nosnippet>152</a>        <span class="comment">// Unknown id: start a fresh bag under a new id (avoids fixation on stale cookies).
+<a href=#153 id=153 data-nosnippet>153</a>
+<a href=#154 id=154 data-nosnippet>154</a>        </span><span class="prelude-val">Ok</span>(Session::new(generate_session_id()<span class="question-mark">?</span>))
 <a href=#155 id=155 data-nosnippet>155</a>    }
 <a href=#156 id=156 data-nosnippet>156</a>
 <a href=#157 id=157 data-nosnippet>157</a>    <span class="doccomment">/// Persists `session` and returns a `Set-Cookie` header value when needed.
