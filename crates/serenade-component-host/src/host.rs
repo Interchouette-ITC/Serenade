@@ -16,11 +16,11 @@ pub enum ComponentHostError {
         path: String,
         /// Underlying wasmtime / IO error.
         #[source]
-        source: anyhow::Error,
+        source: wasmtime::Error,
     },
     /// Failed to load a component from in-memory bytes.
     #[error("load component from bytes: {0}")]
-    LoadBytes(#[source] anyhow::Error),
+    LoadBytes(#[source] wasmtime::Error),
 }
 
 /// Builds a default wasmtime [`Engine`] with Component Model support.
