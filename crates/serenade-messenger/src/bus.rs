@@ -174,10 +174,10 @@ impl MessageBus {
             };
             let mut first_error = None;
             for handler in handlers {
-                if let Err(error) = handler(event as &dyn Any) {
-                    if first_error.is_none() {
-                        first_error = Some(error);
-                    }
+                if let Err(error) = handler(event as &dyn Any)
+                    && first_error.is_none()
+                {
+                    first_error = Some(error);
                 }
             }
             first_error.map_or(Ok(()), Err)

@@ -18,10 +18,10 @@ pub fn dump_file(
     contents: impl AsRef<[u8]>,
 ) -> Result<(), FilesystemError> {
     let path = path.as_ref();
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            mkdir(parent)?;
-        }
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        mkdir(parent)?;
     }
     fs::write(path, contents.as_ref())
         .map_err(|source| FilesystemError::io("dump_file", path, source))
@@ -37,10 +37,10 @@ pub fn append_to_file(
     contents: impl AsRef<[u8]>,
 ) -> Result<(), FilesystemError> {
     let path = path.as_ref();
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            mkdir(parent)?;
-        }
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        mkdir(parent)?;
     }
     let mut file = OpenOptions::new()
         .create(true)
@@ -99,10 +99,10 @@ pub fn read_to_string(path: impl AsRef<Path>) -> Result<String, FilesystemError>
 /// Returns [`FilesystemError`] on I/O failure.
 pub fn touch(path: impl AsRef<Path>) -> Result<(), FilesystemError> {
     let path = path.as_ref();
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            mkdir(parent)?;
-        }
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        mkdir(parent)?;
     }
     if exists(path) {
         OpenOptions::new()

@@ -98,10 +98,10 @@ impl Process {
         if self.command.is_empty() {
             return Err(ProcessError::EmptyCommand);
         }
-        if let Some(cwd) = &self.cwd {
-            if !cwd.is_dir() {
-                return Err(ProcessError::InvalidCwd { path: cwd.clone() });
-            }
+        if let Some(cwd) = &self.cwd
+            && !cwd.is_dir()
+        {
+            return Err(ProcessError::InvalidCwd { path: cwd.clone() });
         }
 
         let mut cmd = Command::new(&self.command);
@@ -178,15 +178,15 @@ fn wait_child(
             return Ok(status);
         }
         // `Err` / `Ok(None)`: still running (or rare try_wait I/O); keep polling.
-        if let Some(limit) = timeout {
-            if start.elapsed() >= limit {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(ProcessError::TimedOut {
-                    command: command.to_owned(),
-                    timeout: limit,
-                });
-            }
+        if let Some(limit) = timeout
+            && start.elapsed() >= limit
+        {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(ProcessError::TimedOut {
+                command: command.to_owned(),
+                timeout: limit,
+            });
         }
         thread::sleep(Duration::from_millis(10));
     }

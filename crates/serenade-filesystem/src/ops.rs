@@ -71,10 +71,10 @@ pub fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<(), Filesy
             path: from.to_path_buf(),
         });
     }
-    if let Some(parent) = to.parent() {
-        if !parent.as_os_str().is_empty() {
-            mkdir(parent)?;
-        }
+    if let Some(parent) = to.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        mkdir(parent)?;
     }
     fs::rename(from, to).map_err(|source| FilesystemError::io("rename", from, source))
 }

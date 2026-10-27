@@ -98,7 +98,7 @@ impl UploadedFile {
 
     /// In-memory bytes when storage is [`FileStorage::Memory`].
     #[must_use]
-    pub fn as_bytes(&self) -> Option<&[u8]> {
+    pub const fn as_bytes(&self) -> Option<&[u8]> {
         match &self.payload {
             FilePayload::Bytes(bytes) => Some(bytes.as_slice()),
             FilePayload::Temp(_) => None,

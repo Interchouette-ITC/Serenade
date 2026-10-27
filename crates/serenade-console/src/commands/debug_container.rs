@@ -79,14 +79,12 @@ fn draw_loop(input: &Input, ids: &[String]) -> Result<(), ConsoleError> {
             render(frame, area, input, ids);
         })?;
 
-        if event::poll(std::time::Duration::from_millis(200))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press
-                    && matches!(key.code, KeyCode::Char('q') | KeyCode::Esc)
-                {
-                    break;
-                }
-            }
+        if event::poll(std::time::Duration::from_millis(200))?
+            && let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press
+            && matches!(key.code, KeyCode::Char('q') | KeyCode::Esc)
+        {
+            break;
         }
     }
     Ok(())

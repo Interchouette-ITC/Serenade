@@ -514,10 +514,10 @@ fn cookie_value(request: &Request, name: &str) -> Option<String> {
     let header = request.headers().get("cookie")?;
     for part in header.split(';') {
         let part = part.trim();
-        if let Some((key, value)) = part.split_once('=') {
-            if key.trim() == name {
-                return Some(value.trim().to_owned());
-            }
+        if let Some((key, value)) = part.split_once('=')
+            && key.trim() == name
+        {
+            return Some(value.trim().to_owned());
         }
     }
     None

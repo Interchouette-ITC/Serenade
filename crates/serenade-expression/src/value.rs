@@ -20,7 +20,7 @@ impl Value {
 
     /// Coerce to bool (`Bool` as-is; non-zero `Int`; non-empty `Str`).
     #[must_use]
-    pub fn as_bool_truthy(&self) -> bool {
+    pub const fn as_bool_truthy(&self) -> bool {
         match self {
             Self::Bool(v) => *v,
             Self::Int(v) => *v != 0,

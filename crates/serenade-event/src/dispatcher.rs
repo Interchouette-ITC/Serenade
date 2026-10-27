@@ -65,10 +65,10 @@ impl EventDispatcher {
             if subscriber.event_name() != event.name() {
                 continue;
             }
-            if let Err(error) = subscriber.handle(event) {
-                if first_error.is_none() {
-                    first_error = Some(error);
-                }
+            if let Err(error) = subscriber.handle(event)
+                && first_error.is_none()
+            {
+                first_error = Some(error);
             }
         }
         first_error.map_or(Ok(()), Err)
