@@ -183,12 +183,11 @@ impl LdapBinder for MockLdapBinder {
         }
         if let (Some(expected_user), Some(expected_pass)) =
             (&self.expected_username, &self.expected_password)
+            && (username != expected_user || password != expected_pass)
         {
-            if username != expected_user || password != expected_pass {
-                return Err(SecurityError::Authentication {
-                    message: "invalid ldap credentials".to_owned(),
-                });
-            }
+            return Err(SecurityError::Authentication {
+                message: "invalid ldap credentials".to_owned(),
+            });
         }
         Ok(self.identity.clone())
     }
