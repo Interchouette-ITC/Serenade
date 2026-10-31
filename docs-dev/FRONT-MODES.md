@@ -13,7 +13,7 @@ examples/
   demo-monorepo/            # modes SPA + SSG sharing UI lib
     apps/
       demo-spa/             # Trunk CSR → dist/index.html + wasm + js glue
-      demo-ssg/             # SSG → per-route HTML + hydrate wasm (after rangular SSG)
+      demo-ssg/             # SSG → per-route HTML + hydrate wasm
     libs/
       demo-ui/              # shared panels/chrome used by demo-spa and demo-ssg
   demo-universal/           # mode Universal (needs a server process)
@@ -33,7 +33,7 @@ examples/
 | `demo-monorepo` | Multi-app front workspace: **apps** deployable, **libs** shared; SPA and later SSG without copying UI | Backend API, Universal listen |
 | `demo-monorepo/apps/demo-spa` | Mode **SPA**: hello + button, client routes in wasm | Per-route HTML files on disk |
 | `demo-monorepo/apps/demo-ssg` | Mode **SSG**: same UI via `demo-ui`, prerendered HTML per route + hydrate | Running Serenade HTTP server |
-| `demo-monorepo/libs/demo-ui` | Shared rangular/Leptos UI for spa and ssg | Standalone deploy |
+| `demo-monorepo/libs/demo-ui` | Shared Leptos UI for spa and ssg | Standalone deploy |
 | `demo-universal` | Mode **Universal**: one process (or documented pair) front+back | Full rustashop; flat CDN-only marketing |
 | `demo-universal/apps/demo-front` | Hello wasm UI talking to demo-back | SSG export |
 | `demo-universal/apps/demo-back` | Boot Serenade kernel, `listen`, `GET /hello` (JSON), serve front assets | HTML demo (demo-html), console tutorial |
@@ -59,7 +59,9 @@ lives in its own tree with `demo-front` + `demo-back` + `demo-contract`.
 | SSG | `serenade-ssg` | `examples/demo-monorepo/apps/demo-ssg` | `dist/` HTML per route + wasm hydrate |
 | Universal | `serenade-universal` | `examples/demo-universal` | Running server serving API + front |
 
-SSG is blocked until rangular delivers render-to-string + hydrate (see Phase E of plan).
+SSG uses Leptos SSR to render the shared `demo-ui` component to HTML and Leptos hydration to
+activate the same UI in the browser. Rangular AOT components lower to Leptos views and follow
+the same rendering/hydration path; see the rangular SPEC.
 
 ## Mode commands
 
@@ -73,11 +75,12 @@ the default command.
 | --- | --- | --- | --- | --- |
 | HTML | `serenade-html` | `serenade-html demo-html` | `serenade-html --all` | `make html` / `make html-all` |
 | SPA | `serenade-spa` | `serenade-spa demo-spa` | `serenade-spa --all` | `make spa` / `make spa-all` |
+| SSG | `serenade-ssg` | `serenade-ssg demo-ssg` | `serenade-ssg --all` | `make ssg` / `make ssg-all` |
 
 HTML runs the app server (default `127.0.0.1:8080`); `--all` starts all selected HTML apps.
 SPA builds with Trunk to `examples/demo-monorepo/apps/demo-spa/dist/`.
 Universal builds the `demo-front` Trunk bundle and starts `demo-back` on `127.0.0.1:8080`;
-the backend serves `/hello` JSON, frontend assets, and the live-rendered `/cms/hello` page.
+the backend serves `/hello` JSON, frontend assets, and `/cms/hello`.
 
 
 ## Make targets (simple, per-app)
@@ -90,6 +93,8 @@ the backend serves `/hello` JSON, frontend assets, and the live-rendered `/cms/h
 | `make myfeed` | Legacy alias for `make html` |
 | `make spa` | Build demo-spa with Trunk (SPA mode) |
 | `make spa-all` | Build every registered SPA app |
+| `make ssg` | Build and prerender the default SSG app |
+| `make ssg-all` | Build and prerender every registered SSG app |
 | `make universal` | Build the frontend and run the Universal backend |
 | `make demo-ssg` | Run demo-ssg (SSG mode, Phase E) |
 | `make demo-universal` | Run demo-universal (Universal mode, Phase D) |
@@ -101,5 +106,5 @@ the backend serves `/hello` JSON, frontend assets, and the live-rendered `/cms/h
 | B | FRONT-MODES.md · demo-html rename · `serenade-html` / `make html` | ✅ done |
 | C | demo-monorepo · demo-spa · demo-ui · `serenade-spa` | ✅ done |
 | D | demo-universal · demo-front · demo-back · demo-contract · `serenade-universal` | ✅ done |
-| E | rangular SSG · demo-ssg · `serenade-ssg` | blocked on rangular |
+| E | rangular SSR/hydration guidance · demo-ssg · `serenade-ssg` | ✅ done |
 | F | All four modes green in CI · `run-many` docs · handoff to release plan | pending |

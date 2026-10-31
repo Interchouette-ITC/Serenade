@@ -157,7 +157,7 @@ jobs:
         run: cargo +stable test -p serenade-search --locked --features http
 
   front-mode-demos:
-    name: HTML, SPA and Universal demos
+    name: HTML, SPA, SSG and Universal demos
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
@@ -175,6 +175,12 @@ jobs:
         run: cargo +stable check -p serenade-demo-html --locked
       - name: Build demo-spa
         run: make spa
+      - name: Build and prerender demo-ssg
+        run: make ssg
+      - name: Verify prerendered routes
+        run: |
+          grep -q 'Hello from Serenade' examples/demo-monorepo/apps/demo-ssg/dist/index.html
+          grep -q 'About Serenade' examples/demo-monorepo/apps/demo-ssg/dist/about/index.html
       - name: Build Universal frontend
         run: cd examples/demo-universal/apps/demo-front && trunk build
       - name: Build Universal backend
@@ -189,7 +195,13 @@ jobs:
             sleep 1
           done
           grep -q 'Hello from the Serenade backend!' /tmp/hello.json
-          curl --fail --silent http://127.0.0.1:8080/cms/hello | grep -q 'Hello from Serenade'
+          curl --fail --silent http://127.0.0.1:8080/cms/hello | tee /tmp/cms-hello.html
+          grep -q '<h1>Hello from Serenade</h1>' /tmp/cms-hello.html
+          grep -q 'Clicked 0 times' /tmp/cms-hello.html
+          curl --fail --silent http://127.0.0.1:8080/favicon.ico --output /tmp/favicon.ico
+          test -s /tmp/favicon.ico
+          curl --fail --silent http://127.0.0.1:8080/serenade-demo-front.js --output /tmp/universal.js
+          test -s /tmp/universal.js
 
   cache-redis:
     name: cache redis

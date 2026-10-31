@@ -4,6 +4,8 @@ use serenade_demo_contract::HelloResponse;
 use serenade_http::{AsyncHttpKernel, Method, Request, Response};
 use serenade_kernel::{App, Application, Environment};
 
+mod html;
+
 #[allow(clippy::needless_pass_by_ref_mut)]
 fn response(
     request: &mut Request,
@@ -21,7 +23,7 @@ fn response(
         }
         (Method::Get, "/cms/hello") => Ok(Response::new(200)
             .with_header("content-type", "text/html; charset=utf-8")
-            .with_body(b"<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Serenade</title><link rel=\"stylesheet\" href=\"/style.css\"><body><main class=\"hello\"><header class=\"hello__header\"><img class=\"hello__banner\" src=\"/serenade-banner.png\" alt=\"Serenade\" width=\"534\" height=\"147\"></header><section class=\"hello__content\"><h1>Hello from Serenade</h1><p>This page is rendered live by the backend.</p><a href=\"/\">Back to the app</a></section></main></body></html>".to_vec())),
+            .with_body(html::cms_hello_page().into_bytes())),
         (Method::Get, path) => Ok(serve_asset(dist, path)),
         _ => Ok(Response::text(404, "Not found")),
     }

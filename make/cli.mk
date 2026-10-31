@@ -1,6 +1,6 @@
 # User-facing aliases (scaffolding CLI + demo console). Prefer these over raw cargo run.
 
-.PHONY: serenade serenade-tui tui recipe-list console demo serenade-html html html-all myfeed serenade-spa spa spa-all demo-spa serenade-universal universal demo-ssg demo-universal
+.PHONY: serenade serenade-tui tui recipe-list console demo serenade-html html html-all myfeed serenade-spa spa spa-all demo-spa serenade-universal universal serenade-ssg ssg ssg-all demo-ssg demo-universal
 
 # Scaffolding CLI: `make serenade` or `make serenade ARGS='new demo --path /tmp'`
 serenade:
@@ -53,3 +53,14 @@ universal:
 	$(MAKE) serenade-universal
 
 demo-universal: universal
+
+serenade-ssg:
+	cd $(ROOT) && $(CARGO) run -p serenade-cli --bin serenade-ssg -- $(ARGS)
+
+ssg:
+	$(MAKE) serenade-ssg
+
+ssg-all:
+	$(MAKE) serenade-ssg ARGS=--all
+
+demo-ssg: ssg

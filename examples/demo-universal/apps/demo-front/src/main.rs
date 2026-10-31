@@ -55,5 +55,12 @@ fn App() -> impl IntoView {
 }
 
 fn main() {
-    mount_to_body(App);
+    let path = web_sys::window()
+        .and_then(|window| window.location().pathname().ok())
+        .unwrap_or_default();
+    if path == "/cms/hello" {
+        leptos::mount::hydrate_body(|| view! { <serenade_demo_ui::HelloUi /> });
+    } else {
+        mount_to_body(App);
+    }
 }

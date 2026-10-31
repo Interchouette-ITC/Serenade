@@ -10,5 +10,5 @@ name = "demo-spa"
 mode = "spa"
 
 [dependencies]
-leptos = { workspace = true }
-serenade-demo-ui = { path = "../../libs/demo-ui" }
+leptos = { workspace = true, features = ["csr"] }
+serenade-demo-ui = { path = "../../libs/demo-ui", features = ["csr"] }

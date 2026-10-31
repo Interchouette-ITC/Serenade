@@ -1,8 +1,18 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn HelloUi() -> impl IntoView {
+pub fn HelloUi(#[prop(default = "home")] page: &'static str) -> impl IntoView {
     let clicks = RwSignal::new(0);
+    let (title, description) = match page {
+        "about" => (
+            "About Serenade",
+            "Serenade builds web apps with shared, framework-rendered UI.",
+        ),
+        _ => (
+            "Hello from Serenade",
+            "A shared hello UI component rendered by Serenade's front apps.",
+        ),
+    };
 
     view! {
         <main class="hello">
@@ -16,8 +26,8 @@ pub fn HelloUi() -> impl IntoView {
                 />
             </header>
             <section class="hello__content">
-                <h1>"Hello from Serenade"</h1>
-                <p>"A small shared UI component for the demo-monorepo front apps."</p>
+                <h1>{title}</h1>
+                <p>{description}</p>
                 <button on:click=move |_| clicks.update(|count| *count += 1)>
                     {move || format!("Clicked {} times", clicks.get())}
                 </button>

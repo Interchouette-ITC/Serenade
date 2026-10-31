@@ -1,5 +1,5 @@
 [workspace]
-members = ["apps/demo-spa", "libs/demo-ui"]
+members = ["apps/demo-spa", "apps/demo-ssg", "libs/demo-ui"]
 resolver = "3"
 
 [workspace.package]
@@ -9,4 +9,4 @@ version = "0.1.0"
 publish = false
 
 [workspace.dependencies]
-leptos = { version = "0.8", features = ["csr"] }
+leptos = { version = "0.8", default-features = false }

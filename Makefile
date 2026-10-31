@@ -57,6 +57,8 @@ help:
 	@echo "  make myfeed                    legacy alias for make html"
 	@echo "  make spa                       build the default SPA app with Trunk"
 	@echo "  make spa-all                   build every registered SPA app"
+	@echo "  make ssg                       build the default SSG app"
+	@echo "  make ssg-all                   build every registered SSG app"
 	@echo "  make universal                 build and run the Universal demo (:8080)"
 	@echo ""
 	@echo "Docker (make/docker.mk):"

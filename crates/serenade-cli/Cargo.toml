@@ -24,6 +24,10 @@ path = "src/bin/serenade-html.rs"
 name = "serenade-universal"
 path = "src/bin/serenade-universal.rs"
 
+[[bin]]
+name = "serenade-ssg"
+path = "src/bin/serenade-ssg.rs"
+
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
