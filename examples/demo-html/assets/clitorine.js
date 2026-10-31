@@ -6,7 +6,7 @@
   "use strict";
 
   const MAX_BODY = 2000;
-  const MAX_IMAGE_BYTES = 200 * 1024;
+  const MAX_IMAGE_BYTES = 1024 * 1024;
   const EMOJI_ICON =
     '<svg viewBox="0 0 18 18" aria-hidden="true">' +
     '<circle class="ql-stroke" cx="9" cy="9" r="7"></circle>' +
@@ -104,7 +104,7 @@
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      window.alert("Image must be under 200KB for this demo.");
+      window.alert("Image must be 1 MB or smaller for this demo.");
       input.value = "";
       return;
     }

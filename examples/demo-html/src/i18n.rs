@@ -1,6 +1,6 @@
 //! UI chrome strings resolved through Serenade Translator.
 
-use serenade_translation::{Locale, Translator, TranslatorInterface, format_currency};
+use serenade_translation::{Locale, Translator, TranslatorInterface};
 
 /// Translated chrome for one request (post bodies stay author language).
 #[derive(Clone, Debug)]
@@ -33,19 +33,5 @@ impl<'a> Ui<'a> {
     pub fn tn(&self, id: &str, number: i64) -> String {
         self.translator
             .trans_choice(id, number, &[], None, Some(&self.locale))
-    }
-
-    /// Translates `id` with named parameters.
-    #[must_use]
-    pub fn tp(&self, id: &str, parameters: &[(&str, &str)]) -> String {
-        self.translator
-            .trans(id, parameters, None, Some(&self.locale))
-    }
-
-    /// Locale-aware demo price (ICU currency formatting).
-    #[must_use]
-    pub fn demo_price(&self) -> String {
-        let amount = format_currency(0.0, "EUR", &self.locale);
-        self.tp("footer_demo_price", &[("amount", amount.as_str())])
     }
 }

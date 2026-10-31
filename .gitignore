@@ -1,4 +1,8 @@
 /target/
+/examples/**/target/
+/examples/demo-monorepo/apps/demo-spa/dist/
+/examples/demo-monorepo/apps/demo-ssg/dist/
+/examples/demo-universal/apps/demo-front/dist/
 coverage/
 fuzz/target/
 fuzz/corpus/

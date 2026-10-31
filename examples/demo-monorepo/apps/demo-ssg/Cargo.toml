@@ -1,0 +1,36 @@
+[package]
+name = "serenade-demo-ssg"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[package.metadata.serenade]
+name = "demo-ssg"
+mode = "ssg"
+
+[[bin]]
+name = "serenade-demo-ssg"
+path = "src/main.rs"
+required-features = ["hydrate"]
+
+[[bin]]
+name = "prerender"
+path = "src/bin/prerender.rs"
+required-features = ["ssr"]
+
+[features]
+default = ["hydrate"]
+hydrate = ["leptos/hydrate", "serenade-demo-ui/hydrate"]
+ssr = [
+    "leptos/ssr",
+    "serenade-demo-ui/ssr",
+    "dep:hydration_context",
+]
+
+[dependencies]
+leptos = { workspace = true, default-features = false }
+serenade-demo-ui = { path = "../../libs/demo-ui", default-features = false }
+web-sys = { version = "0.3", features = ["Location", "Window"] }
+anyhow = "1"
+hydration_context = { version = "0.3.2", optional = true, default-features = false }

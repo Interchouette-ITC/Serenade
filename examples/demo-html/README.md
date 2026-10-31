@@ -1,4 +1,4 @@
-# MyFeed
+# demo-html (MyFeed)
 
 Beginner Serenade demo: an **open public feed** you can self-host.
 
@@ -7,25 +7,40 @@ Server-rendered HTML + Bootstrap 5 + Quill + [`serenade-form`](../../crates/sere
 ## Run
 
 ```bash
-cargo run -p my_feed
-# or: make myfeed
+# preferred mode command:
+make html
+# or: make myfeed (legacy alias)
+# direct package run:
+cargo run -p serenade-demo-html
 ```
 
-Open <http://127.0.0.1:8090/>.
+Open <http://127.0.0.1:8080/>.
+
+The mode command defaults to `demo-html`. Named app arguments are for choosing among multiple
+registered HTML apps; today there is only one. Use `make html-all` to run every registered HTML
+app.
+
+The demo stores posts in `.myfeed.sqlite` and only inserts the starter post when the database is
+empty. Code changes rebuild normally, but changing the seed text will not update an existing
+database. To preview the starter post in a fresh database without replacing your existing posts:
+
+```bash
+MYFEED_DB=/tmp/demo-html-preview.sqlite make html
+```
 
 ### Optional performance profiling
 
 Default builds (and CI) do **not** enable hotpath. For a local function-timing report:
 
 ```bash
-cargo run -p my_feed --features hotpath
+cargo run -p serenade-demo-html --features hotpath
 ```
 
 See [`docs-dev/PERF.md`](../../docs-dev/PERF.md) and [hotpath.rs](https://hotpath.rs/).
 
 | Env                  | Default            | Role                                 |
 | -------------------- | ------------------ | ------------------------------------ |
-| `MYFEED_BIND`        | `127.0.0.1:8090`   | Listen address                       |
+| `MYFEED_BIND`        | `127.0.0.1:8080`   | Listen address                       |
 | `MYFEED_CSRF_SECRET` | (dev secret)       | HMAC CSRF key                        |
 | `MYFEED_ADMIN_TOKEN` | `myfeed-dev-admin` | Admin sign-in token                  |
 | `MYFEED_DB`          | `.myfeed.sqlite`   | SQLite file (posts survive restarts) |
@@ -35,7 +50,7 @@ See [`docs-dev/PERF.md`](../../docs-dev/PERF.md) and [hotpath.rs](https://hotpat
 - Wider public wall with purple Bootstrap theme
 - Composer opens from the top input (Bootstrap collapse)
 - Quill WYSIWYG (bold / lists / links) + emoji toolbar icon
-- Optional image upload / YouTube / SoundCloud / `.mp4` / image URL
+- Optional image upload (up to 1 MiB) / YouTube / SoundCloud / `.mp4` / image URL
 - Public likes; comments pending until approved
 - `/admin` cookie login, moderation queue
 - Category CRUD via `serenade-admin` (`/admin/categories`)

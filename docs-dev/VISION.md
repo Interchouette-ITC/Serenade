@@ -76,6 +76,12 @@ Serenade defines **contracts** (repository traits, unit of work hooks, request/r
 
 RustaShop should feel “ Symfony-backed ” in **architecture**, not in PHP or in copying Symfony APIs literally.
 
+## Front modes and examples
+
+Serenade examples are structured as apps and libs across four front modes: HTML, SPA, SSG, and
+Universal. See [FRONT-MODES.md](FRONT-MODES.md) for the locked examples tree, CLI contract, and
+phase status.
+
 ## Non-goals
 
 - 1:1 Symfony PHP API port
