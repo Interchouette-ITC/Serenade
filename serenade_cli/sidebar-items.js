@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["error","new","recipe","tui"]};
+window.SIDEBAR_ITEMS = {"mod":["error","mode","new","recipe","tui"]};

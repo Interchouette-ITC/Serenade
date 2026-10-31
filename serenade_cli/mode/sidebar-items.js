@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["discover_apps","find_examples_root","select_apps"],"struct":["ModeApp"]};
