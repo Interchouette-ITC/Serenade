@@ -9,7 +9,7 @@ Path: [`examples/demo-html`](../examples/demo-html). Epic [#112](https://github.
 ## Goal
 
 `cargo run -p serenade-demo-html` → open a public scrollable feed. Same _journey_ as
-Symfony Demo / Fast Track: framework forms, security habits, HTML pages — not a SPA tutorial.
+Symfony Demo / Fast Track: framework forms, security habits, HTML pages - not a SPA tutorial.
 
 ## Stack (locked for this demo)
 
