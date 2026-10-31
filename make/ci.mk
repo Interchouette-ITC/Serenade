@@ -63,11 +63,11 @@ fuzz-build:
 fuzz:
 	cd $(ROOT) && cargo +nightly fuzz run $(FUZZ_TARGET) -- -max_total_time=$(FUZZ_TIME)
 
-## Unsafe Rust surface for the MyFeed demo tree (fat framework consumer).
+## Unsafe Rust surface for the demo-html demo tree (framework consumer, MyFeed).
 ## Requires `cargo-geiger` and `jq`. Fails when red packages exceed
 ## `.geiger-budget.toml` (`max_red_packages`). Fresh target dir avoids stale `.d`
 ## files from rust-cache breaking the scan.
-GEIGER_MANIFEST ?= $(ROOT)/examples/MyFeed/Cargo.toml
+GEIGER_MANIFEST ?= $(ROOT)/examples/demo-html/Cargo.toml
 geiger:
 	@mkdir -p $(ROOT)/target/geiger
 	@rm -rf $(ROOT)/target/geiger-scan

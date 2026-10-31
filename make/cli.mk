@@ -1,6 +1,6 @@
 # User-facing aliases (scaffolding CLI + demo console). Prefer these over raw cargo run.
 
-.PHONY: serenade serenade-tui tui recipe-list console demo myfeed
+.PHONY: serenade serenade-tui tui recipe-list console demo serenade-html html html-all myfeed serenade-spa spa spa-all demo-spa serenade-universal universal demo-ssg demo-universal
 
 # Scaffolding CLI: `make serenade` or `make serenade ARGS='new demo --path /tmp'`
 serenade:
@@ -21,6 +21,35 @@ console:
 demo:
 	cd $(ROOT) && $(CARGO) run -p serenade-demo-app -- $(ARGS)
 
-# MyFeed beginner demo (HTML + Form/CSRF)
-myfeed:
-	cd $(ROOT) && $(CARGO) run -p my_feed -- $(ARGS)
+# HTML mode: run the default, named, or all registered HTML apps.
+serenade-html:
+	cd $(ROOT) && $(CARGO) run -p serenade-cli --bin serenade-html -- $(ARGS)
+
+html:
+	$(MAKE) serenade-html
+
+html-all:
+	$(MAKE) serenade-html ARGS=--all
+
+# Legacy alias: `make myfeed` → same as `make html`
+myfeed: html
+
+# SPA demo: build every registered mode=spa app with `ARGS=--all`.
+serenade-spa:
+	cd $(ROOT) && $(CARGO) run -p serenade-cli --bin serenade-spa -- $(ARGS)
+
+spa:
+	$(MAKE) serenade-spa
+
+spa-all:
+	$(MAKE) serenade-spa ARGS=--all
+
+demo-spa: spa
+
+serenade-universal:
+	cd $(ROOT) && $(CARGO) run -p serenade-cli --bin serenade-universal -- $(ARGS)
+
+universal:
+	$(MAKE) serenade-universal
+
+demo-universal: universal

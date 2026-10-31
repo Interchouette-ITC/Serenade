@@ -10,6 +10,32 @@
   --bs-primary-rgb: 107, 63, 160;
   --bs-link-color: #5a3388;
   --bs-link-hover-color: #45266a;
+  margin-top: 0.35rem;
+}
+
+.composer-textarea textarea {
+  display: block;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.625rem 0.75rem;
+  color: var(--mf-ink);
+  background-color: #fff;
+  border: 1px solid var(--mf-line);
+  border-radius: 0.5rem;
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.composer-textarea textarea::placeholder {
+  color: #8b8299;
+}
+
+.composer-textarea textarea:focus {
+  border-color: #b69ad8;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(107, 63, 160, 0.2);
 }
 
 body.myfeed {
@@ -178,7 +204,13 @@ body.myfeed {
   border-radius: 0.65rem;
 }
 
-.embed-media img,
+.embed-media img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: transparent;
+}
+
 .embed-media video {
   max-height: 28rem;
   object-fit: contain;

@@ -16,7 +16,7 @@ Serenade does **not** hard-depend on hotpath in kernel or HTTP crates. Apps opt 
 
 ## App recipe (optional features)
 
-In an application `Cargo.toml` (example: `examples/MyFeed`):
+In an application `Cargo.toml` (example: `examples/demo-html`):
 
 ```toml
 [features]
@@ -34,10 +34,10 @@ Default `make` / CI builds **without** these features (no hotpath compile in the
 
 ```bash
 # Normal (CI)
-cargo run -p my_feed
+cargo run -p serenade-demo-html
 
 # Local performance report
-cargo run -p my_feed --features hotpath
+cargo run -p serenade-demo-html --features hotpath
 ```
 
 ## Non-goals

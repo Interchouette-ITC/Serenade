@@ -1,0 +1,18 @@
+[package]
+name = "serenade-demo-back"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[package.metadata.serenade]
+name = "demo-universal"
+mode = "universal"
+
+[dependencies]
+serenade-demo-contract = { path = "../../libs/demo-contract" }
+serenade-http = { path = "../../../../crates/serenade-http" }
+serenade-http-actix = { path = "../../../../crates/serenade-http-actix" }
+serenade-kernel = { path = "../../../../crates/serenade-kernel" }
+serde_json = { workspace = true }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

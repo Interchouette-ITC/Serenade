@@ -41,7 +41,7 @@ members = [
     "crates/serenade-profiler",
     "crates/serenade-view",
     "examples/demo-app",
-    "examples/MyFeed",
+    "examples/demo-html",
 ]
 exclude = ["fuzz"]
 resolver = "3"

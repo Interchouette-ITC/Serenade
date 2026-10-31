@@ -1,5 +1,5 @@
-# Max packages with used unsafe in the MyFeed cargo-geiger tree
-# (`examples/MyFeed`, the fat framework consumer).
+# Max packages with used unsafe in the demo-html cargo-geiger tree
+# (`examples/demo-html`, MyFeed — the framework consumer).
 # Counted as: any package whose used unsafe_ totals (functions/exprs/impls/traits/methods) > 0.
 # Ratchet: CI fails when the live count goes above this number. Lower when the tree gets cleaner.
 #

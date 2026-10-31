@@ -1,7 +1,7 @@
-//! `MyFeed`: open public feed demo (Serenade Form + CSRF, Actix listen).
+//! `demo-html`: HTML-mode demo (Serenade Form + CSRF, Actix listen).
 //!
 //! Bootstrap + Quill for UI; Clitorine (`assets/clitorine.js`) wires composer helpers.
-//! Run: `cargo run -p my_feed`
+//! Run: `make html` or `cargo run -p serenade-demo-html`
 
 mod admin_crud;
 mod embed;
@@ -54,13 +54,13 @@ use crate::store::{FeedStore, NewPost, Post};
 
 use serenade_search::{DocumentIndex, MemorySearchAdapter, SearchDocument, SearchQuery};
 
-const DEFAULT_BIND: &str = "127.0.0.1:8090";
+const DEFAULT_BIND: &str = "127.0.0.1:8080";
 const DEFAULT_CSRF: &str = "myfeed-dev-csrf-secret-change-me!!";
 const DEFAULT_ADMIN: &str = "myfeed-dev-admin";
 const ADMIN_COOKIE: &str = "myfeed_admin";
 const LOCALE_COOKIE: &str = "_locale";
-const MAX_IMAGE_BYTES: usize = 200 * 1024;
-const MAX_IMAGE_DATA: usize = 280_000;
+const MAX_IMAGE_BYTES: usize = 1024 * 1024;
+const MAX_IMAGE_DATA: usize = 1_398_200;
 const MAX_BODY_CHARS: usize = 2000;
 
 struct AppState {
@@ -136,6 +136,16 @@ fn routes() -> Result<RouteCollection, HttpError> {
     collection.add(Route::with_method(
         "asset_js",
         "/assets/clitorine.js",
+        Method::Get,
+    ))?;
+    collection.add(Route::with_method(
+        "asset_favicon",
+        "/favicon.png",
+        Method::Get,
+    ))?;
+    collection.add(Route::with_method(
+        "asset_favicon_ico",
+        "/favicon.ico",
         Method::Get,
     ))?;
     collection.add(Route::with_method(
@@ -660,6 +670,14 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         "asset_js" => Ok(asset_response(
             "text/javascript; charset=utf-8",
             include_bytes!("../assets/clitorine.js"),
+        )),
+        "asset_favicon" => Ok(asset_response(
+            "image/png",
+            include_bytes!("../assets/favicon.png"),
+        )),
+        "asset_favicon_ico" => Ok(asset_response(
+            "image/x-icon",
+            include_bytes!("../assets/favicon.ico"),
         )),
         "locale_set" => Ok(handle_locale_set(state, request)),
         _ => {
@@ -1296,7 +1314,7 @@ fn seed_if_empty(store: &FeedStore) {
     }
     let _ = store.add_post(NewPost {
         body: "<p>Hello World from MyFeed - Bootstrap JS + Quill + Serenade forms/CSRF.</p>".into(),
-        embed_url: Some("https://www.youtube.com/watch?v=MrQ41qf0Rqs".into()),
+        embed_url: Some("https://www.youtube.com/watch?v=kYfNvmF0Bqw".into()),
         image_data: None,
         category: "Ideas".into(),
     });
@@ -1371,7 +1389,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ));
     }
 
-    println!("MyFeed listening on http://{bind}/");
+    println!("demo-html listening on http://{bind}/");
     println!("Admin: open /admin and sign in with token `{admin_token}`");
     if profiler_enabled {
         println!("Profiler: http://{bind}/_profiler (disable with MYFEED_PROFILER=0)");

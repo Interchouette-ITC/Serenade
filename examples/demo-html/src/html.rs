@@ -21,14 +21,15 @@ const QUILL_JS: &str = "https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js";
 #[must_use]
 pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> String {
     let open_flag = if composer_open { "1" } else { "0" };
-    let css = asset("myfeed.css?v=5").unwrap_or_else(|_| "/assets/myfeed.css?v=5".into());
-    let js = asset("clitorine.js?v=4").unwrap_or_else(|_| "/assets/clitorine.js?v=4".into());
+    let css = asset("myfeed.css?v=7").unwrap_or_else(|_| "/assets/myfeed.css?v=7".into());
+    let js = asset("clitorine.js?v=5").unwrap_or_else(|_| "/assets/clitorine.js?v=5".into());
     format!(
         r#"<!DOCTYPE html>
 <html lang="{lang}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 <title>{title}</title>
 <link rel="stylesheet" href="{BOOTSTRAP_CSS}" />
 <link rel="stylesheet" href="{QUILL_CSS}" />
@@ -159,8 +160,6 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
       <span class="mx-1">·</span>
       {footer_stack}
       <span class="mx-1">·</span>
-      {footer_demo_price}
-      <span class="mx-1">·</span>
       {footer_scroll}
     </p>
   </footer>
@@ -183,7 +182,6 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         post_form_html = view.post_form_html,
         footer_about = escape_html(&ui.t("footer_about")),
         footer_stack = escape_html(&ui.t("footer_stack")),
-        footer_demo_price = escape_html(&ui.demo_price()),
         footer_scroll = escape_html(&ui.t("footer_scroll")),
         delete_modal = if view.admin_forms.is_empty() {
             String::new()
@@ -418,7 +416,7 @@ fn post_card(
         .and_then(embed_html)
         .unwrap_or_default();
     let image = post.image_data.as_deref().map_or(String::new(), |data| {
-        if data.starts_with("data:image/") && data.len() < 280_000 {
+        if data.starts_with("data:image/") && data.len() <= 1_398_200 {
             format!(
                 r#"<div class="embed-media my-2"><img class="img-fluid rounded" src="{src}" alt="posted image" loading="lazy" /></div>"#,
                 src = escape_attr(data)

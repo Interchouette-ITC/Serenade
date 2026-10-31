@@ -4,6 +4,7 @@
 //! `serenade-console`. Cargo remains the package manager.
 
 pub mod error;
+pub mod mode;
 pub mod new;
 pub mod recipe;
 pub mod tui;

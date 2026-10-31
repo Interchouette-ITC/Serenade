@@ -12,6 +12,18 @@ rust-version.workspace = true
 name = "serenade"
 path = "src/main.rs"
 
+[[bin]]
+name = "serenade-spa"
+path = "src/bin/serenade-spa.rs"
+
+[[bin]]
+name = "serenade-html"
+path = "src/bin/serenade-html.rs"
+
+[[bin]]
+name = "serenade-universal"
+path = "src/bin/serenade-universal.rs"
+
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
@@ -25,6 +37,7 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 toml = { workspace = true }
 tokio = { workspace = true }
+walkdir = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

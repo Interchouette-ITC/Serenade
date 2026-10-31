@@ -156,6 +156,41 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: cargo +stable test -p serenade-search --locked --features http
 
+  front-mode-demos:
+    name: HTML, SPA and Universal demos
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk@0.21.14
+      - name: Check demo-html
+        run: cargo +stable check -p serenade-demo-html --locked
+      - name: Build demo-spa
+        run: make spa
+      - name: Build Universal frontend
+        run: cd examples/demo-universal/apps/demo-front && trunk build
+      - name: Build Universal backend
+        run: cargo +stable check --manifest-path examples/demo-universal/Cargo.toml --workspace --locked
+      - name: Smoke test Universal server
+        run: |
+          SERENADE_UNIVERSAL_BIND=127.0.0.1:8080 cargo +stable run --manifest-path examples/demo-universal/Cargo.toml -p serenade-demo-back --locked &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/hello > /tmp/hello.json; then break; fi
+            sleep 1
+          done
+          grep -q 'Hello from the Serenade backend!' /tmp/hello.json
+          curl --fail --silent http://127.0.0.1:8080/cms/hello | grep -q 'Hello from Serenade'
+
   cache-redis:
     name: cache redis
     needs: changes

@@ -1,0 +1,13 @@
+[workspace]
+members = ["apps/demo-front", "apps/demo-back", "libs/demo-contract"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+version = "0.1.0"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
