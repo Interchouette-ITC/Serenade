@@ -7,7 +7,7 @@ subscriber on `demo.ready`.
 Author guide: [`docs-dev/BUNDLES.md`](../../docs-dev/BUNDLES.md).
 
 ```bash
-cargo run -p serenade-demo-app
+cargo run -p serenade-demo-app --bin serenade-demo-app
 ```
 
 Console entry (`bin/console` analogue):

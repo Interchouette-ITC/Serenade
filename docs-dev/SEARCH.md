@@ -63,7 +63,7 @@ index
 
 ## MyFeed dogfood
 
-[`examples/MyFeed`](../examples/MyFeed) keeps a `MemorySearchAdapter` beside SQLite:
+[`examples/demo-html`](../examples/demo-html) keeps a `MemorySearchAdapter` beside SQLite:
 
 - rebuild on boot from stored posts
 - upsert on create / admin edit

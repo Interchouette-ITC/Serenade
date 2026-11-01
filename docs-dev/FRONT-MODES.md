@@ -79,10 +79,17 @@ one registered demo app, so naming it is equivalent to using the default command
 
 HTML runs the app server (default `127.0.0.1:8080`); `--all` starts all selected HTML apps.
 SPA builds with Trunk to `examples/demo-monorepo/apps/demo-spa/dist/`.
-SSG builds a hydration bundle and prerenders the selected app's declared routes.
+SPA and Universal frontend builds minify generated `.html` files in `dist/` after Trunk.
+SSG builds a hydration bundle, prerenders the selected app's declared routes, and minifies
+the resulting `.html` files. The `serenade-minify` component minifies inline classic and
+module JavaScript as well as HTML, preserving HTML comments (including Leptos hydration
+markers) and meaningful text whitespace. External scripts and non-JavaScript script data
+blocks are left intact; CSS is not minified here.
 Universal builds the `demo-front` Trunk bundle and starts `demo-back` on `127.0.0.1:8080`;
 the backend serves `/hello` JSON, frontend assets, and `/cms/hello`. The `/cms/hello` page
-server-renders the shared Leptos UI and hydrates it in the browser.
+server-renders the shared Leptos UI and hydrates it in the browser. The demo's HTTP kernel
+uses `HtmlMinifier` for runtime `text/html` responses. Other server apps can opt in by adding
+the same middleware to their kernel.
 
 The current HTML and Universal examples both default to `127.0.0.1:8080`; running both at once
 requires changing one app's bind address.

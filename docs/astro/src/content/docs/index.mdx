@@ -1,0 +1,54 @@
+---
+title: Documentation
+description: Learn Serenade from your first workspace run through its architecture and component reference.
+template: splash
+hero:
+  image:
+    html: '<img src="/docs/serenade-logo.png" alt="Serenade, Rust application framework" width="412" height="179">'
+  tagline: A Symfony-oriented Rust framework, composed from a kernel, bundles, components, and adapters.
+  actions:
+    - text: Start with the workspace
+      link: /docs/first-steps/installation/
+      icon: right-arrow
+    - text: Explore the architecture
+      link: /docs/concepts/architecture/
+      icon: open-book
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Serenade takes inspiration from Symfony’s component architecture and builds it for Rust. Cargo
+manages dependencies; your application composes the framework pieces it needs.
+
+<CardGrid>
+  <Card title="Start here" icon="rocket">
+    Install the prerequisites, run the canonical demo, and choose a web mode in the
+    [first steps](./first-steps/installation/). Then follow the
+    [bundle application tutorial](./tutorials/first-bundle-app/).
+  </Card>
+  <Card title="Understand the architecture" icon="open-book">
+    See how the [kernel, bundles, components, and adapters](./concepts/architecture/) fit together.
+  </Card>
+  <Card title="Choose components" icon="puzzle">
+    Browse the [component overview](./components/) and its linked crate documentation.
+  </Card>
+  <Card title="Find a task guide" icon="document">
+    Browse practical [how-to guides](./how-to/) and the detailed framework references.
+  </Card>
+</CardGrid>
+
+:::caution[Pre-1.0]
+Serenade is under active development. Crates differ in scope and maturity; check each crate’s
+documentation, examples, and tests before adopting it.
+:::
+
+## Two documentation layers
+
+- **These guides** explain architecture, workflows, and practical use.
+- **[Rust API documentation](https://interchouette-itc.github.io/Serenade/)** is generated from
+  source with `make doc`; see the [API documentation guide](./reference/api-docs/) to build it
+  locally.
+
+The examples are deliberately distinct: the bundle sample explains application composition;
+the HTML, SPA, SSG, and Universal examples demonstrate different front-end modes.

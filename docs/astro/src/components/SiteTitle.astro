@@ -1,0 +1,16 @@
+---
+const isDocsHome = Astro.locals.starlightRoute.entry.data.title === 'Documentation';
+---
+
+<a
+	class:list={['site-title', 'sl-flex', { 'site-title--home': isDocsHome }]}
+	href={isDocsHome ? '/' : '/docs/'}
+	aria-label={isDocsHome ? 'Serenade home' : 'Serenade documentation home'}
+>
+	<img
+		src={isDocsHome ? '/docs/serenade-home-logo.png' : '/docs/serenade-docs-header.png'}
+		alt=""
+		width={isDocsHome ? 238 : 297}
+		height={isDocsHome ? 252 : 302}
+	/>
+</a>

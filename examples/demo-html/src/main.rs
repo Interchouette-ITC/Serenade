@@ -1382,6 +1382,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut async_kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| {
         handle(state_for_handler.as_ref(), request)
     });
+    async_kernel.push_middleware(serenade_minify::HtmlMinifier);
     if profiler_enabled {
         async_kernel.push_middleware(AsyncProfilerMiddleware::new(
             Arc::clone(&profiler_store),

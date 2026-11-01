@@ -44,6 +44,12 @@ fn main() -> anyhow::Result<()> {
         if !status.success() {
             bail!("Trunk failed to build Universal app `{}`", app.name);
         }
+        let dist = serenade_cli::html_output::dist_directory(&front)?;
+        let minified = serenade_cli::html_output::minify_html_files(&dist)?;
+        println!(
+            "Minified {minified} frontend HTML document(s) for {}",
+            app.name
+        );
 
         println!("Starting {} backend", app.name);
         let status = Command::new("cargo")

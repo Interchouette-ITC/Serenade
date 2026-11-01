@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serenade_demo_contract::HelloResponse;
 use serenade_http::{AsyncHttpKernel, Method, Request, Response};
 use serenade_kernel::{App, Application, Environment};
+use serenade_minify::HtmlMinifier;
 
 mod html;
 
@@ -63,7 +64,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     app.boot()?;
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let dist = root.join("../../apps/demo-front/dist");
-    let kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| response(request, &dist));
+    let mut kernel =
+        AsyncHttpKernel::from_sync(move |request: &mut Request| response(request, &dist));
+    kernel.push_middleware(HtmlMinifier);
     let bind =
         std::env::var("SERENADE_UNIVERSAL_BIND").unwrap_or_else(|_| "127.0.0.1:8080".to_owned());
     println!("demo-universal listening on http://{bind}");

@@ -1,0 +1,230 @@
+---
+import EditLink from 'virtual:starlight/components/EditLink';
+import LastUpdated from 'virtual:starlight/components/LastUpdated';
+import Pagination from 'virtual:starlight/components/Pagination';
+---
+
+<footer class="sl-flex docs-footer">
+	<div class="meta sl-flex">
+		<EditLink />
+		<LastUpdated />
+	</div>
+	<Pagination />
+
+	<div class="site-footer">
+		<div class="footer-left">
+			<a class="brand brand--footer" href="/" aria-label="Serenade home">
+				<img src="/docs/serenade-eyes.png" alt="" width="35" height="35" />
+				<span>Serenade</span>
+			</a>
+			<nav class="footer-project-links" aria-label="Project links">
+				<a href="https://github.com/Interchouette-ITC/Serenade/releases">Release · Pre-1.0</a>
+				<a href="https://github.com/Interchouette-ITC/Serenade">Open source</a>
+				<a href="https://github.com/Interchouette-ITC/Serenade/blob/dev/LICENSE">Apache-2.0</a>
+				<span class="footer-project-link--disabled" aria-disabled="true">crates.io</span>
+			</nav>
+			<small class="footer-disclaimer">
+				Developed by <a href="https://interchouette.net">Interchouette</a>, not affiliated with or endorsed by Symfony.
+			</small>
+			<small class="footer-tech">
+				Built with <a href="https://leptos.dev">Leptos</a>;
+				<a href="https://github.com/Interchouette-ITC/rangular">rangular</a> compiles the page
+				templates and nested SCSS; this site is built on
+				<a href="https://github.com/Interchouette-ITC/Serenade">Serenade</a>.
+			</small>
+		</div>
+		<div class="footer-right">
+			<p>A Rust application framework, made to be composed.</p>
+			<nav class="footer-links" aria-label="Footer">
+				<a href="https://github.com/Interchouette-ITC/Serenade">GitHub</a>
+				<a href="/docs/">Documentation</a>
+				<a href="https://interchouette-itc.github.io/Serenade/">API docs</a>
+				<a href="/getting-started/">Getting started</a>
+			</nav>
+			<div class="footer-emblem-wrap">
+				<a href="/" aria-label="Serenade home">
+					<img
+						class="footer-emblem"
+						src="/docs/serenade-footer-home.png"
+						alt="Serenade"
+						width="189"
+						height="192"
+					/>
+				</a>
+			</div>
+		</div>
+	</div>
+</footer>
+
+<style>
+	.docs-footer {
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.meta {
+		gap: 0.75rem 3rem;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		margin-top: 3rem;
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+
+	.meta > :global(p:only-child) {
+		margin-inline-start: auto;
+	}
+
+	.site-footer {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
+		align-items: start;
+		gap: 2rem;
+		width: min(1280px, 100% - 48px);
+		margin-inline: auto;
+		padding-block: 2rem 2.5rem;
+		border-top: 1px solid var(--sl-color-hairline);
+	}
+
+	.footer-left,
+	.footer-right {
+		display: grid;
+		justify-items: start;
+		gap: 0.65rem;
+		min-width: 0;
+	}
+
+	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.55rem;
+		color: var(--sl-color-white);
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.brand img {
+		width: 35px;
+		height: 35px;
+		border: 1px solid rgb(242 191 70 / 25%);
+		border-radius: 50%;
+	}
+
+	.footer-project-links,
+	.footer-links {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+	}
+
+	.footer-project-links a,
+	.footer-project-link--disabled {
+		display: inline-flex;
+		min-height: 28px;
+		align-items: center;
+		padding: 0.25rem 0.6rem;
+		border: 1px solid rgb(242 191 70 / 24%);
+		border-radius: 999px;
+		color: var(--sl-color-gray-1);
+		font-size: 0.68rem;
+		line-height: 1;
+		text-decoration: none;
+	}
+
+	.footer-project-links a:hover,
+	.footer-project-links a:focus-visible {
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-accent-high);
+	}
+
+	.footer-project-link--disabled {
+		border-color: var(--sl-color-gray-5);
+		color: var(--sl-color-gray-3);
+		cursor: default;
+	}
+
+	.site-footer p,
+	.site-footer small {
+		margin: 0;
+		color: var(--sl-color-gray-2);
+		font-size: 0.75rem;
+		line-height: 1.6;
+	}
+
+	.footer-disclaimer,
+	.footer-tech {
+		max-width: 42rem;
+	}
+
+	.footer-disclaimer a,
+	.footer-tech a {
+		color: var(--sl-color-accent);
+		text-decoration: none;
+	}
+
+	.footer-disclaimer a:hover,
+	.footer-tech a:hover,
+	.footer-disclaimer a:focus-visible,
+	.footer-tech a:focus-visible {
+		color: var(--sl-color-accent-high);
+		text-decoration: underline;
+	}
+
+	.footer-right > p {
+		width: 100%;
+		padding-top: 0.5rem;
+		text-align: center;
+	}
+
+	.footer-links {
+		justify-self: center;
+		width: max-content;
+		max-width: 100%;
+		gap: 1.2rem;
+	}
+
+	.footer-links a {
+		color: var(--sl-color-gray-1);
+		font-size: 0.78rem;
+		text-decoration: none;
+	}
+
+	.footer-links a:hover,
+	.footer-links a:focus-visible {
+		color: var(--sl-color-accent-high);
+	}
+
+	.footer-emblem-wrap {
+		display: flex;
+		width: 100%;
+		justify-content: center;
+		margin-top: 0.1rem;
+	}
+
+	.footer-emblem {
+		display: block;
+		width: 120px;
+		height: auto;
+		border-radius: 18px;
+		object-fit: contain;
+	}
+
+	@media (max-width: 760px) {
+		.site-footer {
+			grid-template-columns: minmax(0, 1fr);
+			width: calc(100% - 36px);
+			gap: 1rem;
+		}
+
+		.footer-right {
+			justify-items: start;
+		}
+
+		.footer-links {
+			justify-self: start;
+			width: auto;
+			justify-content: flex-start;
+		}
+	}
+</style>

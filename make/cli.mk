@@ -19,7 +19,7 @@ console:
 
 # Demo HTTP binary
 demo:
-	cd $(ROOT) && $(CARGO) run -p serenade-demo-app -- $(ARGS)
+	cd $(ROOT) && $(CARGO) run -p serenade-demo-app --bin serenade-demo-app -- $(ARGS)
 
 # HTML mode: run the default, named, or all registered HTML apps.
 serenade-html:
