@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MinifyError"],"fn":["minify_html"],"struct":["HtmlMinifier"]};
