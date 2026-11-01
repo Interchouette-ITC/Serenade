@@ -9,7 +9,7 @@ Symfony demonstrated how an application framework can be composed from independe
 coordinated by a kernel, and extended with bundles. Serenade takes inspiration from those ideas
 and implements its own Rust-native architecture.
 
-Serenade is an independent Rust project—not a PHP port, a Symfony compatibility layer, or an
+Serenade is an independent Rust project, not a PHP port, a Symfony compatibility layer, or an
 affiliated Symfony product. Cargo owns dependency management. Rust traits and types define the
 contracts. The application chooses its server and persistence strategy.
 

@@ -22,10 +22,11 @@ pub fn minify_html(html: &str) -> Result<String, MinifyError> {
     config.remove_bangs = false;
     config.remove_processing_instructions = false;
 
-    Ok(String::from_utf8(simple_minify_html::minify(
-        html.as_bytes(),
-        Some(config),
-    ))?)
+    decode_html_output(simple_minify_html::minify(html.as_bytes(), Some(config)))
+}
+
+fn decode_html_output(output: Vec<u8>) -> Result<String, MinifyError> {
+    String::from_utf8(output).map_err(MinifyError::from)
 }
 
 fn minify_inline_scripts(html: &str) -> Result<String, MinifyError> {
@@ -162,6 +163,14 @@ fn closing_tag(html: &str, from: usize, name: &str) -> Option<(usize, usize)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rejects_non_utf8_minifier_output() {
+        assert!(matches!(
+            decode_html_output(vec![0xff]),
+            Err(MinifyError::InvalidHtmlOutput(_))
+        ));
+    }
 
     #[test]
     fn minifies_html_and_preserves_hydration_markers_and_text_spacing() {

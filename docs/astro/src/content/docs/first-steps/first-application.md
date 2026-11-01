@@ -23,7 +23,7 @@ cargo run -p serenade-demo-app --bin serenade-demo-app
 ```
 
 The output includes registered bundles, a greeting, event subscribers, and routes. This is a
-console sample—not a web server or a generated application.
+console sample, not a web server or a generated application.
 
 ## Follow the composition
 
