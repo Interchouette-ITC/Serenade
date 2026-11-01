@@ -115,4 +115,4 @@ let mut form = Form::builder("avatar")
 
 - CSRF manager API: [SECURITY.md](SECURITY.md)
 - Validator constraints: [KERNEL.md](KERNEL.md) (Validator)
-- HTML apps: see `examples/MyFeed` (depends on this crate)
+- HTML apps: see `examples/demo-html` (depends on this crate)

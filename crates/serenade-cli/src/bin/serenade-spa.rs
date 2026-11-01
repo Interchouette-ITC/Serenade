@@ -38,6 +38,9 @@ fn main() -> anyhow::Result<()> {
                 app.name
             );
         }
+        let dist = serenade_cli::html_output::dist_directory(&app.directory)?;
+        let minified = serenade_cli::html_output::minify_html_files(&dist)?;
+        println!("Minified {minified} HTML document(s) for {}", app.name);
     }
 
     Ok(())

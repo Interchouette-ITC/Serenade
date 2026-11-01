@@ -1,0 +1,72 @@
+---
+import '../styles/serenade.css';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="robots" content="noindex" />
+		<title>Page not found | Serenade</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				font-family: system-ui, sans-serif;
+				background: var(--sl-color-black);
+				color: var(--sl-color-white);
+			}
+
+			body {
+				margin: 0;
+			}
+
+			main {
+				box-sizing: border-box;
+				display: grid;
+				min-height: 100vh;
+				align-content: center;
+				gap: 1rem;
+				max-width: 42rem;
+				margin: 0 auto;
+				padding: 2rem;
+			}
+
+			p {
+				margin: 0;
+				color: var(--sl-color-gray-2);
+				line-height: 1.6;
+			}
+
+			.eyebrow {
+				color: var(--sl-color-accent-high);
+				font-weight: 700;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+			}
+
+			a {
+				width: fit-content;
+				border-radius: 999px;
+				background: var(--sl-color-accent-high);
+				color: var(--sl-color-black);
+				font-weight: 700;
+				padding: 0.7rem 1rem;
+				text-decoration: none;
+			}
+
+			a:focus-visible {
+				outline: 3px solid var(--sl-color-white);
+				outline-offset: 3px;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<p class="eyebrow">Serenade documentation</p>
+			<h1>Page not found</h1>
+			<p>The page may have moved or the address may be mistyped.</p>
+			<a href="/docs/">Return to documentation</a>
+		</main>
+	</body>
+</html>

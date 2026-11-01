@@ -77,7 +77,7 @@ Bind POSTs with `Form::handle_request` + CSRF manager, then call `AdminResourceH
 
 ## MyFeed dogfood
 
-[`examples/MyFeed`](../examples/MyFeed) wires one resource: **categories**.
+[`examples/demo-html`](../examples/demo-html) wires one resource: **categories**.
 
 | Surface | Role |
 | --- | --- |
@@ -86,7 +86,7 @@ Bind POSTs with `Form::handle_request` + CSRF manager, then call `AdminResourceH
 | `/admin/categories/new` | Create (CSRF form) |
 | `/admin/categories/{id}` | Show / edit / delete |
 
-Sample package: `examples/MyFeed/config/packages/admin.toml`. Handlers live in `examples/MyFeed/src/admin_crud.rs` (`CategoryHandler`).
+Sample package: `examples/demo-html/config/packages/admin.toml`. Handlers live in `examples/demo-html/src/admin_crud.rs` (`CategoryHandler`).
 
 See also [MYFEED.md](MYFEED.md), [FORMS.md](FORMS.md), [RECIPES.md](RECIPES.md).
 

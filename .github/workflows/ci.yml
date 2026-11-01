@@ -76,6 +76,7 @@ jobs:
         run: >-
           cargo +nightly clippy -p serenade-rate-limiter --all-targets --locked --features redis
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+
       - name: Lint serenade-serializer toon feature
         if: needs.changes.outputs.code == 'true'
         run: >-
@@ -116,6 +117,24 @@ jobs:
         run: >-
           cargo +nightly clippy -p serenade-search --all-targets --locked --features http
           -- -D warnings -D clippy::all -D clippy::pedantic -D clippy::nursery
+
+  docs-site:
+    name: documentation site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/astro/package-lock.json
+      - name: Install documentation dependencies
+        working-directory: docs/astro
+        run: npm ci
+      - name: Build Starlight documentation
+        working-directory: docs/astro
+        run: npm run build
 
   test:
     name: workspace tests

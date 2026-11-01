@@ -14,6 +14,7 @@ serenade-demo-contract = { path = "../../libs/demo-contract" }
 serenade-demo-ui = { path = "../../../demo-monorepo/libs/demo-ui", default-features = false, features = ["ssr"] }
 leptos = { version = "0.8", default-features = false, features = ["ssr"] }
 serenade-http = { path = "../../../../crates/serenade-http" }
+serenade-minify = { path = "../../../../crates/serenade-minify" }
 serenade-http-actix = { path = "../../../../crates/serenade-http-actix" }
 serenade-kernel = { path = "../../../../crates/serenade-kernel" }
 hydration_context = "0.3.2"

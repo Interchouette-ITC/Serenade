@@ -2,6 +2,11 @@
 
 English only. Workspace crates publish through normal PR flow to `dev`.
 
+The public documentation site is built from Astro/Starlight in [`docs/astro`](../docs/astro).
+Its import step reads the guides below directly; do not keep a second hand-edited copy of those
+guides in the site. New tutorials and curated learning paths belong in the Starlight content
+tree.
+
 ## Index
 
 | Doc                          | Topic                                                  |
@@ -18,7 +23,7 @@ English only. Workspace crates publish through normal PR flow to `dev`.
 | [PERF.md](PERF.md)           | Profiler vs hotpath; optional app perf features |
 | [VIEW.md](VIEW.md)           | path / asset / partial HTML helpers            |
 | [SERIALIZER.md](SERIALIZER.md) | JSON + optional TOON (agent context export)  |
-| [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/MyFeed`) |
+| [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/demo-html`) |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |
 | [SESSION.md](SESSION.md)     | Session bag, flash, SessionStore, cookie + HTTP middleware |
 | [SEARCH.md](SEARCH.md)       | Document index contracts, MemorySearchAdapter          |

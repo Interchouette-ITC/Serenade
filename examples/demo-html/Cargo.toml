@@ -32,6 +32,7 @@ rusqlite = { version = "0.41", features = ["bundled"] }
 serenade-admin = { workspace = true }
 serenade-form = { workspace = true }
 serenade-http = { workspace = true }
+serenade-minify = { workspace = true }
 serenade-http-actix = { workspace = true }
 serenade-security = { workspace = true }
 serenade-validator = { workspace = true }

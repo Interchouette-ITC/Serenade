@@ -1,0 +1,62 @@
+# build output
+dist/
+# generated types
+.astro/
+src/content/docs/source-guides/
+src/content/docs/concepts/vision.md
+src/content/docs/concepts/kernel.md
+src/content/docs/concepts/bundle-extensions.md
+src/content/docs/concepts/persistence.md
+src/content/docs/concepts/wasm.md
+src/content/docs/concepts/front-modes.md
+src/content/docs/how-to/recipes.md
+src/content/docs/how-to/security.md
+src/content/docs/how-to/forms.md
+src/content/docs/how-to/http-ops.md
+src/content/docs/how-to/i18n.md
+src/content/docs/how-to/perf.md
+src/content/docs/how-to/view.md
+src/content/docs/how-to/cache.md
+src/content/docs/how-to/session.md
+src/content/docs/how-to/mailer.md
+src/content/docs/how-to/notifier.md
+src/content/docs/how-to/search.md
+src/content/docs/how-to/workflow.md
+src/content/docs/how-to/filesystem.md
+src/content/docs/how-to/process.md
+src/content/docs/how-to/finder.md
+src/content/docs/how-to/http-client.md
+src/content/docs/how-to/messenger.md
+src/content/docs/how-to/lock.md
+src/content/docs/how-to/rate-limiter.md
+src/content/docs/how-to/scheduler.md
+src/content/docs/how-to/observability.md
+src/content/docs/how-to/admin.md
+src/content/docs/how-to/profiler.md
+src/content/docs/reference/console.md
+src/content/docs/reference/serializer.md
+src/content/docs/reference/expression.md
+src/content/docs/reference/errors.md
+src/content/docs/reference/openapi.md
+src/content/docs/reference/string.md
+src/content/docs/reference/supply-chain.md
+src/content/docs/examples/myfeed.md
+src/content/docs/examples/rustashop.md
+src/content/docs/components/catalog.md
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
