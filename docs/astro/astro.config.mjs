@@ -4,7 +4,6 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://docs.serenade.rs',
-  base: '/docs',
   trailingSlash: 'always',
   integrations: [
     starlight({
