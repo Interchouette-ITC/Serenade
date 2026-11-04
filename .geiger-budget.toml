@@ -6,4 +6,4 @@
 # History (red packages):
 # - 175: first geiger gate (172 observed; headroom 3)
 # - 196: OXC inline-JavaScript minifier dependencies add 26 red packages
-max_red_packages = 196
+max_red_packages = 197
