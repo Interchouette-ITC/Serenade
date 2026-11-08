@@ -40,7 +40,7 @@ The mode command defaults to `demo-html`. Named app arguments are for choosing a
 registered HTML apps; today there is only one. Use `make html-all` to run every registered HTML
 app.
 
-The demo stores posts in `.myfeed.sqlite` and only inserts the starter post when the database is
+The demo stores posts in `.myfeed.sqlite` and inserts both starter posts when the database is
 empty. Code changes rebuild normally, but changing the seed text will not update an existing
 database. To preview the starter post in a fresh database without replacing your existing posts:
 
