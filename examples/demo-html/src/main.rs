@@ -1436,12 +1436,37 @@ mod workflow_tests {
         assert_eq!(post.category, "Work");
         assert!(post.embed_url.is_none());
         let image = post.image_data.expect("original attached image");
-        let encoded = image.strip_prefix("data:image/png;base64,").expect("PNG data URL");
+        let encoded = image
+            .strip_prefix("data:image/png;base64,")
+            .expect("PNG data URL");
         let decoded = base64::Engine::decode(&super::BASE64, encoded).expect("valid base64");
         assert_eq!(decoded, include_bytes!("../assets/meet-serenade.png"));
         assert_eq!(decoded.len(), 207_360);
 
         super::seed_if_empty(&store);
+        assert_eq!(store.posts().len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod seed_tests {
+    use super::{FeedStore, seed_if_empty};
+
+    #[test]
+    fn fresh_demo_includes_meet_serenade_without_duplicates() {
+        let store = FeedStore::open_memory();
+        seed_if_empty(&store);
+        let posts = store.posts();
+        assert_eq!(posts.len(), 2);
+        assert_eq!(posts[0].id, 2);
+        assert_eq!(posts[0].category, "Work");
+        assert_eq!(
+            posts[0].body,
+            "<h2>Meet Serenade</h2><p>Serenade is a Rust framework for building dependable web applications, with practical tools for routing, forms, security, and server-rendered HTML.</p>"
+        );
+        assert!(posts[1].body.contains("Hello World"));
+
+        seed_if_empty(&store);
         assert_eq!(store.posts().len(), 2);
     }
 }
