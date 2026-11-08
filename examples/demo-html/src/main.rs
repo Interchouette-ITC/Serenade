@@ -1318,6 +1318,12 @@ fn seed_if_empty(store: &FeedStore) {
         image_data: None,
         category: "Ideas".into(),
     });
+    let _ = store.add_post(NewPost {
+        body: "<h2>Meet Serenade</h2><p>Serenade is a Rust framework for building dependable web applications, with practical tools for routing, forms, security, and server-rendered HTML.</p>".into(),
+        embed_url: None,
+        image_data: None,
+        category: "Work item".into(),
+    });
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -1413,5 +1419,28 @@ mod workflow_tests {
     #[test]
     fn expression_guard_blocks_guest_subject() {
         assert!(try_approve_comment_workflow("guest").is_err());
+    }
+}
+
+#[cfg(test)]
+mod seed_tests {
+    use super::{FeedStore, seed_if_empty};
+
+    #[test]
+    fn fresh_demo_includes_meet_serenade_without_duplicates() {
+        let store = FeedStore::open_memory();
+        seed_if_empty(&store);
+        let posts = store.posts();
+        assert_eq!(posts.len(), 2);
+        assert_eq!(posts[0].id, 2);
+        assert_eq!(posts[0].category, "Work item");
+        assert_eq!(
+            posts[0].body,
+            "<h2>Meet Serenade</h2><p>Serenade is a Rust framework for building dependable web applications, with practical tools for routing, forms, security, and server-rendered HTML.</p>"
+        );
+        assert!(posts[1].body.contains("Hello World"));
+
+        seed_if_empty(&store);
+        assert_eq!(store.posts().len(), 2);
     }
 }
