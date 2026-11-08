@@ -1321,8 +1321,11 @@ fn seed_if_empty(store: &FeedStore) {
     let _ = store.add_post(NewPost {
         body: "<h2>Meet Serenade</h2><p>Serenade is a Rust framework for building dependable web applications, with practical tools for routing, forms, security, and server-rendered HTML.</p>".into(),
         embed_url: None,
-        image_data: None,
-        category: "Work item".into(),
+        image_data: Some(format!(
+            "data:image/png;base64,{}",
+            BASE64.encode(include_bytes!("../assets/meet-serenade.png"))
+        )),
+        category: "Work".into(),
     });
 }
 
@@ -1420,6 +1423,29 @@ mod workflow_tests {
     fn expression_guard_blocks_guest_subject() {
         assert!(try_approve_comment_workflow("guest").is_err());
     }
+
+    #[test]
+    fn seed_preserves_complete_meet_serenade_post() {
+        let store = super::FeedStore::open_memory();
+        super::seed_if_empty(&store);
+        let post = store.get_post(2).expect("seeded Post #2");
+        assert_eq!(
+            post.body,
+            "<h2>Meet Serenade</h2><p>Serenade is a Rust framework for building dependable web applications, with practical tools for routing, forms, security, and server-rendered HTML.</p>"
+        );
+        assert_eq!(post.category, "Work");
+        assert!(post.embed_url.is_none());
+        let image = post.image_data.expect("original attached image");
+        let encoded = image
+            .strip_prefix("data:image/png;base64,")
+            .expect("PNG data URL");
+        let decoded = base64::Engine::decode(&super::BASE64, encoded).expect("valid base64");
+        assert_eq!(decoded, include_bytes!("../assets/meet-serenade.png"));
+        assert_eq!(decoded.len(), 207_360);
+
+        super::seed_if_empty(&store);
+        assert_eq!(store.posts().len(), 2);
+    }
 }
 
 #[cfg(test)]
@@ -1433,7 +1459,7 @@ mod seed_tests {
         let posts = store.posts();
         assert_eq!(posts.len(), 2);
         assert_eq!(posts[0].id, 2);
-        assert_eq!(posts[0].category, "Work item");
+        assert_eq!(posts[0].category, "Work");
         assert_eq!(
             posts[0].body,
             "<h2>Meet Serenade</h2><p>Serenade is a Rust framework for building dependable web applications, with practical tools for routing, forms, security, and server-rendered HTML.</p>"
