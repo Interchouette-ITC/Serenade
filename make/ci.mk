@@ -82,12 +82,12 @@ geiger:
 	total=$$(jq '.packages | length' "$$report"); \
 	red=$$(jq '[.packages[] | (.unsafety.used // {}) as $$u | (($$u.functions.unsafe_ // 0) + ($$u.exprs.unsafe_ // 0) + ($$u.item_impls.unsafe_ // 0) + ($$u.item_traits.unsafe_ // 0) + ($$u.methods.unsafe_ // 0)) as $$n | select($$n > 0)] | length' "$$report"); \
 	{ \
-	  echo "## cargo-geiger"; echo; \
-	  echo "- Packages scanned: **$$total**"; \
-	  echo "- Red (used unsafe > 0): **$$red**"; \
-	  echo "- Budget (\`max_red_packages\`): **$$budget**"; echo; \
-	  if [ "$$red" -gt "$$budget" ]; then echo "**FAIL:** red count $$red exceeds budget $$budget."; \
-	  else echo "OK: red count $$red within budget $$budget."; fi; \
+		echo "## cargo-geiger"; echo; \
+		echo "- Packages scanned: **$$total**"; \
+		echo "- Red (used unsafe > 0): **$$red**"; \
+		echo "- Budget (\`max_red_packages\`): **$$budget**"; echo; \
+		if [ "$$red" -gt "$$budget" ]; then echo "**FAIL:** red count $$red exceeds budget $$budget."; \
+		else echo "OK: red count $$red within budget $$budget."; fi; \
 	} | tee $(ROOT)/target/geiger/summary.md; \
 	if [ "$$red" -gt "$$budget" ]; then echo "geiger budget exceeded: $$red red packages > $$budget" >&2; exit 1; fi
 
@@ -160,10 +160,7 @@ doc-clean:
 ## zip 3.x is a build-dep of utoipa-swagger-ui 9; no release yet accepts zip >=9.
 audit:
 	cd $(ROOT) && $(CARGO_STABLE) audit \
-		--ignore RUSTSEC-2026-0258 \
-		--ignore RUSTSEC-2026-0367 \
-		--ignore RUSTSEC-2026-0368 \
-		--ignore RUSTSEC-2026-0369
+		--ignore RUSTSEC-2026-0258
 
 ## Requires `cargo install cargo-deny`.
 deny:

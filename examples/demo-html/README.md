@@ -16,6 +16,26 @@ cargo run -p serenade-demo-html
 
 Open <http://127.0.0.1:8080/>.
 
+### Docker
+
+From the repository root, build and run MyFeed with Compose:
+
+```bash
+make myfeed-up
+# To build the image without starting the service:
+make myfeed-image
+```
+
+Open <http://127.0.0.1:8080/>. The database is stored in the Compose-managed
+`myfeed-data` volume and survives container restarts. Stop the service with `make myfeed-down`.
+The container uses the app's documented development admin token and CSRF secret by default.
+Set `MYFEED_ADMIN_TOKEN` and `MYFEED_CSRF_SECRET` in the environment before `make myfeed-up`
+for any non-local deployment.
+
+CI and local publishing use the same Make targets:
+`make docker-build-dev` builds and tags `:dev` / `:latest` for Docker Hub and GHCR
+(`make myfeed-image` is an alias).
+
 The mode command defaults to `demo-html`. Named app arguments are for choosing among multiple
 registered HTML apps; today there is only one. Use `make html-all` to run every registered HTML
 app.
@@ -74,12 +94,12 @@ See epic [#112](https://github.com/Interchouette-ITC/Serenade/issues/112) and `d
 
 ## Component dogfood
 
-| Crate | How this sample uses it |
-| --- | --- |
-| `serenade-string` | Category names stored as slugs |
-| `serenade-notifier` | `NullTransport` SMS on comment approve |
-| `serenade-filesystem` / `serenade-finder` | Translation dir check + `*.toml` discovery |
-| `serenade-workflow` + `ExpressionGuard` | Comment approve pending → approved (blocks subject `guest`) |
+| Crate                                     | How this sample uses it                                     |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| `serenade-string`                         | Category names stored as slugs                              |
+| `serenade-notifier`                       | `NullTransport` SMS on comment approve                      |
+| `serenade-filesystem` / `serenade-finder` | Translation dir check + `*.toml` discovery                  |
+| `serenade-workflow` + `ExpressionGuard`   | Comment approve pending → approved (blocks subject `guest`) |
 
 ## About / inspiration
 
