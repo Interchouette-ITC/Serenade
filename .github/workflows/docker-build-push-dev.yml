@@ -1,0 +1,89 @@
+name: CI/CD MyFeed Image dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - .dockerignore
+      - .github/workflows/docker-build-push-dev.yml
+      - Cargo.toml
+      - Cargo.lock
+      - crates/**
+      - docker/**
+      - examples/demo-html/**
+      - Makefile
+      - make/common.mk
+      - make/docker.mk
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-push-dev:
+    name: Build and Push MyFeed :dev / :latest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Set up Make
+        run: sudo apt-get install -y make
+
+      - name: Build Docker image :dev and :latest
+        run: make docker-build-dev
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push :dev and :latest to Docker Hub
+        run: make docker-push-dev-hub
+
+      - name: Log in to GHCR (personal)
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Push :dev and :latest to personal GHCR
+        run: make docker-push-dev-ghcr-personal
+
+      - name: Log in to GHCR (Interchouette / ITC)
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME_ITC }}
+          password: ${{ secrets.GHCR_PAT_ITC }}
+
+      - name: Push :dev and :latest to ghcr.io/interchouette and interchouette-itc
+        run: make docker-push-dev-ghcr-itc
+
+      - name: Redeploy Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${RENDER_DEPLOY_HOOK_URL}" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret not set; skipping Render redeploy"
+            exit 0
+          fi
+          hook="$(printf '%s' "$RENDER_DEPLOY_HOOK_URL" | tr -d '\r\n')"
+          http_code="$(curl -sS -o /tmp/render-hook.json -w '%{http_code}' --get "$hook")"
+          echo "render_hook_http=${http_code}"
+          cat /tmp/render-hook.json
+          echo
+          case "$http_code" in
+            200|202) ;;
+            *) exit 1 ;;
+          esac
