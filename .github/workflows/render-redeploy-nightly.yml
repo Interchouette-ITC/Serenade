@@ -1,0 +1,34 @@
+name: Nightly Render redeploy
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Redeploy Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${RENDER_DEPLOY_HOOK_URL}" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret not set"
+            exit 1
+          fi
+
+          hook="$(printf '%s' "$RENDER_DEPLOY_HOOK_URL" | tr -d '\r\n')"
+          http_code="$(curl -sS -o /tmp/render-hook.json -w '%{http_code}' --get "$hook")"
+
+          echo "render_hook_http=${http_code}"
+          cat /tmp/render-hook.json
+          echo
+
+          case "$http_code" in
+            200|202) ;;
+            *) exit 1 ;;
+          esac
