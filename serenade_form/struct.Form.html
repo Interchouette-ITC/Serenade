@@ -13,14 +13,14 @@
 </div></details><details class="toggle method-toggle" open><summary><section id="method.csrf_enabled" class="method"><a class="src rightside" href="../src/serenade_form/form.rs.html#165-167">Source</a><h4 class="code-header">pub const fn <a href="#method.csrf_enabled" class="fn">csrf_enabled</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.99.1/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Whether CSRF protection is enabled (default <code>true</code>).</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.prepare_csrf" class="method"><a class="src rightside" href="../src/serenade_form/form.rs.html#174-180">Source</a><h4 class="code-header">pub fn <a href="#method.prepare_csrf" class="fn">prepare_csrf</a>(
     &amp;mut self,
-    manager: &amp;dyn CsrfTokenManager,
+    manager: &amp;dyn <a class="trait" href="../serenade_security/csrf/trait.CsrfTokenManager.html" title="trait serenade_security::csrf::CsrfTokenManager">CsrfTokenManager</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.99.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.99.1/std/primitive.unit.html">()</a>, <a class="enum" href="enum.FormError.html" title="enum serenade_form::FormError">FormError</a>&gt;</h4></section></summary><div class="docblock"><p>Issues a CSRF token when CSRF is enabled (call before render on GET).</p>
 <h5 id="errors"><a class="doc-anchor" href="#errors">§</a>Errors</h5>
 <p>Returns <a href="enum.FormError.html#variant.Csrf" title="variant serenade_form::FormError::Csrf"><code>FormError::Csrf</code></a> when token generation fails.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.handle_request" class="method"><a class="src rightside" href="../src/serenade_form/form.rs.html#191-234">Source</a><h4 class="code-header">pub fn <a href="#method.handle_request" class="fn">handle_request</a>(
     &amp;mut self,
     request: &amp;<a class="struct" href="../serenade_http/request/struct.Request.html" title="struct serenade_http::request::Request">Request</a>,
-    manager: &amp;dyn CsrfTokenManager,
+    manager: &amp;dyn <a class="trait" href="../serenade_security/csrf/trait.CsrfTokenManager.html" title="trait serenade_security::csrf::CsrfTokenManager">CsrfTokenManager</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.99.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="enum.FormStatus.html" title="enum serenade_form::FormStatus">FormStatus</a>, <a class="enum" href="enum.FormError.html" title="enum serenade_form::FormError">FormError</a>&gt;</h4></section></summary><div class="docblock"><p>Binds POST/PUT/PATCH urlencoded or multipart body and checks CSRF.</p>
 <p>Multipart is used when <code>Content-Type</code> is <code>multipart/form-data</code>. File fields
 require multipart; size and MIME limits come from each field’s <a href="struct.FileOptions.html" title="struct serenade_form::FileOptions"><code>FileOptions</code></a>.</p>
