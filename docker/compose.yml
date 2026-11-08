@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: serenade/myfeed:latest
+    image: interchouette/serenade-myfeed:latest
     ports:
       - '8080:8080'
     environment:
