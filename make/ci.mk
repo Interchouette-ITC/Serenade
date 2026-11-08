@@ -160,10 +160,7 @@ doc-clean:
 ## zip 3.x is a build-dep of utoipa-swagger-ui 9; no release yet accepts zip >=9.
 audit:
 	cd $(ROOT) && $(CARGO_STABLE) audit \
-		--ignore RUSTSEC-2026-0258 \
-		--ignore RUSTSEC-2026-0367 \
-		--ignore RUSTSEC-2026-0368 \
-		--ignore RUSTSEC-2026-0369
+		--ignore RUSTSEC-2026-0258
 
 ## Requires `cargo install cargo-deny`.
 deny:

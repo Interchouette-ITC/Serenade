@@ -104,12 +104,12 @@ getrandom = "0.4"
 hmac = "0.13"
 include_dir = "0.7"
 simple-minify-html = "0.17.2"
-oxc_allocator = "0.156.0"
-oxc_codegen = { version = "0.156.0", default-features = false }
-oxc_mangler = "0.156.0"
-oxc_minifier = "0.156.0"
-oxc_parser = "0.156.0"
-oxc_span = "0.156.0"
+oxc_allocator = "0.157.0"
+oxc_codegen = { version = "0.157.0", default-features = false }
+oxc_mangler = "0.157.0"
+oxc_minifier = "0.157.0"
+oxc_parser = "0.157.0"
+oxc_span = "0.157.0"
 serenade-minify = { path = "crates/serenade-minify" }
 ratatui = "0.30"
 rustyline = { version = "19", features = ["with-file-history"] }
