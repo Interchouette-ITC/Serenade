@@ -6,9 +6,9 @@ COMPOSE := docker compose -f $(COMPOSE_FILE) --project-directory $(ROOT)
 DOCKER_BUILDKIT ?= 1
 DOCKERFILE ?= $(ROOT)/docker/Dockerfile
 HUB_IMAGE := interchouette/serenade-myfeed
-GHCR_PERSONAL_IMAGE := ghcr.io/groussac/myfeed
-GHCR_WORKER_IMAGE := ghcr.io/interchouette/myfeed
-GHCR_ORG_IMAGE := ghcr.io/interchouette-itc/myfeed
+GHCR_PERSONAL_IMAGE := ghcr.io/groussac/serenade-myfeed
+GHCR_WORKER_IMAGE := ghcr.io/interchouette/serenade-myfeed
+GHCR_ORG_IMAGE := ghcr.io/interchouette-itc/serenade-myfeed
 
 .PHONY: docker-help docker-build-dev docker-push-dev-hub \
 	docker-push-dev-ghcr-personal docker-push-dev-ghcr-itc \
