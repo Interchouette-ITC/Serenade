@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_admin_action_form","build_admin_post_actions","build_comment_form","build_composer_form","build_edit_form","build_like_form","build_login_form","build_logout_form","build_post_bind_form","build_post_form","category_choice_options","extract_csrf_hidden","extract_csrf_value","image_file_options","not_blank"]};

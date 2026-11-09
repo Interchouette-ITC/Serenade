@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["handle_admin_get","handle_admin_login","handle_admin_logout","handle_admin_moderation","render_admin","try_approve_comment_workflow"]};

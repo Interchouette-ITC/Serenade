@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ADMIN_COOKIE","DEFAULT_ADMIN","DEFAULT_BIND","DEFAULT_CSRF","LOCALE_COOKIE","MAX_BODY_CHARS","MAX_IMAGE_BYTES","MAX_IMAGE_DATA"],"fn":["cookie_value","handle_locale_set","is_admin","ui_for"],"struct":["AppState"]};

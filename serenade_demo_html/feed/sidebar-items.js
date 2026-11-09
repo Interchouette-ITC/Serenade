@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["ajax_text","feed_with_flash","handle_comment_create","handle_like","wants_ajax"]};

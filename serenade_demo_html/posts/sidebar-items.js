@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["handle_post_create","handle_post_delete","handle_post_edit_get","handle_post_edit_post","parse_new_post","route_post_id","sanitize_image_data","uploaded_image_to_data_url"]};
