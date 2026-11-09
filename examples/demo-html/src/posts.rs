@@ -98,10 +98,7 @@ fn parse_new_post(
     })
 }
 
-pub(super) fn handle_post_create(
-    state: &AppState,
-    request: &Request,
-) -> Result<Response, HttpError> {
+pub fn handle_post_create(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     let categories = state.store.categories();
     let mut form = build_post_bind_form("post", &categories);
     match form.handle_request(request, &state.csrf) {
@@ -135,10 +132,7 @@ fn route_post_id(request: &Request) -> Result<u64, HttpError> {
         .ok_or_else(|| HttpError::bad_request("bad post id"))
 }
 
-pub(super) fn handle_post_edit_get(
-    state: &AppState,
-    request: &Request,
-) -> Result<Response, HttpError> {
+pub fn handle_post_edit_get(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
         let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
@@ -169,10 +163,7 @@ pub(super) fn handle_post_edit_get(
     ))
 }
 
-pub(super) fn handle_post_edit_post(
-    state: &AppState,
-    request: &Request,
-) -> Result<Response, HttpError> {
+pub fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
         let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
@@ -228,10 +219,7 @@ pub(super) fn handle_post_edit_post(
     }
 }
 
-pub(super) fn handle_post_delete(
-    state: &AppState,
-    request: &Request,
-) -> Result<Response, HttpError> {
+pub fn handle_post_delete(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
         let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(

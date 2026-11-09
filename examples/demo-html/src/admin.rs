@@ -15,7 +15,7 @@ use crate::html::{
 };
 use crate::state::{ADMIN_COOKIE, AppState, is_admin, ui_for};
 
-pub(super) fn handle_admin_get(state: &AppState, request: &Request) -> Result<Response, HttpError> {
+pub fn handle_admin_get(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
         let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
@@ -31,10 +31,7 @@ pub(super) fn handle_admin_get(state: &AppState, request: &Request) -> Result<Re
     render_admin(state, request, None)
 }
 
-pub(super) fn handle_admin_login(
-    state: &AppState,
-    request: &Request,
-) -> Result<Response, HttpError> {
+pub fn handle_admin_login(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     let mut form = Form::builder("admin-login")
         .field("token", not_blank())
         .build();
@@ -72,7 +69,7 @@ pub(super) fn handle_admin_login(
     }
 }
 
-pub(super) fn handle_admin_logout(state: &AppState, request: &Request) -> Response {
+pub fn handle_admin_logout(state: &AppState, request: &Request) -> Response {
     let mut form = Form::builder("admin-logout").build();
     let _ = form.handle_request(request, &state.csrf);
     let cookie = format!("{ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
@@ -131,7 +128,7 @@ fn render_admin(
     ))
 }
 
-pub(super) fn handle_admin_moderation(
+pub fn handle_admin_moderation(
     state: &AppState,
     request: &Request,
     approve: bool,

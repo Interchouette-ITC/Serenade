@@ -12,15 +12,15 @@ fn post_search_document(post: &Post) -> SearchDocument {
         .field("category", post.category.clone())
 }
 
-pub(super) fn index_upsert(state: &AppState, post: &Post) {
+pub fn index_upsert(state: &AppState, post: &Post) {
     let _ = state.index.upsert(post_search_document(post));
 }
 
-pub(super) fn index_delete(state: &AppState, id: u64) {
+pub fn index_delete(state: &AppState, id: u64) {
     let _ = state.index.delete(&id.to_string());
 }
 
-pub(super) fn rebuild_search_index(store: &FeedStore, index: &MemorySearchAdapter) {
+pub fn rebuild_search_index(store: &FeedStore, index: &MemorySearchAdapter) {
     let _ = index.clear();
     for post in store.posts() {
         let _ = index.upsert(post_search_document(&post));
@@ -90,7 +90,7 @@ fn snippet_for(post: &Post) -> String {
     }
 }
 
-pub(super) fn handle_search(state: &AppState, request: &Request) -> Response {
+pub fn handle_search(state: &AppState, request: &Request) -> Response {
     let ui = ui_for(state, request);
     let q = query_param(request.query(), "q").unwrap_or_default();
     let mut owned: Vec<(String, String, String)> = Vec::new();

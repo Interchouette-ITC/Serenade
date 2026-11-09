@@ -10,7 +10,7 @@ use crate::forms::{
 use crate::html::{FeedView, feed_page, html_response, redirect};
 use crate::state::{AppState, is_admin, ui_for};
 
-pub(super) fn feed_with_flash(
+pub fn feed_with_flash(
     state: &AppState,
     request: &Request,
     flash: Option<&str>,
@@ -90,10 +90,7 @@ fn ajax_text(body: impl Into<String>) -> Response {
         .with_body(body.into().into_bytes())
 }
 
-pub(super) fn handle_comment_create(
-    state: &AppState,
-    request: &Request,
-) -> Result<Response, HttpError> {
+pub fn handle_comment_create(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     let post_id = request
         .attributes()
         .get::<String>("id")
@@ -132,7 +129,7 @@ pub(super) fn handle_comment_create(
     }
 }
 
-pub(super) fn handle_like(state: &AppState, request: &Request) -> Result<Response, HttpError> {
+pub fn handle_like(state: &AppState, request: &Request) -> Result<Response, HttpError> {
     let post_id = request
         .attributes()
         .get::<String>("id")

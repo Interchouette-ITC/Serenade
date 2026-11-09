@@ -25,11 +25,11 @@ fn extract_csrf_hidden(form_html: &str) -> String {
     rest[..=end + 1].to_owned()
 }
 
-pub(super) fn not_blank() -> Vec<Arc<dyn serenade_validator::Constraint>> {
+pub fn not_blank() -> Vec<Arc<dyn serenade_validator::Constraint>> {
     vec![Arc::new(NotBlank) as Arc<dyn serenade_validator::Constraint>]
 }
 
-pub(super) fn build_post_form(
+pub fn build_post_form(
     csrf: &HmacCsrfTokenManager,
     routes: &RouteCollection,
     categories: &[String],
@@ -39,7 +39,7 @@ pub(super) fn build_post_form(
     build_composer_form(csrf, categories, "post", &action, None, "Post", &cancel)
 }
 
-pub(super) fn build_edit_form(
+pub fn build_edit_form(
     csrf: &HmacCsrfTokenManager,
     routes: &RouteCollection,
     categories: &[String],
@@ -87,7 +87,7 @@ fn category_choice_options(categories: &[String]) -> ChoiceOptions {
     }
 }
 
-pub(super) fn build_post_bind_form(name: impl Into<String>, categories: &[String]) -> Form {
+pub fn build_post_bind_form(name: impl Into<String>, categories: &[String]) -> Form {
     Form::builder(name)
         .field_config(
             "body",
@@ -212,7 +212,7 @@ fn build_composer_form(
     ))
 }
 
-pub(super) fn build_admin_post_actions(
+pub fn build_admin_post_actions(
     csrf: &HmacCsrfTokenManager,
     routes: &RouteCollection,
     post_id: u64,
@@ -251,7 +251,7 @@ fn extract_csrf_value(csrf_hidden: &str) -> String {
         .to_owned()
 }
 
-pub(super) fn build_comment_form(
+pub fn build_comment_form(
     csrf: &HmacCsrfTokenManager,
     routes: &RouteCollection,
     post_id: u64,
@@ -290,7 +290,7 @@ pub(super) fn build_comment_form(
     ))
 }
 
-pub(super) fn build_like_form(
+pub fn build_like_form(
     csrf: &HmacCsrfTokenManager,
     routes: &RouteCollection,
     post_id: u64,
@@ -311,7 +311,7 @@ pub(super) fn build_like_form(
     ))
 }
 
-pub(super) fn build_admin_action_form(
+pub fn build_admin_action_form(
     csrf: &HmacCsrfTokenManager,
     form_name: &str,
     action: &str,
@@ -333,7 +333,7 @@ pub(super) fn build_admin_action_form(
     ))
 }
 
-pub(super) fn build_login_form(
+pub fn build_login_form(
     csrf: &HmacCsrfTokenManager,
     routes: &RouteCollection,
 ) -> Result<String, HttpError> {
@@ -359,7 +359,7 @@ pub(super) fn build_login_form(
     ))
 }
 
-pub(super) fn build_logout_form(
+pub fn build_logout_form(
     csrf: &HmacCsrfTokenManager,
     routes: &RouteCollection,
 ) -> Result<String, HttpError> {
