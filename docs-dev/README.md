@@ -21,7 +21,7 @@ tree.
 | [I18N.md](I18N.md)           | Translator, catalogues, locale, ICU helpers    |
 | [PROFILER.md](PROFILER.md)   | Web debug toolbar / per-request profiler       |
 | [PERF.md](PERF.md)           | Profiler vs hotpath; optional app perf features |
-| [VIEW.md](VIEW.md)           | path / asset / partial HTML helpers            |
+| [VIEW.md](VIEW.md)           | path / asset / partial helpers; documents, head lifecycle, and delivery modes |
 | [SERIALIZER.md](SERIALIZER.md) | JSON + optional TOON (agent context export)  |
 | [MYFEED.md](MYFEED.md)       | Beginner demo: open public feed (`examples/demo-html`) |
 | [CACHE.md](CACHE.md)         | Cache pools, ArrayAdapter, RedisAdapter (redis-rs)     |

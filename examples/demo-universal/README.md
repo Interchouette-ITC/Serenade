@@ -1,7 +1,8 @@
 # demo-universal
 
-A hello-scale Universal app: the Leptos front calls the backend's shared `/hello` JSON contract,
-and the backend serves the Trunk bundle plus a live HTML page at `/cms/hello`.
+A hello-scale Universal app: the Leptos frontend calls the backend's shared `/hello` JSON
+contract, while the backend serves the Trunk bundle and a request-time HTML page at
+`/cms/hello`.
 
 From the Serenade repository root, build and run with:
 
@@ -9,13 +10,26 @@ From the Serenade repository root, build and run with:
 make universal
 ```
 
-Open <http://127.0.0.1:8080/>. The `/cms/hello` route renders the shared Leptos `HelloUi`
-component on each backend request. Its document shell and visible UI are Leptos views, not
-hand-authored HTML strings. Use View Source to inspect the server-rendered page; this is a live
-SSR response, not an SSG output. The rendered component comes from
-`examples/demo-monorepo/libs/demo-ui`, so the same UI is reused by the SPA and SSG examples.
-The page hydrates that same component in the browser, so its counter button is interactive
-after the wasm bundle loads. The Universal frontend also serves the Serenade favicon at
-`/favicon.ico`. Set `SERENADE_UNIVERSAL_BIND` to change the backend listen address.
+Open <http://127.0.0.1:8080/>. The `/` route is a client-rendered Leptos SPA. Only
+`/cms/hello` is server-rendered: the backend renders a complete document per request from
+Rangular-authored document, head, and body templates. Rangular AOT compiles those templates to
+Leptos views; Leptos renders the views to the initial HTML, and the browser hydrates the
+existing body markup. In-place route buttons update the URL and managed title, description,
+canonical URL, and repeatable social-image metadata without a full-page navigation. Use View
+Source to inspect the server-rendered response.
+
+The backend reads Trunk's validated `trunk-assets.json` manifest at startup and uses its exact
+URLs for the `/cms/hello` bootstrap and WASM bundle, including hashed filenames.
+
+SSR renders the route on each request. SSG instead renders declared routes during the build and
+writes static HTML files. AOT compiles templates to view code; by itself it does not render
+route HTML or determine whether the app uses SSR or SSG. The existing Leptos SSG demo and
+Rust.Contact are unchanged; neither is migrated by this example. The `/hello` API and the
+Universal frontend's favicon at `/favicon.ico` remain available. Set
+`SERENADE_UNIVERSAL_BIND` to change the backend listen address.
+
+Head composition uses Serenade's generic Leptos head lifecycle, not Rangular-specific behavior:
+Rangular supplies the head view, while `ManagedHead` and its keyed metadata components manage
+route updates. See the [generic head extension point](../../docs-dev/VIEW.md#generic-head-extension-point).
 
 The full product reference is [rustashop](../../rustashop); this demo stays intentionally tiny.

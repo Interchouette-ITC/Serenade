@@ -1,0 +1,29 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title head-key="title:primary">Serenade Universal</title>
+<meta
+    head-key="meta:name:description"
+    name="description"
+    content="A shared description for the Universal document."
+/>
+<link head-key="link:canonical" rel="canonical" href="/" />
+
+@if (route_specific) {
+    <title head-key="title:primary">{{ route_title }}</title>
+    <meta
+        head-key="meta:name:description"
+        name="description"
+        [content]="route_description"
+    />
+    <link
+        head-key="link:canonical"
+        rel="canonical"
+        [href]="route_canonical"
+    />
+}
+
+<meta property="og:image" content="/serenade-banner.png" />
+<meta property="og:image" [content]="route_social_image" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="stylesheet" href="/style.css" />
+<script type="application/ld+json">{{ json_ld }}</script>

@@ -4,13 +4,18 @@ use serenade_demo_contract::HelloResponse;
 use serenade_http::{AsyncHttpKernel, Method, Request, Response};
 use serenade_kernel::{App, Application, Environment};
 use serenade_minify::HtmlMinifier;
+use serenade_view::{TRUNK_DIST_DIRECTORY_ENV, TrunkAssetManifest, initialize_leptos_ssr};
 
+mod assets;
+#[path = "../../../libs/cms_hello_host.rs"]
+mod cms_hello_host;
 mod html;
 
 #[allow(clippy::needless_pass_by_ref_mut)]
 fn response(
     request: &mut Request,
     dist: &std::path::Path,
+    bootstrap: &assets::CmsBootstrap,
 ) -> Result<Response, serenade_http::HttpError> {
     match (request.method(), request.path()) {
         (Method::Get, "/hello") => {
@@ -22,9 +27,16 @@ fn response(
                 .with_header("content-type", "application/json; charset=utf-8")
                 .with_body(body))
         }
-        (Method::Get, "/cms/hello") => Ok(Response::new(200)
-            .with_header("content-type", "text/html; charset=utf-8")
-            .with_body(html::cms_hello_page().into_bytes())),
+        (Method::Get, "/cms/hello") => {
+            let body = html::cms_hello_page(
+                cms_hello_host::route_specific_from_query(request.query()),
+                bootstrap,
+            )
+            .map_err(|error| serenade_http::HttpError::status(500, error.to_string()))?;
+            Ok(Response::new(200)
+                .with_header("content-type", "text/html; charset=utf-8")
+                .with_body(body.into_bytes()))
+        }
         (Method::Get, path) => Ok(serve_asset(dist, path)),
         _ => Ok(Response::text(404, "Not found")),
     }
@@ -62,10 +74,16 @@ fn serve_asset(dist: &std::path::Path, uri: &str) -> Response {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new(Environment::from_name("dev")?);
     app.boot()?;
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let dist = root.join("../../apps/demo-front/dist");
-    let mut kernel =
-        AsyncHttpKernel::from_sync(move |request: &mut Request| response(request, &dist));
+    initialize_leptos_ssr()?;
+    let dist = std::env::var_os(TRUNK_DIST_DIRECTORY_ENV)
+        .map(PathBuf::from)
+        .ok_or_else(|| format!("{TRUNK_DIST_DIRECTORY_ENV} is not set"))?;
+    let manifest = TrunkAssetManifest::read_from_env()?;
+    manifest.validate_output(&dist)?;
+    let bootstrap = assets::CmsBootstrap::from_manifest(&manifest)?;
+    let mut kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| {
+        response(request, &dist, &bootstrap)
+    });
     kernel.push_middleware(HtmlMinifier);
     let bind =
         std::env::var("SERENADE_UNIVERSAL_BIND").unwrap_or_else(|_| "127.0.0.1:8080".to_owned());

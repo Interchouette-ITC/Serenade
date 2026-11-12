@@ -18,8 +18,8 @@ examples/
       demo-ui/              # shared panels/chrome used by demo-spa and demo-ssg
   demo-universal/           # mode Universal (needs a server process)
     apps/
-      demo-front/           # hello Leptos+rangular (ultra-simple shop-shaped front)
-      demo-back/            # small Serenade listen API (+ serve front assets)
+      demo-front/           # Leptos CSR at `/`; hydrates the SSR document at `/cms/hello`
+      demo-back/            # API/assets server; request-time SSR at `/cms/hello`
     libs/
       demo-contract/        # shared serde DTO(s) for GET /hello (and similar)
 ```
@@ -34,9 +34,9 @@ examples/
 | `demo-monorepo/apps/demo-spa` | Mode **SPA**: hello + button, client-rendered wasm | Per-route HTML files on disk |
 | `demo-monorepo/apps/demo-ssg` | Mode **SSG**: same UI via `demo-ui`, prerendered HTML per route + hydrate | Running Serenade HTTP server |
 | `demo-monorepo/libs/demo-ui` | Shared Leptos UI for spa and ssg | Standalone deploy |
-| `demo-universal` | Mode **Universal**: one process (or documented pair) front+back | Full rustashop; flat CDN-only marketing |
-| `demo-universal/apps/demo-front` | Hello wasm UI talking to demo-back; hydrates `/cms/hello` | SSG export |
-| `demo-universal/apps/demo-back` | Boot Serenade kernel, `listen`, `GET /hello` (JSON), serve front assets | HTML demo (demo-html), console tutorial |
+| `demo-universal` | Mode **Universal**: client-rendered `/` plus request-time SSR and hydration at `/cms/hello` | Full rustashop; flat CDN-only marketing |
+| `demo-universal/apps/demo-front` | Leptos client-rendered `/`; WASM bundle also hydrates the server-rendered `/cms/hello` document | SSG export |
+| `demo-universal/apps/demo-back` | Boot Serenade kernel, serve `GET /hello` (JSON) and frontend assets, render `/cms/hello` per request | HTML demo (demo-html), console tutorial |
 | `demo-universal/libs/demo-contract` | Shared request/response types front↔back | UI components |
 
 ### Why demo-html is not inside demo-monorepo
@@ -59,9 +59,14 @@ lives in its own tree with `demo-front` + `demo-back` + `demo-contract`.
 | SSG | `serenade-ssg` | `examples/demo-monorepo/apps/demo-ssg` | `dist/` HTML per route + wasm hydrate |
 | Universal | `serenade-universal` | `examples/demo-universal` | Running server serving API + front |
 
-SSG uses Leptos SSR to render the shared `demo-ui` component to HTML and Leptos hydration to
-activate the same UI in the browser. Rangular AOT components lower to Leptos views and follow
-the same rendering/hydration path; see the rangular SPEC.
+SSR is a rendering strategy: the server renders a route for each request. SSG renders declared
+routes during the build and writes static HTML files. AOT compiles templates into view code; it
+does not render route HTML or choose between SSR and SSG. The SSG demo uses Leptos's server
+renderer at build time for its route files, then hydrates the shared `demo-ui` in the browser.
+Rangular AOT templates also compile to Leptos views, which Leptos can render and hydrate; see
+the rangular SPEC. HTML, SPA, SSG, and Universal describe delivery shapes, not interchangeable
+rendering strategies. See [VIEW.md](VIEW.md) for the complete-document API, head extension
+point, asset handoff, and marker-to-framework migration guide.
 
 ## Mode commands
 
@@ -86,10 +91,15 @@ module JavaScript as well as HTML, preserving HTML comments (including Leptos hy
 markers) and meaningful text whitespace. External scripts and non-JavaScript script data
 blocks are left intact; CSS is not minified here.
 Universal builds the `demo-front` Trunk bundle and starts `demo-back` on `127.0.0.1:8080`;
-the backend serves `/hello` JSON, frontend assets, and `/cms/hello`. The `/cms/hello` page
-server-renders the shared Leptos UI and hydrates it in the browser. The demo's HTTP kernel
-uses `HtmlMinifier` for runtime `text/html` responses. Other server apps can opt in by adding
-the same middleware to their kernel.
+the backend serves `/hello` JSON, frontend assets, and `/cms/hello`. The `/` route remains
+client-rendered. `/cms/hello` is rendered by the backend on each request from Rangular-authored,
+AOT-compiled document, head, and body templates; Leptos renders those views to HTML, then
+hydrates the existing body in the browser. The head uses Serenade's generic Leptos
+`ManagedHead` lifecycle, so other Leptos view or template adapters can supply head content
+without requiring Rangular. See [VIEW.md](VIEW.md#generic-head-extension-point). The existing
+`examples/demo-monorepo/apps/demo-ssg` and Rust.Contact remain unchanged; neither is migrated
+by Universal. The demo's HTTP kernel uses `HtmlMinifier` for runtime `text/html` responses.
+Other server apps can opt in by adding the same middleware to their kernel.
 
 The current HTML and Universal examples both default to `127.0.0.1:8080`; running both at once
 requires changing one app's bind address.

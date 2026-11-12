@@ -2,4 +2,4 @@
 target = "index.html"
 dist = "dist"
 no_sri = true
-filehash = false
+filehash = true

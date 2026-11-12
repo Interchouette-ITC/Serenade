@@ -1,0 +1,26 @@
+<main class="hello">
+    <header class="hello__header">
+        <img
+            class="hello__banner"
+            src="/serenade-banner.png"
+            alt="Serenade"
+            width="534"
+            height="147"
+        />
+    </header>
+    <section class="hello__content">
+        <h1 id="cms-heading">{{ heading }}</h1>
+        <p id="cms-message">{{ message }}</p>
+        <button id="cms-counter" type="button" (click)="increment_clicks()">{{ click_label }}</button>
+        @if (route_specific) {
+            <button id="show-shared" type="button" (click)="show_shared()">
+                Show shared route
+            </button>
+        } @else {
+            <button id="show-route" type="button" (click)="show_route()">
+                Show CMS route
+            </button>
+        }
+        <a href="/">Return to the Universal SPA</a>
+    </section>
+</main>

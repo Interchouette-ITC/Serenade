@@ -187,9 +187,6 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: trunk@0.21.14
       - name: Check demo-html
         run: cargo +stable check -p serenade-demo-html --locked
       - name: Build demo-spa
@@ -201,7 +198,7 @@ jobs:
           grep -q 'Hello from Serenade' examples/demo-monorepo/apps/demo-ssg/dist/index.html
           grep -q 'About Serenade' examples/demo-monorepo/apps/demo-ssg/dist/about/index.html
       - name: Build Universal frontend
-        run: cd examples/demo-universal/apps/demo-front && trunk build
+        run: cd examples/demo-universal/apps/demo-front && cargo +stable run --locked --manifest-path ../../../../Cargo.toml -p serenade-cli --bin serenade-trunk -- build
       - name: Build Universal backend
         run: cargo +stable check --manifest-path examples/demo-universal/Cargo.toml --workspace --locked
       - name: Compile Universal backend for smoke test
