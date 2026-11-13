@@ -44,11 +44,11 @@ fn response(
 }
 
 fn serve_asset(dist: &std::path::Path, manifest: &TrunkAssetManifest, uri: &str) -> Response {
-    // Same URL-to-file mapping as `validate_output`; the public URL root is the HTML shell.
-    let Ok(requested) = manifest.output_path_for_url(uri) else {
+    // Same URL mapping as `validate_output`, plus symlink containment for files the
+    // manifest does not list; the public URL root is the HTML shell.
+    let Ok(path) = manifest.resolve_output_file(dist, uri) else {
         return Response::text(404, "Not found");
     };
-    let path = dist.join(requested);
     let Ok(bytes) = std::fs::read(&path) else {
         return Response::text(404, "Not found");
     };
@@ -141,5 +141,21 @@ mod tests {
             }
         }
         std::fs::remove_dir_all(&dist).expect("cleanup");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn symlinks_out_of_dist_are_not_served() {
+        let root =
+            std::env::temp_dir().join(format!("serenade-demo-back-symlink-{}", std::process::id()));
+        let dist = root.join("dist");
+        std::fs::create_dir_all(&dist).expect("dist");
+        std::fs::write(root.join("secret.txt"), "secret").expect("outside file");
+        std::os::unix::fs::symlink(root.join("secret.txt"), dist.join("leak.txt"))
+            .expect("symlink");
+        let response = serve_asset(&dist, &manifest("/"), "/leak.txt");
+        assert_eq!(response.status(), 404);
+        assert_ne!(response.body(), b"secret");
+        std::fs::remove_dir_all(&root).expect("cleanup");
     }
 }

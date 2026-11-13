@@ -267,13 +267,19 @@ manifest, or schema is missing or invalid; `validate_output(dist)` additionally 
 the generated files, digests, and URLs against the output directory, and rejects any
 referenced file whose real path (after following symbolic links) is outside it. Do not reconstruct
 hashed filenames or silently fall back to guessed asset paths.
-Asset URLs must sit under the manifest public URL at a path boundary: with a
-`/app` public URL, `/app/app.js` is accepted but `/apple.js` is rejected. Select the
+The manifest public URL must be a root-relative path (`/`, `/app/`) or an absolute
+`http`/`https` URL; other schemes (`javascript:`, `data:`), protocol-relative `//host`
+prefixes, whitespace, quotes, backslashes, and angle brackets are rejected when the
+manifest is parsed. Every asset, WASM, initializer, and preload URL must sit under the
+manifest public URL at a path boundary: with a `/app` public URL, `/app/app.js` is
+accepted but `/apple.js` is rejected. Select the
 Universal bootstrap module by an explicit marker value, such as
 `data-serenade-universal-bootstrap="true"`, not by the attribute's mere presence.
-A server that hosts the output itself must map request paths with
-`output_path_for_url(path)`, which applies the same public-URL rules as
-`validate_output`, rather than joining the raw request path onto `dist`. With a
+A server that hosts the output itself must resolve request paths with
+`resolve_output_file(dist, path)`, rather than joining the raw request path onto `dist`.
+It applies the same public-URL rules as `validate_output` and returns the real file path
+only when that file, after following symbolic links, is inside `dist`, including files
+the manifest does not list. `output_path_for_url(path)` returns the relative mapping alone. With a
 `/app/` public URL, `/app/app.js` is the output file `app.js`, and the public root
 (`/app/` or `/app`) is the HTML entry point named by the manifest.
 Application templates must build frontend file URLs (icons, images, stylesheets, links

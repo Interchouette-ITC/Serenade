@@ -61,7 +61,7 @@ struct PageAssets {
     scripts: Vec<Tag>,
     icons: Vec<Tag>,
     preloads: Vec<Preload>,
-    loader: Option<String>,
+    loader: String,
 }
 
 impl PageAssets {
@@ -72,7 +72,7 @@ impl PageAssets {
             scripts: Vec::new(),
             icons: Vec::new(),
             preloads: Vec::new(),
-            loader: None,
+            loader: String::new(),
         };
         for asset in &manifest.assets {
             if let Some(name) = asset
@@ -102,6 +102,9 @@ impl PageAssets {
         let [bundle] = manifest.wasm.as_slice() else {
             bail!("the SSG demo needs exactly one Trunk WASM bundle to hydrate");
         };
+        if !bundle.inject_scripts {
+            bail!("the SSG demo requires Trunk WASM script injection for hydration");
+        }
         if bundle.app_type != "main"
             || bundle.compression_algorithm.is_some()
             || bundle.custom_script_pattern.is_some()
@@ -124,30 +127,28 @@ impl PageAssets {
                 crossorigin: preload.cross_origin.clone(),
             })
             .collect();
-        if bundle.inject_scripts {
-            let init = if bundle.init_with_object {
-                format!(
-                    "init({{ module_or_path: {} }})",
-                    js_string(&bundle.wasm_url)
-                )
-            } else {
-                format!("init({})", js_string(&bundle.wasm_url))
-            };
-            let bindings = if bundle.import_bindings {
-                let name = bundle
-                    .import_bindings_name
-                    .as_deref()
-                    .unwrap_or("wasmBindings");
-                format!("window[{}] = bindings;\n", js_string(name))
-            } else {
-                String::new()
-            };
-            assets.loader = Some(format!(
-                "import init, * as bindings from {};\nconst wasm = await {init};\n{bindings}dispatchEvent(new CustomEvent({}, {{ detail: {{ wasm }} }}));\n",
-                js_string(&bundle.js_url),
-                js_string(TRUNK_STARTED_EVENT),
-            ));
-        }
+        let init = if bundle.init_with_object {
+            format!(
+                "init({{ module_or_path: {} }})",
+                js_string(&bundle.wasm_url)
+            )
+        } else {
+            format!("init({})", js_string(&bundle.wasm_url))
+        };
+        let bindings = if bundle.import_bindings {
+            let name = bundle
+                .import_bindings_name
+                .as_deref()
+                .unwrap_or("wasmBindings");
+            format!("window[{}] = bindings;\n", js_string(name))
+        } else {
+            String::new()
+        };
+        assets.loader = format!(
+            "import init, * as bindings from {};\nconst wasm = await {init};\n{bindings}dispatchEvent(new CustomEvent({}, {{ detail: {{ wasm }} }}));\n",
+            js_string(&bundle.js_url),
+            js_string(TRUNK_STARTED_EVENT),
+        );
         Ok(assets)
     }
 
@@ -205,7 +206,7 @@ fn asset_tags(assets: PageAssets) -> impl IntoView {
                 <script src=tag.url type=tag.type_ integrity=tag.integrity crossorigin=tag.crossorigin></script>
             })
             .collect_view()}
-        {loader.map(|loader| view! { <script type="module">{loader}</script> })}
+        <script type="module">{loader}</script>
         {preloads
             .into_iter()
             .map(|preload| view! {
@@ -398,6 +399,15 @@ mod tests {
         let mut compressed = manifest.clone();
         compressed.wasm[0].compression_algorithm = Some("brotli".to_owned());
         assert!(prerender(&output, &compressed).is_err());
+
+        let mut no_injection = manifest.clone();
+        no_injection.wasm[0].inject_scripts = false;
+        assert!(
+            prerender(&output, &no_injection)
+                .expect_err("hydration needs the loader")
+                .to_string()
+                .contains("requires Trunk WASM script injection")
+        );
 
         let mut no_bundle = manifest.clone();
         no_bundle.wasm.clear();

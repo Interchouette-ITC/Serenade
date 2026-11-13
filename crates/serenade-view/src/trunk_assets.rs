@@ -181,6 +181,7 @@ impl TrunkAssetManifest {
                 "Trunk asset manifest has an empty public URL prefix",
             ));
         }
+        validate_public_url(&self.public_url)?;
         if self.html.trim().is_empty() {
             return Err(ViewError::msg(
                 "Trunk asset manifest has an empty HTML output filename",
@@ -259,6 +260,25 @@ impl TrunkAssetManifest {
                 }
             }
         }
+        self.validate_url_prefixes()
+    }
+
+    /// Requires every referenced URL to sit under `public_url`, so parsed manifests
+    /// never carry another scheme or origin even before output validation.
+    fn validate_url_prefixes(&self) -> Result<(), ViewError> {
+        let urls = self
+            .assets
+            .iter()
+            .map(|asset| &asset.url)
+            .chain(self.wasm.iter().flat_map(|bundle| {
+                [&bundle.js_url, &bundle.wasm_url]
+                    .into_iter()
+                    .chain(&bundle.initializer_url)
+                    .chain(bundle.preloads.iter().map(|preload| &preload.url))
+            }));
+        for url in urls {
+            self.local_asset_path(url)?;
+        }
         Ok(())
     }
 
@@ -270,13 +290,7 @@ impl TrunkAssetManifest {
     /// Returns an error when a reference escapes the output directory, an
     /// artifact is missing or stale, or an integrity digest does not match.
     pub fn validate_output(&self, dist: impl AsRef<Path>) -> Result<(), ViewError> {
-        let dist = dist.as_ref();
-        let root = dist.canonicalize().map_err(|error| {
-            ViewError::msg(format!(
-                "failed to resolve Trunk output directory {}: {error}",
-                dist.display()
-            ))
-        })?;
+        let root = canonical_output_root(dist.as_ref())?;
         let html_path = safe_relative_path(&self.html)?;
         contained_file(&root, &html_path, "HTML output")?;
 
@@ -334,6 +348,28 @@ impl TrunkAssetManifest {
         }
 
         Ok(())
+    }
+
+    /// Resolves a public URL or request path to the real file it names inside
+    /// the Trunk output directory, for servers that host the output themselves.
+    ///
+    /// Applies [`Self::output_path_for_url`], then follows symbolic links and
+    /// rejects any file whose real location is outside `dist`, including files
+    /// that the manifest does not reference.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the URL is not under the public URL, the file is
+    /// missing or not a regular file, or it resolves outside `dist`.
+    pub fn resolve_output_file(
+        &self,
+        dist: impl AsRef<Path>,
+        url: &str,
+    ) -> Result<PathBuf, ViewError> {
+        let relative = self.output_path_for_url(url)?;
+        let root = canonical_output_root(dist.as_ref())?;
+        let (file, _) = contained_file(&root, &relative, &format!("output file for `{url}`"))?;
+        Ok(file)
     }
 
     /// Maps a public asset URL or request path to its path relative to the
@@ -441,6 +477,38 @@ const fn hex_digit(byte: u8) -> Option<u8> {
         b'a'..=b'f' => Some(byte - b'a' + 10),
         b'A'..=b'F' => Some(byte - b'A' + 10),
         _ => None,
+    }
+}
+
+fn canonical_output_root(dist: &Path) -> Result<PathBuf, ViewError> {
+    dist.canonicalize().map_err(|error| {
+        ViewError::msg(format!(
+            "failed to resolve Trunk output directory {}: {error}",
+            dist.display()
+        ))
+    })
+}
+
+/// Accepts only a root-relative path (`/` or `/app/`) or an absolute `http`/`https`
+/// URL, because the value prefixes every URL that callers emit into HTML.
+fn validate_public_url(public_url: &str) -> Result<(), ViewError> {
+    let lower = public_url.to_ascii_lowercase();
+    let after_scheme = lower
+        .strip_prefix("https://")
+        .or_else(|| lower.strip_prefix("http://"));
+    let allowed_form = after_scheme.map_or_else(
+        || public_url.starts_with('/') && !public_url.starts_with("//"),
+        |rest| !rest.is_empty() && !rest.starts_with('/'),
+    );
+    let allowed_characters = public_url
+        .chars()
+        .all(|character| character.is_ascii_graphic() && !"\\\"'<>`".contains(character));
+    if allowed_form && allowed_characters {
+        Ok(())
+    } else {
+        Err(ViewError::msg(format!(
+            "Trunk asset manifest public URL `{public_url}` must be a root-relative path or an http(s) URL"
+        )))
     }
 }
 
@@ -1103,6 +1171,97 @@ mod tests {
         manifest
             .validate_output(&linked_dist)
             .expect("a symlinked dist root is resolved before containment checks");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn resolve_output_file_serves_only_real_files_inside_dist() {
+        use std::os::unix::fs::symlink;
+
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let manifest = write_valid_output(temp.path());
+        let root = temp.path().canonicalize().expect("canonical dist");
+        assert_eq!(
+            manifest
+                .resolve_output_file(temp.path(), "/app/app-123.js")
+                .expect("listed asset"),
+            root.join("app-123.js")
+        );
+        assert_eq!(
+            manifest
+                .resolve_output_file(temp.path(), "/app/")
+                .expect("public root"),
+            root.join("index.html")
+        );
+
+        let outside = tempfile::tempdir().expect("outside directory");
+        std::fs::write(outside.path().join("secret.txt"), "secret").expect("outside file");
+        symlink(
+            outside.path().join("secret.txt"),
+            temp.path().join("unlisted.txt"),
+        )
+        .expect("unlisted symlink outside dist");
+        assert!(
+            manifest
+                .resolve_output_file(temp.path(), "/app/unlisted.txt")
+                .expect_err("unlisted escaping symlink must fail")
+                .to_string()
+                .contains("escapes the Trunk output directory")
+        );
+        for rejected in ["/app/missing.js", "/app/../secret.txt", "/elsewhere.js"] {
+            assert!(
+                manifest.resolve_output_file(temp.path(), rejected).is_err(),
+                "{rejected}"
+            );
+        }
+        assert!(
+            manifest
+                .resolve_output_file(temp.path().join("missing"), "/app/app-123.js")
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn public_url_must_be_root_relative_or_http() {
+        for accepted in [
+            "/",
+            "/app/",
+            "/app",
+            "https://cdn.example.com/app/",
+            "HTTP://cdn.example.com",
+        ] {
+            let mut value = manifest_value();
+            value["public_url"] = accepted.into();
+            for asset in value["assets"].as_array_mut().expect("assets") {
+                asset["url"] = format!("{}/x.css", accepted.trim_end_matches('/')).into();
+            }
+            value["wasm"] = serde_json::json!([]);
+            TrunkAssetManifest::from_json(value.to_string().as_bytes())
+                .unwrap_or_else(|error| panic!("{accepted}: {error}"));
+        }
+        for rejected in [
+            "javascript:alert(1)//",
+            "data:text/html,x/",
+            "app/",
+            "//evil.example/",
+            "https:///app/",
+            "https://",
+            "/app\\x/",
+            "/a b/",
+            "/a\"x/",
+            "/<x>/",
+        ] {
+            let mut value = manifest_value();
+            value["public_url"] = rejected.into();
+            assert_manifest_error(&value, "must be a root-relative path or an http(s) URL");
+        }
+
+        let mut asset = manifest_value();
+        asset["assets"][0]["url"] = "javascript:alert(1)".into();
+        assert_manifest_error(&asset, "does not use manifest public URL prefix");
+        let mut preload = manifest_value();
+        preload["wasm"][0]["preloads"][0]["url"] = "https://evil.example/app/x.js".into();
+        assert_manifest_error(&preload, "does not use manifest public URL prefix");
     }
 
     #[test]

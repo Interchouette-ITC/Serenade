@@ -63,6 +63,9 @@ SSR is a rendering strategy: the server renders a route for each request. SSG re
 routes during the build and writes static HTML files. AOT compiles templates into view code; it
 does not render route HTML or choose between SSR and SSG. The SSG demo uses Leptos's server
 renderer at build time for its route files, then hydrates the shared `demo-ui` in the browser.
+Its prerenderer builds each route's head and WASM loader from the Trunk asset manifest and
+fails the build when the manifest cannot hydrate, for example when Trunk script injection
+(`inject_scripts = false` in `Trunk.toml`) is disabled.
 Rangular AOT templates also compile to Leptos views, which Leptos can render and hydrate; see
 the rangular SPEC. HTML, SPA, SSG, and Universal describe delivery shapes, not interchangeable
 rendering strategies. See [VIEW.md](VIEW.md) for the complete-document API, head extension
