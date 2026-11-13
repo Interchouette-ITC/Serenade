@@ -26,6 +26,7 @@ ssr = [
     "leptos/ssr",
     "serenade-demo-ui/ssr",
     "dep:hydration_context",
+    "dep:serenade-view",
 ]
 
 [dependencies]
@@ -34,3 +35,4 @@ serenade-demo-ui = { path = "../../libs/demo-ui", default-features = false }
 web-sys = { version = "0.3", features = ["Location", "Window"] }
 anyhow = "1"
 hydration_context = { version = "0.3.2", optional = true, default-features = false }
+serenade-view = { path = "../../../../crates/serenade-view", optional = true, features = ["leptos-ssr"] }

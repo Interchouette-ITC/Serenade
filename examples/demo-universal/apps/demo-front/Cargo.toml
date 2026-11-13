@@ -8,8 +8,37 @@ publish.workspace = true
 [dependencies]
 leptos = { version = "0.8", features = ["csr", "hydrate"] }
 serenade-demo-contract = { path = "../../libs/demo-contract" }
-serenade-demo-ui = { path = "../../../demo-monorepo/libs/demo-ui", default-features = false, features = ["hydrate"] }
+serenade-view = { path = "../../../../crates/serenade-view", features = ["leptos-client"] }
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-expr = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-host = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
 serde_json = { workspace = true }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Response", "Location"] }
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Element",
+    "Event",
+    "EventTarget",
+    "History",
+    "HtmlBodyElement",
+    "HtmlElement",
+    "HtmlHeadElement",
+    "HtmlScriptElement",
+    "Location",
+    "MouseEvent",
+    "Node",
+    "NodeList",
+    "Response",
+    "Window",
+] }
+
+[build-dependencies]
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[package.metadata.cargo-machete]
+# Used by shared CMS host code and Rangular-generated Rust.
+ignored = ["rangular-expr", "rangular-host"]

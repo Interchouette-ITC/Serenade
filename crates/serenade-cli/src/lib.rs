@@ -8,6 +8,7 @@ pub mod html_output;
 pub mod mode;
 pub mod new;
 pub mod recipe;
+pub mod trunk;
 pub mod tui;
 
 pub use error::CliError;

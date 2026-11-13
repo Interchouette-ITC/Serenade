@@ -27,14 +27,11 @@ fn main() -> anyhow::Result<()> {
 
     for app in selected {
         println!("Building {} hydration bundle with Trunk", app.name);
-        let trunk_status = Command::new("trunk")
-            .args(["build", "--features", "hydrate"])
-            .current_dir(&app.directory)
-            .status()
-            .with_context(|| format!("failed to start Trunk for app `{}`", app.name))?;
-        if !trunk_status.success() {
-            bail!("Trunk failed to build SSG app `{}`", app.name);
-        }
+        serenade_cli::trunk::build(&app.directory, &["--features", "hydrate"]).map_err(
+            |error| anyhow::anyhow!("failed to build SSG app `{}`: {error:#}", app.name),
+        )?;
+        let dist = serenade_cli::html_output::dist_directory_for_build(&app.directory, &[])?;
+        let manifest = dist.join(serenade_view::TRUNK_ASSET_MANIFEST_FILE);
 
         println!("Prerendering {} routes", app.name);
         let status = Command::new("cargo")
@@ -48,6 +45,8 @@ fn main() -> anyhow::Result<()> {
                 "ssr",
             ])
             .current_dir(&root)
+            .env(serenade_view::STATIC_OUTPUT_DIR_ENV, &dist)
+            .env(serenade_view::TRUNK_ASSET_MANIFEST_ENV, &manifest)
             .status()
             .with_context(|| format!("failed to start prerenderer for `{}`", app.name))?;
         if !status.success() {
@@ -56,7 +55,6 @@ fn main() -> anyhow::Result<()> {
                 app.name
             );
         }
-        let dist = serenade_cli::html_output::dist_directory(&app.directory)?;
         let minified = serenade_cli::html_output::minify_html_files(&dist)?;
         println!("Minified {minified} HTML document(s) for {}", app.name);
     }

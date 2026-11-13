@@ -36,15 +36,14 @@ fn main() -> anyhow::Result<()> {
             .join("demo-front");
         let back_manifest = app.directory.join("Cargo.toml");
         println!("Building {} frontend with Trunk", app.name);
-        let status = Command::new("trunk")
-            .arg("build")
-            .current_dir(&front)
-            .status()
-            .context("failed to start Trunk for Universal frontend")?;
-        if !status.success() {
-            bail!("Trunk failed to build Universal app `{}`", app.name);
-        }
-        let dist = serenade_cli::html_output::dist_directory(&front)?;
+        serenade_cli::trunk::build(&front, &[]).map_err(|error| {
+            anyhow::anyhow!(
+                "failed to build Universal frontend for `{}`: {error:#}",
+                app.name
+            )
+        })?;
+        let dist = serenade_cli::html_output::dist_directory_for_build(&front, &[])?;
+        let manifest = dist.join(serenade_view::TRUNK_ASSET_MANIFEST_FILE);
         let minified = serenade_cli::html_output::minify_html_files(&dist)?;
         println!(
             "Minified {minified} frontend HTML document(s) for {}",
@@ -56,6 +55,8 @@ fn main() -> anyhow::Result<()> {
             .args(["run", "--manifest-path"])
             .arg(back_manifest)
             .current_dir(&root)
+            .env(serenade_view::TRUNK_DIST_DIRECTORY_ENV, &dist)
+            .env(serenade_view::TRUNK_ASSET_MANIFEST_ENV, &manifest)
             .status()
             .with_context(|| format!("failed to start backend for `{}`", app.name))?;
         if !status.success() {

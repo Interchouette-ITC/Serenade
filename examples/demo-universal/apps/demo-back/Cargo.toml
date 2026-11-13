@@ -11,12 +11,22 @@ mode = "universal"
 
 [dependencies]
 serenade-demo-contract = { path = "../../libs/demo-contract" }
-serenade-demo-ui = { path = "../../../demo-monorepo/libs/demo-ui", default-features = false, features = ["ssr"] }
 leptos = { version = "0.8", default-features = false, features = ["ssr"] }
 serenade-http = { path = "../../../../crates/serenade-http" }
 serenade-minify = { path = "../../../../crates/serenade-minify" }
 serenade-http-actix = { path = "../../../../crates/serenade-http-actix" }
 serenade-kernel = { path = "../../../../crates/serenade-kernel" }
-hydration_context = "0.3.2"
+serenade-view = { path = "../../../../crates/serenade-view", features = ["leptos-ssr"] }
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-expr = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-host = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
 serde_json = { workspace = true }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+web-sys = { version = "0.3", features = ["MouseEvent"] }
+
+[build-dependencies]
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+
+[package.metadata.cargo-machete]
+# Used by Rangular-generated Rust, including its browser event types.
+ignored = ["rangular-expr", "rangular-host", "web-sys"]

@@ -1,8 +1,5 @@
 //! Build registered Serenade SPA apps with Trunk.
 
-use std::process::Command;
-
-use anyhow::{Context, bail};
 use clap::Parser;
 use serenade_cli::mode::{discover_apps, find_examples_root, select_apps};
 
@@ -27,18 +24,10 @@ fn main() -> anyhow::Result<()> {
 
     for app in selected {
         println!("Building {} ({})", app.name, app.directory.display());
-        let status = Command::new("trunk")
-            .arg("build")
-            .current_dir(&app.directory)
-            .status()
-            .with_context(|| format!("failed to start Trunk for app `{}`", app.name))?;
-        if !status.success() {
-            bail!(
-                "Trunk failed to build app `{}` with status {status}",
-                app.name
-            );
-        }
-        let dist = serenade_cli::html_output::dist_directory(&app.directory)?;
+        serenade_cli::trunk::build(&app.directory, &[]).map_err(|error| {
+            anyhow::anyhow!("failed to build SPA app `{}`: {error:#}", app.name)
+        })?;
+        let dist = serenade_cli::html_output::dist_directory_for_build(&app.directory, &[])?;
         let minified = serenade_cli::html_output::minify_html_files(&dist)?;
         println!("Minified {minified} HTML document(s) for {}", app.name);
     }

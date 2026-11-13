@@ -12,7 +12,9 @@ crates. Start from the repository so the examples and local crate versions match
 - Git.
 - GNU Make for the documented workspace commands.
 
-To build the browser examples, also install Trunk and the `wasm32-unknown-unknown` target.
+To build the browser examples, Serenade needs Git, Cargo, and the
+`wasm32-unknown-unknown` target. Serenade installs and caches its pinned Trunk
+version automatically on the first frontend build.
 
 ## Clone the workspace
 
@@ -26,8 +28,17 @@ The first Cargo build downloads the workspace dependencies. To build the browser
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo install trunk
 ```
+
+The first SPA, SSG, or Universal frontend build downloads and compiles Serenade's
+pinned Trunk release (`v0.22.1-itc.2`). It is cached under
+`~/.serenade/tools`; set `SERENADE_HOME` to use another cache location. This is
+separate from any system-wide Trunk installation. To run Trunk directly with
+Serenade's pinned version, use
+`cargo run -p serenade-cli --bin serenade-trunk -- <trunk arguments>`.
+Concurrent builds share an OS installation lock, released automatically if the installer
+exits or is killed. The persistent `.install-lock` file is reusable; it does not need
+manual deletion after an interrupted installation.
 
 ## Next
 

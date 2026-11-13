@@ -187,9 +187,6 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: trunk@0.21.14
       - name: Check demo-html
         run: cargo +stable check -p serenade-demo-html --locked
       - name: Build demo-spa
@@ -201,14 +198,22 @@ jobs:
           grep -q 'Hello from Serenade' examples/demo-monorepo/apps/demo-ssg/dist/index.html
           grep -q 'About Serenade' examples/demo-monorepo/apps/demo-ssg/dist/about/index.html
       - name: Build Universal frontend
-        run: cd examples/demo-universal/apps/demo-front && trunk build
+        run: cd examples/demo-universal/apps/demo-front && cargo +stable run --locked --manifest-path ../../../../Cargo.toml -p serenade-cli --bin serenade-trunk -- build
       - name: Build Universal backend
         run: cargo +stable check --manifest-path examples/demo-universal/Cargo.toml --workspace --locked
+      - name: Install wasm-pack
+        run: cargo +stable install wasm-pack --locked --version 0.15.1
+      - name: Run serenade-view browser tests
+        run: wasm-pack test --headless --chrome crates/serenade-view --test browser_head --features leptos-client --locked
       - name: Compile Universal backend for smoke test
         run: cargo +stable build --manifest-path examples/demo-universal/Cargo.toml -p serenade-demo-back --locked
       - name: Smoke test Universal server
+        env:
+          SERENADE_UNIVERSAL_BIND: 127.0.0.1:8080
+          SERENADE_TRUNK_DIST_DIR: ${{ github.workspace }}/examples/demo-universal/apps/demo-front/dist
+          SERENADE_TRUNK_ASSET_MANIFEST: ${{ github.workspace }}/examples/demo-universal/apps/demo-front/dist/trunk-assets.json
         run: |
-          SERENADE_UNIVERSAL_BIND=127.0.0.1:8080 cargo +stable run --manifest-path examples/demo-universal/Cargo.toml -p serenade-demo-back --locked &
+          cargo +stable run --manifest-path examples/demo-universal/Cargo.toml -p serenade-demo-back --locked &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           ready=0
@@ -234,12 +239,20 @@ jobs:
           fi
           grep -q 'Hello from the Serenade backend!' /tmp/hello.json
           curl --fail --silent http://127.0.0.1:8080/cms/hello | tee /tmp/cms-hello.html
-          grep -q '<h1>Hello from Serenade</h1>' /tmp/cms-hello.html
+          grep -Eq '<h1 id=("cms-heading"|cms-heading)>Hello from Rangular</h1>' /tmp/cms-hello.html
           grep -q 'Clicked 0 times' /tmp/cms-hello.html
+          curl --fail --silent 'http://127.0.0.1:8080/cms/hello?view=shared' --output /tmp/cms-shared.html
+          grep -q '<title>Serenade Universal</title>' /tmp/cms-shared.html
           curl --fail --silent http://127.0.0.1:8080/favicon.ico --output /tmp/favicon.ico
           test -s /tmp/favicon.ico
-          curl --fail --silent http://127.0.0.1:8080/serenade-demo-front.js --output /tmp/universal.js
-          test -s /tmp/universal.js
+          jq -er '
+            (.assets[] | .url),
+            (.wasm[] | .js_url, .wasm_url, (.initializer_url // empty))
+          ' "$SERENADE_TRUNK_ASSET_MANIFEST" > /tmp/universal-assets.txt
+          while IFS= read -r asset; do
+            curl --fail --silent "http://127.0.0.1:8080$asset" --output /tmp/universal-asset
+            test -s /tmp/universal-asset
+          done < /tmp/universal-assets.txt
 
   cache-redis:
     name: cache redis
