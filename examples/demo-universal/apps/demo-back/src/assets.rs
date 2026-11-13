@@ -2,6 +2,7 @@ use serenade_view::TrunkAssetManifest;
 
 #[derive(Clone, Debug)]
 pub struct CmsBootstrap {
+    pub public_url: String,
     pub script_url: String,
     pub js_url: String,
     pub wasm_url: String,
@@ -54,6 +55,7 @@ impl CmsBootstrap {
         }
 
         Ok(Self {
+            public_url: manifest.public_url.clone(),
             script_url: asset.url.clone(),
             js_url: bundle
                 .initializer_url
@@ -144,6 +146,7 @@ mod tests {
         assert!(bootstrap.init_with_object);
         assert!(bootstrap.import_bindings);
         assert_eq!(bootstrap.import_bindings_name, "wasmBindings");
+        assert_eq!(bootstrap.public_url, "/");
     }
 
     #[test]

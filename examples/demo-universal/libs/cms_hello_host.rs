@@ -4,24 +4,35 @@ use rangular_host::{Host, HostError, Value};
 pub struct CmsHelloHost {
     route_specific: RwSignal<bool>,
     clicks: RwSignal<u32>,
+    public_url: String,
     navigate: Option<Box<dyn Fn(bool)>>,
 }
 
 impl CmsHelloHost {
-    pub fn new(route_specific: bool) -> Self {
+    /// `public_url` is the Trunk public URL that frontend files are served under.
+    pub fn new(route_specific: bool, public_url: &str) -> Self {
         Self {
             route_specific: RwSignal::new(route_specific),
             clicks: RwSignal::new(0),
+            public_url: public_url_base(public_url),
             navigate: None,
         }
     }
 
     #[allow(dead_code)]
-    pub fn with_navigator(route_specific: bool, navigate: impl Fn(bool) + 'static) -> Self {
+    pub fn with_navigator(
+        route_specific: bool,
+        public_url: &str,
+        navigate: impl Fn(bool) + 'static,
+    ) -> Self {
         Self {
             navigate: Some(Box::new(navigate)),
-            ..Self::new(route_specific)
+            ..Self::new(route_specific, public_url)
         }
+    }
+
+    fn public_file(&self, file: &str) -> String {
+        format!("{}{file}", self.public_url)
     }
 
     #[allow(dead_code)]
@@ -48,11 +59,15 @@ impl Host for CmsHelloHost {
             "route_canonical" => Some(Value::Str(if route_specific {
                 "/cms/hello?source=universal&mode=ssr".to_owned()
             } else {
-                "/".to_owned()
+                self.public_url.clone()
             })),
             "route_social_image" => Some(Value::Str(
-                "/serenade-banner.png?crop=cms&width=1200".to_owned(),
+                self.public_file("serenade-banner.png?crop=cms&width=1200"),
             )),
+            "home_url" => Some(Value::Str(self.public_url.clone())),
+            "banner_url" => Some(Value::Str(self.public_file("serenade-banner.png"))),
+            "favicon_url" => Some(Value::Str(self.public_file("favicon.ico"))),
+            "stylesheet_url" => Some(Value::Str(self.public_file("style.css"))),
             "json_ld" => Some(Value::Str(
                 r#"{"@context":"https://schema.org","name":"Serenade & <Universal>"}"#.to_owned(),
             )),
@@ -89,6 +104,11 @@ impl CmsHelloHost {
         }
         self.route_specific.set(route_specific);
     }
+}
+
+/// Normalizes a Trunk public URL to a prefix ending in `/`, so files can be appended.
+pub fn public_url_base(public_url: &str) -> String {
+    format!("{}/", public_url.trim().trim_end_matches('/'))
 }
 
 pub fn route_specific_from_query(query: Option<&str>) -> bool {

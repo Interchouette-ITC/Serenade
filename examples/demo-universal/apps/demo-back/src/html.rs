@@ -11,7 +11,7 @@ mod cms_hello {
 }
 
 pub fn cms_hello_page(route_specific: bool, bootstrap: &CmsBootstrap) -> Result<String, ViewError> {
-    let host = HostCell::new(CmsHelloHost::new(route_specific));
+    let host = HostCell::new(CmsHelloHost::new(route_specific, &bootstrap.public_url));
     let head_host = host.clone();
     let document_host = host.clone();
     let document = Document::new(
@@ -37,6 +37,7 @@ fn bootstrap_view(bootstrap: CmsBootstrap) -> impl IntoView {
             type="module"
             src=bootstrap.script_url
             data-serenade-universal-bootstrap="true"
+            data-serenade-public-url=bootstrap.public_url
             data-wasm-js=bootstrap.js_url
             data-wasm-url=bootstrap.wasm_url
             data-init-with-object=bootstrap.init_with_object.to_string()
@@ -58,6 +59,7 @@ mod tests {
 
     fn test_bootstrap() -> CmsBootstrap {
         CmsBootstrap {
+            public_url: "/".to_owned(),
             script_url: "/universal-bootstrap.js".to_owned(),
             js_url: "/serenade-demo-front.js".to_owned(),
             wasm_url: "/serenade-demo-front_bg.wasm".to_owned(),
@@ -69,12 +71,53 @@ mod tests {
         }
     }
 
-    #[test]
-    fn cms_page_renders_complete_aot_document_with_escaped_route_metadata() {
+    fn initialize() {
         static INITIALIZE: Once = Once::new();
         INITIALIZE.call_once(|| {
             initialize_leptos_ssr().expect("initialize Leptos SSR");
         });
+    }
+
+    #[test]
+    fn cms_page_resolves_frontend_urls_under_a_non_root_public_url() {
+        initialize();
+        let bootstrap = CmsBootstrap {
+            public_url: "/app".to_owned(),
+            ..test_bootstrap()
+        };
+        for route_specific in [true, false] {
+            let page = cms_hello_page(route_specific, &bootstrap).expect("render CMS document");
+            for url in [
+                "href=\"/app/favicon.ico\"",
+                "href=\"/app/style.css\"",
+                "content=\"/app/serenade-banner.png\"",
+                "content=\"/app/serenade-banner.png?crop=cms&amp;width=1200\"",
+                "src=\"/app/serenade-banner.png\"",
+                "<a href=\"/app/\">Return to the Universal SPA</a>",
+                "data-serenade-public-url=\"/app\"",
+            ] {
+                assert!(page.contains(url), "{url} in {page}");
+            }
+            for root_url in [
+                "\"/favicon.ico",
+                "\"/style.css",
+                "\"/serenade-banner.png",
+                "href=\"/\"",
+            ] {
+                assert!(!page.contains(root_url), "{root_url} in {page}");
+            }
+        }
+        let shared = cms_hello_page(false, &bootstrap).expect("render shared CMS document");
+        assert!(
+            shared.contains("rel=\"canonical\" href=\"/app/\"")
+                || shared.contains("href=\"/app/\" rel=\"canonical\""),
+            "{shared}"
+        );
+    }
+
+    #[test]
+    fn cms_page_renders_complete_aot_document_with_escaped_route_metadata() {
+        initialize();
 
         let bootstrap = test_bootstrap();
         let manifest = serenade_view::TrunkAssetManifest::from_json(
@@ -114,7 +157,7 @@ mod tests {
             r#"<script type="application/ld+json" data-serenade-head="ssr">{"@context":"https://schema.org","name":"Serenade & \u003cUniversal>"}</script>"#
         ));
         assert!(head.contains(
-            r#"<script type="module" src="/universal-bootstrap.js" data-serenade-universal-bootstrap="true" data-wasm-js="/serenade-demo-front.js" data-wasm-url="/serenade-demo-front_bg.wasm" data-init-with-object="true" data-import-bindings="true" data-import-bindings-name="wasmBindings"></script>"#
+            r#"<script type="module" src="/universal-bootstrap.js" data-serenade-universal-bootstrap="true" data-serenade-public-url="/" data-wasm-js="/serenade-demo-front.js" data-wasm-url="/serenade-demo-front_bg.wasm" data-init-with-object="true" data-import-bindings="true" data-import-bindings-name="wasmBindings"></script>"#
         ));
 
         let body = page.split_once("<body>").expect("document body").1;

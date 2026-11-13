@@ -2,7 +2,7 @@
     <header class="hello__header">
         <img
             class="hello__banner"
-            src="/serenade-banner.png"
+            [attr.src]="banner_url"
             alt="Serenade"
             width="534"
             height="147"
@@ -21,6 +21,6 @@
                 Show CMS route
             </button>
         }
-        <a href="/">Return to the Universal SPA</a>
+        <a [attr.href]="home_url">Return to the Universal SPA</a>
     </section>
 </main>

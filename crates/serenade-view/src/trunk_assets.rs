@@ -341,13 +341,23 @@ impl TrunkAssetManifest {
     ///
     /// Servers must use this instead of joining the raw request path onto the
     /// output directory: with a non-root `public_url` such as `/app/`, the URL
-    /// `/app/app.js` is the output file `app.js`.
+    /// `/app/app.js` is the output file `app.js`. The public URL root itself,
+    /// with or without its trailing slash (`/app/` or `/app`), is the HTML
+    /// entry point named by [`Self::html`].
     ///
     /// # Errors
     ///
     /// Returns an error when the URL is not under `public_url` at a path
     /// boundary, has a query or fragment, or escapes the output directory.
     pub fn output_path_for_url(&self, url: &str) -> Result<PathBuf, ViewError> {
+        let root = self.public_url.trim_end_matches('/');
+        if url
+            .strip_prefix(root)
+            .is_some_and(|rest| rest.is_empty() || rest == "/")
+            && !url.is_empty()
+        {
+            return safe_relative_path(&self.html);
+        }
         self.local_asset_path(url)
     }
 
@@ -442,19 +452,16 @@ fn contained_file(
     description: &str,
 ) -> Result<(PathBuf, std::fs::Metadata), ViewError> {
     let path = root.join(relative);
-    let metadata = require_file(&path, description)?;
-    let resolved = path.canonicalize().map_err(|error| {
-        ViewError::msg(format!(
-            "failed to resolve {description} {}: {error}",
-            path.display()
-        ))
-    })?;
+    let resolved = path
+        .canonicalize()
+        .map_err(|error| file_error(&path, description, &error))?;
     if !resolved.starts_with(root) {
         return Err(ViewError::msg(format!(
             "{description} {} escapes the Trunk output directory through a symbolic link",
             path.display()
         )));
     }
+    let metadata = require_file(&resolved, description)?;
     Ok((resolved, metadata))
 }
 
@@ -465,14 +472,18 @@ fn require_file(path: &Path, description: &str) -> Result<std::fs::Metadata, Vie
             "{description} is not a file: {}",
             path.display()
         ))),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Err(ViewError::msg(format!(
-            "{description} is missing: {}",
-            path.display()
-        ))),
-        Err(error) => Err(ViewError::msg(format!(
+        Err(error) => Err(file_error(path, description, &error)),
+    }
+}
+
+fn file_error(path: &Path, description: &str, error: &std::io::Error) -> ViewError {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        ViewError::msg(format!("{description} is missing: {}", path.display()))
+    } else {
+        ViewError::msg(format!(
             "failed to inspect {description} {}: {error}",
             path.display()
-        ))),
+        ))
     }
 }
 
@@ -943,8 +954,92 @@ mod tests {
         );
     }
 
-    #[cfg(unix)]
     #[test]
+    fn output_validation_reports_unresolvable_paths() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let manifest = write_valid_output(temp.path());
+
+        let error = manifest
+            .validate_output(temp.path().join("missing-dist"))
+            .expect_err("missing dist must fail")
+            .to_string();
+        assert!(
+            error.contains("failed to resolve Trunk output directory"),
+            "{error}"
+        );
+
+        let mut through_file = manifest.clone();
+        through_file.assets[0].url = "/app/index.html/site-123.css".to_owned();
+        let error = through_file
+            .validate_output(temp.path())
+            .expect_err("path through a file must fail")
+            .to_string();
+        assert!(error.contains("failed to inspect"), "{error}");
+
+        std::fs::create_dir(temp.path().join("folder.css")).expect("directory asset");
+        let mut directory = manifest;
+        directory.assets[0].url = "/app/folder.css".to_owned();
+        let error = directory
+            .validate_output(temp.path())
+            .expect_err("directory asset must fail")
+            .to_string();
+        assert!(error.contains("is not a file"), "{error}");
+    }
+
+    #[test]
+    fn output_path_for_url_matches_validation_mapping() {
+        let manifest = TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("valid manifest");
+        assert_eq!(
+            manifest
+                .output_path_for_url("/app/nested/app-123.js")
+                .expect("asset under public URL"),
+            PathBuf::from("nested/app-123.js")
+        );
+        for outside in [
+            "/",
+            "/app-123.js",
+            "/apple.js",
+            "/app//",
+            "/app/%2e%2e/x",
+            "/app/x.js?v=1",
+        ] {
+            assert!(manifest.output_path_for_url(outside).is_err(), "{outside}");
+        }
+    }
+
+    #[test]
+    fn output_path_for_url_maps_the_public_root_to_the_html_entry() {
+        let mut manifest =
+            TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("valid manifest");
+        for public_url in ["/app/", "/app"] {
+            manifest.public_url = public_url.to_owned();
+            for root in ["/app/", "/app"] {
+                assert_eq!(
+                    manifest.output_path_for_url(root).expect("public root"),
+                    PathBuf::from("index.html"),
+                    "{public_url} {root}"
+                );
+            }
+            assert!(manifest.output_path_for_url("").is_err());
+        }
+        manifest.public_url = "/".to_owned();
+        assert_eq!(
+            manifest.output_path_for_url("/").expect("site root"),
+            PathBuf::from("index.html")
+        );
+        assert!(manifest.output_path_for_url("").is_err());
+        manifest.html = "../escape.html".to_owned();
+        assert!(manifest.output_path_for_url("/").is_err());
+
+        let mut root_asset = TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("valid");
+        root_asset.assets[0].url = "/app/".to_owned();
+        let temp = tempfile::tempdir().expect("temporary directory");
+        write_valid_output(temp.path());
+        assert!(root_asset.validate_output(temp.path()).is_err());
+    }
+
+    #[test]
+    #[cfg(unix)]
     fn rejects_output_files_that_escape_dist_through_symlinks() {
         use std::os::unix::fs::symlink;
 

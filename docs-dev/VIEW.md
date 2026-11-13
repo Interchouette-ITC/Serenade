@@ -274,7 +274,12 @@ Universal bootstrap module by an explicit marker value, such as
 A server that hosts the output itself must map request paths with
 `output_path_for_url(path)`, which applies the same public-URL rules as
 `validate_output`, rather than joining the raw request path onto `dist`. With a
-`/app/` public URL, `/app/app.js` is the output file `app.js`.
+`/app/` public URL, `/app/app.js` is the output file `app.js`, and the public root
+(`/app/` or `/app`) is the HTML entry point named by the manifest.
+Application templates must build frontend file URLs (icons, images, stylesheets, links
+to the SPA root) from the same manifest `public_url` rather than hard-coding `/`; when the
+page hydrates, hand that value to the client (for example as an attribute on the bootstrap
+script) so both sides render identical URLs.
 
 ### Migration from marker-based rendering
 

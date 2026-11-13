@@ -21,6 +21,12 @@ Source to inspect the server-rendered response.
 The backend reads Trunk's validated `trunk-assets.json` manifest at startup and uses its exact
 URLs for the `/cms/hello` bootstrap and WASM bundle, including hashed filenames.
 Only scripts marked `data-serenade-universal-bootstrap="true"` qualify as the bootstrap.
+Frontend files (favicon, banner, stylesheet) and the SPA home link are resolved under the
+manifest `public_url`, so the demo also works with a non-root public URL such as
+`serenade-trunk build --public-url /app/`. The server writes that public URL onto the
+bootstrap script as `data-serenade-public-url`, and hydration reads it back so client and
+server produce the same URLs. The SPA shell uses `<base data-trunk-public-url />` with
+relative asset paths. `/cms/hello` and `/hello` remain backend routes at the site root.
 
 To run the backend directly after building the frontend (rather than through `make universal`),
 pass both absolute asset paths from the repository root:
@@ -36,7 +42,7 @@ SSR renders the route on each request. SSG instead renders declared routes durin
 writes static HTML files. AOT compiles templates to view code; by itself it does not render
 route HTML or determine whether the app uses SSR or SSG. The existing Leptos SSG demo and
 Rust.Contact are unchanged; neither is migrated by this example. The `/hello` API and the
-Universal frontend's favicon at `/favicon.ico` remain available. Set
+Universal frontend's favicon under the public URL (`/favicon.ico` by default) remain available. Set
 `SERENADE_UNIVERSAL_BIND` to change the backend listen address.
 
 Head composition uses Serenade's generic Leptos head lifecycle, not Rangular-specific behavior:

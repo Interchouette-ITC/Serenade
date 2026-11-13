@@ -86,7 +86,9 @@ HTML runs the app server (default `127.0.0.1:8080`); `--all` starts all selected
 SPA builds with Trunk to `examples/demo-monorepo/apps/demo-spa/dist/`.
 SPA and Universal frontend builds minify generated `.html` files in `dist/` after Trunk.
 SSG builds a hydration bundle, prerenders the selected app's declared routes, and minifies
-the resulting `.html` files. The `serenade-minify` component minifies inline classic and
+the resulting `.html` files. The prerenderer reads the output directory from
+`SERENADE_STATIC_OUTPUT_DIR` and the shell from the Trunk manifest, so a non-default `--dist`
+or `TRUNK_BUILD_DIST` is prerendered where Trunk wrote it. The `serenade-minify` component minifies inline classic and
 module JavaScript as well as HTML, preserving HTML comments (including Leptos hydration
 markers) and meaningful text whitespace. External scripts and non-JavaScript script data
 blocks are left intact; CSS is not minified here.

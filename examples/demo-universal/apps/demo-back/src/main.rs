@@ -44,15 +44,9 @@ fn response(
 }
 
 fn serve_asset(dist: &std::path::Path, manifest: &TrunkAssetManifest, uri: &str) -> Response {
-    let requested = if uri == "/" {
-        PathBuf::from(&manifest.html)
-    } else {
-        // Same URL-to-file mapping as `validate_output`, so validated assets are reachable
-        // under a non-root Trunk `public_url`.
-        match manifest.output_path_for_url(uri) {
-            Ok(path) => path,
-            Err(_) => return Response::text(404, "Not found"),
-        }
+    // Same URL-to-file mapping as `validate_output`; the public URL root is the HTML shell.
+    let Ok(requested) = manifest.output_path_for_url(uri) else {
+        return Response::text(404, "Not found");
     };
     let path = dist.join(requested);
     let Ok(bytes) = std::fs::read(&path) else {
@@ -127,8 +121,13 @@ mod tests {
             let served = serve_asset(&dist, &nested, "/app/app-123.js");
             assert_eq!(served.status(), 200, "{public_url}");
             assert_eq!(served.body(), b"export {}");
-            assert_eq!(serve_asset(&dist, &nested, "/").status(), 200);
+            for root in ["/app/", "/app"] {
+                let shell = serve_asset(&dist, &nested, root);
+                assert_eq!(shell.status(), 200, "{public_url} {root}");
+                assert_eq!(shell.body(), b"<html></html>");
+            }
             for outside in [
+                "/",
                 "/app-123.js",
                 "/apple-123.js",
                 "/app/../app-123.js",

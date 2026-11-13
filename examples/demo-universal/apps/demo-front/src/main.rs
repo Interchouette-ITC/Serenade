@@ -61,12 +61,23 @@ fn remove_added_nodes(parent: &HtmlElement, original: &[web_sys::Node]) {
     }
 }
 
+/// Reads the Trunk public URL the server rendered onto the bootstrap script, so
+/// hydration resolves frontend asset URLs exactly as the server did.
+fn server_public_url(document: &web_sys::Document) -> String {
+    document
+        .query_selector("script[data-serenade-universal-bootstrap]")
+        .expect("valid bootstrap selector")
+        .and_then(|script| script.get_attribute("data-serenade-public-url"))
+        .unwrap_or_else(|| "/".to_owned())
+}
+
 fn create_cms_host(
     window: &Window,
     route_specific: bool,
+    public_url: &str,
 ) -> (HostCell<CmsHelloHost>, Closure<dyn FnMut(Event)>) {
     let navigation_window = window.clone();
-    let host = CmsHelloHost::with_navigator(route_specific, move |route_specific| {
+    let host = CmsHelloHost::with_navigator(route_specific, public_url, move |route_specific| {
         let path = if route_specific {
             "/cms/hello"
         } else {
@@ -129,7 +140,7 @@ fn App() -> impl IntoView {
             <header class="hello__header">
                 <img
                     class="hello__banner"
-                    src="/serenade-banner.png"
+                    src="serenade-banner.png"
                     alt="Serenade"
                     width="534"
                     height="147"
@@ -160,7 +171,8 @@ fn main() {
             .head()
             .expect("document head is available")
             .unchecked_into::<HtmlElement>();
-        let (host, popstate) = create_cms_host(&window, route_specific);
+        let (host, popstate) =
+            create_cms_host(&window, route_specific, &server_public_url(&document));
         popstate.forget();
 
         clear_server_rendered_head(&document);
@@ -311,7 +323,8 @@ mod browser_tests {
             .query_selector("body > main")
             .expect("valid main selector")
             .expect("server-rendered main");
-        let (host, popstate) = create_cms_host(&window, true);
+        assert_eq!(server_public_url(&document), "/");
+        let (host, popstate) = create_cms_host(&window, true, &server_public_url(&document));
         clear_server_rendered_head(&document);
         for node in &unrelated_nodes {
             assert!(
