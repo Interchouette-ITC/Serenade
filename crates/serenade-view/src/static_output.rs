@@ -175,16 +175,45 @@ fn directory_error(path: &Path, error: &std::io::Error) -> ViewError {
 /// an existing destination (including a symbolic link, which is not followed)
 /// on Unix and Windows. A failed write removes its temporary file.
 fn replace_file(directory: &Path, contents: &[u8]) -> std::io::Result<()> {
+    let destination = directory.join(INDEX_FILE);
     tempfile::Builder::new()
         .prefix(".index.html.")
         .suffix(".serenade-tmp")
         .tempfile_in(directory)
         .and_then(|mut file| file.write_all(contents).map(|()| file))
         .and_then(|file| {
-            file.persist(directory.join(INDEX_FILE))
-                .map_err(|error| error.error)
+            file.persist(&destination)
+                .map(drop)
+                .or_else(|error| retry_replacement(error, &destination))
         })
-        .map(drop)
+}
+
+/// On Windows, `persist` uses `MoveFileExW(MOVEFILE_REPLACE_EXISTING)`, which
+/// replaces an existing `index.html` but refuses a read-only one. Clear the
+/// read-only flag on a regular file (never through a symbolic link) and retry
+/// once, so reruns replace previous output as they do on Unix.
+#[cfg(windows)]
+// Windows-only: clears the read-only attribute; the Unix world-writable concern does not apply.
+#[allow(clippy::permissions_set_readonly_false)]
+fn retry_replacement(error: tempfile::PersistError, destination: &Path) -> std::io::Result<()> {
+    let tempfile::PersistError { error, file } = error;
+    match fs::symlink_metadata(destination) {
+        Ok(metadata) if metadata.is_file() && metadata.permissions().readonly() => {
+            let mut permissions = metadata.permissions();
+            permissions.set_readonly(false);
+            fs::set_permissions(destination, permissions)?;
+            file.persist(destination)
+                .map(drop)
+                .map_err(|error| error.error)
+        }
+        _ => Err(error),
+    }
+}
+
+/// Unix `rename` already replaces any existing destination entry.
+#[cfg(not(windows))]
+fn retry_replacement(error: tempfile::PersistError, _destination: &Path) -> std::io::Result<()> {
+    Err(error.error)
 }
 
 #[cfg(test)]
@@ -327,6 +356,25 @@ mod tests {
             .expect("rewrite root document");
         assert!(
             fs::read_to_string(temp.path().join(INDEX_FILE))
+                .expect("read output")
+                .contains("About page")
+        );
+        assert_eq!(entries(temp.path()), [INDEX_FILE]);
+    }
+
+    #[test]
+    fn rerun_replaces_a_read_only_existing_document() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let existing = temp.path().join(INDEX_FILE);
+        fs::write(&existing, "old").expect("existing document");
+        let mut permissions = fs::metadata(&existing).expect("metadata").permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(&existing, permissions).expect("mark read-only");
+        StaticDocumentWriter::new(temp.path())
+            .write("/", document())
+            .expect("rerun over a read-only document");
+        assert!(
+            fs::read_to_string(&existing)
                 .expect("read output")
                 .contains("About page")
         );

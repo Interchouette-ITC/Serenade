@@ -260,7 +260,8 @@ writes outside the output directory through a symbolic link: a route directory t
 symbolic link is rejected, and each document is written to its own uniquely named
 temporary file that then replaces `index.html` on Unix and Windows, replacing a symbolic
 link instead of following it. Concurrent writes of the same route are safe; the last
-completed write wins. The configured output directory itself may be a symbolic link. Route
+completed write wins. On Windows, a read-only `index.html` left by a previous run is also
+replaced. The configured output directory itself may be a symbolic link. Route
 selection and page data remain the application's responsibility.
 
 `serenade-ssg` and `serenade-universal` provide
