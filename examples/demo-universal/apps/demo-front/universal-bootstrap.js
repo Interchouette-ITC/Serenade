@@ -1,5 +1,5 @@
 const bootstrap = document.querySelector(
-    "script[data-serenade-universal-bootstrap]",
+    'script[data-serenade-universal-bootstrap="true"]',
 );
 
 if (bootstrap && window.location.pathname === "/cms/hello") {

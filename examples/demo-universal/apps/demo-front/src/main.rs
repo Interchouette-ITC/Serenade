@@ -61,11 +61,14 @@ fn remove_added_nodes(parent: &HtmlElement, original: &[web_sys::Node]) {
     }
 }
 
+/// Matches only the bootstrap marked exactly as `CmsBootstrap::from_manifest` requires.
+const BOOTSTRAP_SELECTOR: &str = "script[data-serenade-universal-bootstrap=\"true\"]";
+
 /// Reads the Trunk public URL the server rendered onto the bootstrap script, so
 /// hydration resolves frontend asset URLs exactly as the server did.
 fn server_public_url(document: &web_sys::Document) -> String {
     document
-        .query_selector("script[data-serenade-universal-bootstrap]")
+        .query_selector(BOOTSTRAP_SELECTOR)
         .expect("valid bootstrap selector")
         .and_then(|script| script.get_attribute("data-serenade-public-url"))
         .unwrap_or_else(|| "/".to_owned())
@@ -275,6 +278,11 @@ mod browser_tests {
         head.insert_adjacent_html("afterbegin", include_str!("fixtures/cms-hello-head.html"))
             .expect("insert server-rendered head fixture");
         head.insert_adjacent_html(
+            "afterbegin",
+            r#"<script id="decoy-bootstrap" type="application/json" data-serenade-universal-bootstrap="false" data-serenade-public-url="/decoy/"></script>"#,
+        )
+        .expect("insert decoy bootstrap marker");
+        head.insert_adjacent_html(
             "beforeend",
             r#"
             <meta id="unrelated-charset" charset="utf-8">
@@ -289,6 +297,7 @@ mod browser_tests {
         )
         .expect("insert unrelated application head entries");
         let unrelated_nodes: Vec<_> = [
+            "decoy-bootstrap",
             "unrelated-charset",
             "unrelated-viewport",
             "unrelated-description",
@@ -309,7 +318,7 @@ mod browser_tests {
             .expect("insert server-rendered body fixture");
 
         let bootstrap_element = document
-            .query_selector("script[data-serenade-universal-bootstrap]")
+            .query_selector(BOOTSTRAP_SELECTOR)
             .expect("valid bootstrap selector")
             .expect("CMS bootstrap script is in the fixture");
         assert_eq!(
