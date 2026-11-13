@@ -877,6 +877,68 @@ mod tests {
     }
 
     #[test]
+    fn validate_output_rejects_each_invalid_or_stale_reference() {
+        type BreakReference = fn(&mut TrunkAssetManifest, &str);
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let valid = write_valid_output(temp.path());
+        let wrong_digest = format!("sha384-{}", STANDARD.encode(Sha384::digest(b"other")));
+        let cases: [(&str, BreakReference); 10] = [
+            ("../index.html", |m, _| m.html = "../index.html".into()),
+            ("public URL prefix", |m, _| {
+                m.wasm[0].js_url = "/elsewhere.js".into();
+            }),
+            ("content digest check failed", |m, d| {
+                m.wasm[0].js_content_digest = Some(d.into());
+            }),
+            ("public URL prefix", |m, _| {
+                m.wasm[0].wasm_url = "/elsewhere.wasm".into();
+            }),
+            ("content digest check failed", |m, d| {
+                m.wasm[0].wasm_content_digest = Some(d.into());
+            }),
+            ("public URL prefix", |m, _| {
+                m.wasm[0].initializer_url = Some("/elsewhere.js".into());
+            }),
+            ("public URL prefix", |m, _| {
+                m.wasm[0].preloads[0].url = "/elsewhere.js".into();
+            }),
+            ("content digest check failed", |m, d| {
+                m.wasm[0].preloads[0].content_digest = Some(d.into());
+            }),
+            ("content digest check failed", |m, d| {
+                m.wasm[0].preloads[0].integrity = Some(d.into());
+            }),
+            ("public URL prefix", |m, _| {
+                m.assets[0].url = "/elsewhere.css".into();
+            }),
+        ];
+        for (expected, break_reference) in cases {
+            let mut manifest = valid.clone();
+            break_reference(&mut manifest, &wrong_digest);
+            let error = manifest
+                .validate_output(temp.path())
+                .expect_err(expected)
+                .to_string();
+            assert!(error.contains(expected), "{expected}: {error}");
+        }
+    }
+
+    #[test]
+    fn read_rejects_well_formed_json_that_fails_validation() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let path = temp.path().join(TRUNK_ASSET_MANIFEST_FILE);
+        let mut value = manifest_value();
+        value["version"] = 99.into();
+        std::fs::write(&path, value.to_string()).expect("write manifest");
+        assert!(
+            TrunkAssetManifest::read(&path)
+                .expect_err("unsupported version")
+                .to_string()
+                .contains("unsupported Trunk asset manifest version")
+        );
+    }
+
+    #[test]
     fn validates_all_referenced_files_and_enabled_integrity() {
         let temp = tempfile::tempdir().expect("temporary directory");
         let manifest = write_valid_output(temp.path());

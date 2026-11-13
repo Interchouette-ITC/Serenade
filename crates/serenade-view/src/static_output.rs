@@ -3,6 +3,7 @@
 use std::{
     ffi::OsString,
     fs,
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -59,50 +60,32 @@ impl StaticDocumentWriter {
     ///
     /// Returns an error when `route` is not a safe absolute URL path.
     pub fn output_path(&self, route: &str) -> Result<PathBuf, ViewError> {
-        if !route.starts_with('/') || route.contains(['?', '#', '\\']) || route.contains("//") {
-            return Err(ViewError::msg(format!(
-                "static output route must be a normalized absolute path: `{route}`"
-            )));
-        }
-
-        let relative = route
-            .strip_prefix('/')
-            .and_then(|route| route.strip_suffix('/').or(Some(route)))
-            .unwrap_or_default();
-        let mut output_path = self.output_directory.clone();
-
-        if !relative.is_empty() {
-            for segment in relative.split('/') {
-                let decoded_dots = segment.to_ascii_lowercase().replace("%2e", ".");
-                if segment.is_empty()
-                    || matches!(decoded_dots.as_str(), "." | "..")
-                    || decoded_dots.contains("%2f")
-                    || decoded_dots.contains("%5c")
-                    || segment.contains(':')
-                    || segment.chars().any(char::is_control)
-                {
-                    return Err(ViewError::msg(format!(
-                        "unsafe static output route segment in `{route}`"
-                    )));
-                }
-                output_path.push(segment);
-            }
-        }
-
-        output_path.push("index.html");
-        Ok(output_path)
+        Ok(self.index_path(&route_segments(route)?))
     }
 
     /// Writes a rendered document at the static path for `route`.
     ///
+    /// Route directories below the output directory are created one level at a
+    /// time and must be real directories: a symbolic link there is rejected, so
+    /// a document is never written outside the output directory. The document
+    /// is written to a new temporary file and renamed over `index.html`, which
+    /// replaces an existing symbolic link instead of writing through it.
+    ///
     /// # Errors
     ///
-    /// Returns an error when the route is unsafe or the output directory or
-    /// document cannot be written.
+    /// Returns an error when the route is unsafe, a route directory is a
+    /// symbolic link or not a directory, or the document cannot be written.
     pub fn write(&self, route: &str, document: RenderedDocument) -> Result<PathBuf, ViewError> {
-        let output_path = self.output_path(route)?;
-        ensure_parent_directory(&output_path)?;
-        fs::write(&output_path, document.into_static_output()).map_err(|error| {
+        let segments = route_segments(route)?;
+        let output_path = self.index_path(&segments);
+        let mut directory = fs::create_dir_all(&self.output_directory)
+            .and_then(|()| self.output_directory.canonicalize())
+            .map_err(|error| directory_error(&self.output_directory, &error))?;
+        for segment in segments {
+            directory.push(segment);
+            create_real_directory(&directory)?;
+        }
+        replace_file(&directory, document.into_static_output().as_bytes()).map_err(|error| {
             ViewError::msg(format!(
                 "failed to write static document {}: {error}",
                 output_path.display()
@@ -112,19 +95,89 @@ impl StaticDocumentWriter {
     }
 }
 
-fn ensure_parent_directory(output_path: &Path) -> Result<(), ViewError> {
-    if let Some(parent) = output_path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-    {
-        fs::create_dir_all(parent).map_err(|error| {
-            ViewError::msg(format!(
-                "failed to create static output directory {}: {error}",
-                parent.display()
-            ))
-        })?;
+impl StaticDocumentWriter {
+    fn index_path(&self, segments: &[&str]) -> PathBuf {
+        let mut output_path = self.output_directory.clone();
+        output_path.extend(segments);
+        output_path.push(INDEX_FILE);
+        output_path
     }
-    Ok(())
+}
+
+const INDEX_FILE: &str = "index.html";
+const TEMPORARY_FILE: &str = ".index.html.serenade-tmp";
+
+fn route_segments(route: &str) -> Result<Vec<&str>, ViewError> {
+    if !route.starts_with('/') || route.contains(['?', '#', '\\']) || route.contains("//") {
+        return Err(ViewError::msg(format!(
+            "static output route must be a normalized absolute path: `{route}`"
+        )));
+    }
+    let relative = route.trim_start_matches('/');
+    let relative = relative.strip_suffix('/').unwrap_or(relative);
+    if relative.is_empty() {
+        return Ok(Vec::new());
+    }
+    relative
+        .split('/')
+        .map(|segment| {
+            let decoded_dots = segment.to_ascii_lowercase().replace("%2e", ".");
+            if segment.is_empty()
+                || matches!(decoded_dots.as_str(), "." | "..")
+                || decoded_dots.contains("%2f")
+                || decoded_dots.contains("%5c")
+                || segment.contains(':')
+                || segment.chars().any(char::is_control)
+            {
+                Err(ViewError::msg(format!(
+                    "unsafe static output route segment in `{route}`"
+                )))
+            } else {
+                Ok(segment)
+            }
+        })
+        .collect()
+}
+
+/// Creates `path` if it is missing; an existing entry must be a real directory.
+fn create_real_directory(path: &Path) -> Result<(), ViewError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() => Err(ViewError::msg(format!(
+            "static output directory {} is a symbolic link; refusing to write through it",
+            path.display()
+        ))),
+        Ok(metadata) if metadata.is_dir() => Ok(()),
+        Ok(_) => Err(directory_error(
+            path,
+            &std::io::Error::other("not a directory"),
+        )),
+        Err(_) => fs::create_dir(path).map_err(|error| directory_error(path, &error)),
+    }
+}
+
+fn directory_error(path: &Path, error: &std::io::Error) -> ViewError {
+    ViewError::msg(format!(
+        "failed to create static output directory {}: {error}",
+        path.display()
+    ))
+}
+
+/// Writes `contents` to a fresh temporary file in `directory`, then renames it
+/// over `index.html`. `create_new` refuses an existing entry (including a
+/// symbolic link), and `rename` replaces a link rather than following it.
+fn replace_file(directory: &Path, contents: &[u8]) -> std::io::Result<()> {
+    let temporary = directory.join(TEMPORARY_FILE);
+    let _ = fs::remove_file(&temporary);
+    let result = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary)
+        .and_then(|mut file| file.write_all(contents))
+        .and_then(|()| fs::rename(&temporary, directory.join(INDEX_FILE)));
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
+    }
+    result
 }
 
 #[cfg(test)]
@@ -222,8 +275,91 @@ mod tests {
     }
 
     #[test]
-    fn skips_creating_an_empty_parent_directory() {
-        ensure_parent_directory(Path::new("index.html")).expect("no parent directory to create");
+    fn rejects_route_entries_that_are_files_and_unsafe_routes() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        fs::write(temp.path().join("about"), "not a directory").expect("blocking file");
+        let writer = StaticDocumentWriter::new(temp.path());
+        let error = writer
+            .write("/about/team", document())
+            .expect_err("a file where a route directory belongs must fail")
+            .to_string();
+        assert!(error.contains("failed to create static output directory"));
+        assert!(error.contains("not a directory"));
+        assert!(writer.write("/../secret", document()).is_err());
+
+        let too_long = format!("/{}", "a".repeat(4096));
+        let error = writer
+            .write(&too_long, document())
+            .expect_err("an uncreatable route directory must fail")
+            .to_string();
+        assert!(error.contains("failed to create static output directory"));
+    }
+
+    #[test]
+    fn rewrites_existing_documents_and_clears_stale_temporary_files() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let writer = StaticDocumentWriter::new(temp.path());
+        fs::write(temp.path().join(TEMPORARY_FILE), "stale").expect("stale temporary file");
+        fs::write(temp.path().join(INDEX_FILE), "old").expect("existing document");
+        writer
+            .write("/", document())
+            .expect("rewrite root document");
+        assert!(
+            fs::read_to_string(temp.path().join(INDEX_FILE))
+                .expect("read output")
+                .contains("About page")
+        );
+        assert!(!temp.path().join(TEMPORARY_FILE).exists());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn never_writes_through_symbolic_links_out_of_the_output_directory() {
+        use std::os::unix::fs::symlink;
+
+        let outside = tempfile::tempdir().expect("outside directory");
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let writer = StaticDocumentWriter::new(temp.path());
+
+        symlink(outside.path(), temp.path().join("about")).expect("directory symlink");
+        let error = writer
+            .write("/about/team", document())
+            .expect_err("symlinked route directory must be rejected")
+            .to_string();
+        assert!(error.contains("is a symbolic link"));
+        assert!(!outside.path().join("team").exists());
+
+        let victim = outside.path().join("victim.html");
+        fs::write(&victim, "untouched").expect("outside file");
+        symlink(&victim, temp.path().join(INDEX_FILE)).expect("file symlink");
+        writer
+            .write("/", document())
+            .expect("replace symlinked document");
+        assert_eq!(fs::read_to_string(&victim).expect("victim"), "untouched");
+        let written = temp.path().join(INDEX_FILE);
+        assert!(
+            !fs::symlink_metadata(&written)
+                .expect("metadata")
+                .file_type()
+                .is_symlink()
+        );
+        assert!(
+            fs::read_to_string(written)
+                .expect("output")
+                .contains("About page")
+        );
+
+        symlink(&victim, temp.path().join(TEMPORARY_FILE)).expect("temporary symlink");
+        writer
+            .write("/", document())
+            .expect("ignore planted temporary symlink");
+        assert_eq!(fs::read_to_string(&victim).expect("victim"), "untouched");
+
+        let linked_root = outside.path().join("linked-output");
+        symlink(temp.path(), &linked_root).expect("output directory symlink");
+        StaticDocumentWriter::new(&linked_root)
+            .write("/", document())
+            .expect("a symlinked output directory itself is the configured root");
     }
 
     #[test]
