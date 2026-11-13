@@ -257,9 +257,10 @@ writer.write("/about", rendered)?;
 fragments, traversal, and unsafe path segments are rejected. The writer creates parent
 directories and returns errors for invalid routes or failed filesystem writes. It never
 writes outside the output directory through a symbolic link: a route directory that is a
-symbolic link is rejected, and each document is written to a new temporary file that is
-then renamed over `index.html`, replacing a symbolic link instead of following it. The
-configured output directory itself may be a symbolic link. Route
+symbolic link is rejected, and each document is written to its own uniquely named
+temporary file that then replaces `index.html` on Unix and Windows, replacing a symbolic
+link instead of following it. Concurrent writes of the same route are safe; the last
+completed write wins. The configured output directory itself may be a symbolic link. Route
 selection and page data remain the application's responsibility.
 
 `serenade-ssg` and `serenade-universal` provide

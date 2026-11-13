@@ -68,8 +68,10 @@ impl StaticDocumentWriter {
     /// Route directories below the output directory are created one level at a
     /// time and must be real directories: a symbolic link there is rejected, so
     /// a document is never written outside the output directory. The document
-    /// is written to a new temporary file and renamed over `index.html`, which
-    /// replaces an existing symbolic link instead of writing through it.
+    /// is written to a uniquely named temporary file that then replaces
+    /// `index.html` (on Unix and Windows), so an existing symbolic link is
+    /// replaced instead of written through and concurrent writes of the same
+    /// route do not interfere; the last completed write wins.
     ///
     /// # Errors
     ///
@@ -105,7 +107,6 @@ impl StaticDocumentWriter {
 }
 
 const INDEX_FILE: &str = "index.html";
-const TEMPORARY_FILE: &str = ".index.html.serenade-tmp";
 
 fn route_segments(route: &str) -> Result<Vec<&str>, ViewError> {
     if !route.starts_with('/') || route.contains(['?', '#', '\\']) || route.contains("//") {
@@ -140,18 +141,24 @@ fn route_segments(route: &str) -> Result<Vec<&str>, ViewError> {
 }
 
 /// Creates `path` if it is missing; an existing entry must be a real directory.
+/// Concurrent writers may create the same directory, so `AlreadyExists` is
+/// re-checked instead of treated as a failure.
 fn create_real_directory(path: &Path) -> Result<(), ViewError> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_symlink() => Err(ViewError::msg(format!(
-            "static output directory {} is a symbolic link; refusing to write through it",
-            path.display()
-        ))),
-        Ok(metadata) if metadata.is_dir() => Ok(()),
-        Ok(_) => Err(directory_error(
-            path,
-            &std::io::Error::other("not a directory"),
-        )),
-        Err(_) => fs::create_dir(path).map_err(|error| directory_error(path, &error)),
+    match fs::create_dir(path) {
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            match fs::symlink_metadata(path) {
+                Ok(metadata) if metadata.file_type().is_symlink() => Err(ViewError::msg(format!(
+                    "static output directory {} is a symbolic link; refusing to write through it",
+                    path.display()
+                ))),
+                Ok(metadata) if metadata.is_dir() => Ok(()),
+                _ => Err(directory_error(
+                    path,
+                    &std::io::Error::other("not a directory"),
+                )),
+            }
+        }
+        result => result.map_err(|error| directory_error(path, &error)),
     }
 }
 
@@ -162,22 +169,22 @@ fn directory_error(path: &Path, error: &std::io::Error) -> ViewError {
     ))
 }
 
-/// Writes `contents` to a fresh temporary file in `directory`, then renames it
-/// over `index.html`. `create_new` refuses an existing entry (including a
-/// symbolic link), and `rename` replaces a link rather than following it.
+/// Writes `contents` to a uniquely named temporary file in `directory`, then
+/// replaces `index.html` with it. Each write gets its own exclusively created
+/// temporary file, so concurrent writers never share one, and `persist` replaces
+/// an existing destination (including a symbolic link, which is not followed)
+/// on Unix and Windows. A failed write removes its temporary file.
 fn replace_file(directory: &Path, contents: &[u8]) -> std::io::Result<()> {
-    let temporary = directory.join(TEMPORARY_FILE);
-    let _ = fs::remove_file(&temporary);
-    let result = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temporary)
-        .and_then(|mut file| file.write_all(contents))
-        .and_then(|()| fs::rename(&temporary, directory.join(INDEX_FILE)));
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary);
-    }
-    result
+    tempfile::Builder::new()
+        .prefix(".index.html.")
+        .suffix(".serenade-tmp")
+        .tempfile_in(directory)
+        .and_then(|mut file| file.write_all(contents).map(|()| file))
+        .and_then(|file| {
+            file.persist(directory.join(INDEX_FILE))
+                .map_err(|error| error.error)
+        })
+        .map(drop)
 }
 
 #[cfg(test)]
@@ -295,11 +302,25 @@ mod tests {
         assert!(error.contains("failed to create static output directory"));
     }
 
+    fn entries(directory: &Path) -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(directory)
+            .expect("read directory")
+            .map(|entry| {
+                entry
+                    .expect("entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        names.sort();
+        names
+    }
+
     #[test]
-    fn rewrites_existing_documents_and_clears_stale_temporary_files() {
+    fn rewrites_existing_documents_without_leaving_temporary_files() {
         let temp = tempfile::tempdir().expect("temporary directory");
         let writer = StaticDocumentWriter::new(temp.path());
-        fs::write(temp.path().join(TEMPORARY_FILE), "stale").expect("stale temporary file");
         fs::write(temp.path().join(INDEX_FILE), "old").expect("existing document");
         writer
             .write("/", document())
@@ -309,7 +330,31 @@ mod tests {
                 .expect("read output")
                 .contains("About page")
         );
-        assert!(!temp.path().join(TEMPORARY_FILE).exists());
+        assert_eq!(entries(temp.path()), [INDEX_FILE]);
+    }
+
+    #[test]
+    fn concurrent_writes_of_the_same_route_all_succeed() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let writer = StaticDocumentWriter::new(temp.path());
+        std::thread::scope(|scope| {
+            for _ in 0..8 {
+                scope.spawn(|| {
+                    for _ in 0..25 {
+                        writer
+                            .write("/docs/guide/", document())
+                            .expect("concurrent write");
+                    }
+                });
+            }
+        });
+        let route = temp.path().join("docs/guide");
+        assert_eq!(entries(&route), [INDEX_FILE]);
+        assert!(
+            fs::read_to_string(route.join(INDEX_FILE))
+                .expect("read output")
+                .contains("About page")
+        );
     }
 
     #[test]
@@ -348,12 +393,6 @@ mod tests {
                 .expect("output")
                 .contains("About page")
         );
-
-        symlink(&victim, temp.path().join(TEMPORARY_FILE)).expect("temporary symlink");
-        writer
-            .write("/", document())
-            .expect("ignore planted temporary symlink");
-        assert_eq!(fs::read_to_string(&victim).expect("victim"), "untouched");
 
         let linked_root = outside.path().join("linked-output");
         symlink(temp.path(), &linked_root).expect("output directory symlink");
