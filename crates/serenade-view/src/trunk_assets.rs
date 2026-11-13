@@ -1236,8 +1236,8 @@ mod tests {
                 asset["url"] = format!("{}/x.css", accepted.trim_end_matches('/')).into();
             }
             value["wasm"] = serde_json::json!([]);
-            TrunkAssetManifest::from_json(value.to_string().as_bytes())
-                .unwrap_or_else(|error| panic!("{accepted}: {error}"));
+            let result = TrunkAssetManifest::from_json(value.to_string().as_bytes());
+            assert!(result.is_ok(), "{accepted}: {:?}", result.err());
         }
         for rejected in [
             "javascript:alert(1)//",
