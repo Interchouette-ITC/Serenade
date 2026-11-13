@@ -1,25 +1,49 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/serenade-view/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-0c87338a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="serenade_view" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.1 (58cf8f9c3 2026-10-13)" data-channel="1.99.1" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">serenade_view/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! HTML view helpers: reverse routing, assets, and partials.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/serenade-view/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="serenade_view" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">serenade_view/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! HTML view helpers: reverse routing, assets, partials, and document composition.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Escape stays in [`serenade_form`]; this crate re-exports it for one import surface.
-<a href=#4 id=4 data-nosnippet>4</a>//! No mandatory template engine - apps compose HTML with these helpers.
-<a href=#5 id=5 data-nosnippet>5</a>
-<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">mod </span>asset;
-<a href=#7 id=7 data-nosnippet>7</a><span class="kw">mod </span>error;
-<a href=#8 id=8 data-nosnippet>8</a><span class="kw">mod </span>partial;
-<a href=#9 id=9 data-nosnippet>9</a><span class="kw">mod </span>path;
+<a href=#4 id=4 data-nosnippet>4</a>//! Document composition is engine-neutral; template engines can integrate without
+<a href=#5 id=5 data-nosnippet>5</a>//! becoming mandatory dependencies of this crate. The optional `leptos-ssr` feature
+<a href=#6 id=6 data-nosnippet>6</a>//! renders complete documents under a request-scoped Leptos owner and injects managed
+<a href=#7 id=7 data-nosnippet>7</a>//! metadata. The `leptos-client` feature exposes the head root and lifecycle components
+<a href=#8 id=8 data-nosnippet>8</a>//! used by CSR/hydrated apps. Compatible AOT compilers can target these components
+<a href=#9 id=9 data-nosnippet>9</a>//! without becoming dependencies of this crate.
 <a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">pub use </span>asset::{AssetConfig, asset};
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">pub use </span>error::ViewError;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">pub use </span>partial::partial;
-<a href=#14 id=14 data-nosnippet>14</a><span class="kw">pub use </span>path::path;
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">pub use </span>serenade_form::{escape_attr, escape_html};
-<a href=#16 id=16 data-nosnippet>16</a>
-<a href=#17 id=17 data-nosnippet>17</a><span class="doccomment">/// Compile-time crate version for diagnostics.
-<a href=#18 id=18 data-nosnippet>18</a></span><span class="attr">#[must_use]
-<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">pub const fn </span>version() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
-<a href=#20 id=20 data-nosnippet>20</a>    <span class="macro">env!</span>(<span class="string">"CARGO_PKG_VERSION"</span>)
-<a href=#21 id=21 data-nosnippet>21</a>}
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a><span class="attr">#[cfg(test)]
-<a href=#24 id=24 data-nosnippet>24</a></span><span class="kw">mod </span>tests;
+<a href=#11 id=11 data-nosnippet>11</a></span><span class="kw">mod </span>asset;
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">mod </span>document;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">mod </span>error;
+<a href=#14 id=14 data-nosnippet>14</a><span class="attr">#[cfg(any(feature = <span class="string">"leptos-client"</span>, feature = <span class="string">"leptos-ssr"</span>))]
+<a href=#15 id=15 data-nosnippet>15</a></span><span class="kw">mod </span>head;
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">mod </span>partial;
+<a href=#17 id=17 data-nosnippet>17</a><span class="kw">mod </span>path;
+<a href=#18 id=18 data-nosnippet>18</a><span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">mod </span>static_output;
+<a href=#20 id=20 data-nosnippet>20</a><span class="kw">mod </span>trunk_assets;
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a><span class="attr">#[cfg(feature = <span class="string">"leptos-ssr"</span>)]
+<a href=#23 id=23 data-nosnippet>23</a></span><span class="kw">pub use </span>any_spawner::Executor <span class="kw">as </span>LeptosExecutor;
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">pub use </span>asset::{AssetConfig, asset};
+<a href=#25 id=25 data-nosnippet>25</a><span class="attr">#[cfg(feature = <span class="string">"leptos-ssr"</span>)]
+<a href=#26 id=26 data-nosnippet>26</a></span><span class="kw">pub use </span>document::initialize_leptos_ssr;
+<a href=#27 id=27 data-nosnippet>27</a><span class="kw">pub use </span>document::{Document, DocumentParts, DocumentTemplate, RenderedDocument};
+<a href=#28 id=28 data-nosnippet>28</a><span class="kw">pub use </span>error::ViewError;
+<a href=#29 id=29 data-nosnippet>29</a><span class="attr">#[cfg(any(feature = <span class="string">"leptos-client"</span>, feature = <span class="string">"leptos-ssr"</span>))]
+<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">pub use </span>head::{JsonLd, ManagedHead, ManagedLink, ManagedMeta, ManagedTitle};
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub use </span>partial::partial;
+<a href=#32 id=32 data-nosnippet>32</a><span class="kw">pub use </span>path::path;
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">pub use </span>serenade_form::{escape_attr, escape_html};
+<a href=#34 id=34 data-nosnippet>34</a><span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
+<a href=#35 id=35 data-nosnippet>35</a></span><span class="kw">pub use </span>static_output::{STATIC_OUTPUT_DIR_ENV, StaticDocumentWriter};
+<a href=#36 id=36 data-nosnippet>36</a><span class="kw">pub use </span>trunk_assets::{
+<a href=#37 id=37 data-nosnippet>37</a>    TRUNK_ASSET_MANIFEST_ENV, TRUNK_ASSET_MANIFEST_FILE, TRUNK_DIST_DIRECTORY_ENV,
+<a href=#38 id=38 data-nosnippet>38</a>    TrunkAssetManifest, TrunkAssetReference, TrunkPreloadReference, TrunkWasmBundle,
+<a href=#39 id=39 data-nosnippet>39</a>};
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a><span class="doccomment">/// Compile-time crate version for diagnostics.
+<a href=#42 id=42 data-nosnippet>42</a></span><span class="attr">#[must_use]
+<a href=#43 id=43 data-nosnippet>43</a></span><span class="kw">pub const fn </span>version() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="macro">env!</span>(<span class="string">"CARGO_PKG_VERSION"</span>)
+<a href=#45 id=45 data-nosnippet>45</a>}
+<a href=#46 id=46 data-nosnippet>46</a>
+<a href=#47 id=47 data-nosnippet>47</a><span class="attr">#[cfg(test)]
+<a href=#48 id=48 data-nosnippet>48</a></span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["dist_directory","minify_html_files"]};
+window.SIDEBAR_ITEMS = {"fn":["clear_trunk_asset_manifest","dist_directory","dist_directory_for_build","minify_html_files","validate_trunk_asset_manifest"]};

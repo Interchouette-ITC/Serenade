@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["asset","escape_attr","escape_html","partial","path","version"],"struct":["AssetConfig","ViewError"]};
+window.SIDEBAR_ITEMS = {"constant":["STATIC_OUTPUT_DIR_ENV","TRUNK_ASSET_MANIFEST_ENV","TRUNK_ASSET_MANIFEST_FILE","TRUNK_DIST_DIRECTORY_ENV"],"fn":["asset","escape_attr","escape_html","partial","path","version"],"struct":["AssetConfig","Document","DocumentParts","RenderedDocument","StaticDocumentWriter","TrunkAssetManifest","TrunkAssetReference","TrunkPreloadReference","TrunkWasmBundle","ViewError"],"trait":["DocumentTemplate"]};

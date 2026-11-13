@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/serenade-cli/src/bin/serenade-universal.rs`."><title>serenade-universal.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-0c87338a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="serenade_universal" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.1 (58cf8f9c3 2026-10-13)" data-channel="1.99.1" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">serenade_universal/</div>serenade-universal.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Build and run registered Serenade Universal apps.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/serenade-cli/src/bin/serenade-universal.rs`."><title>serenade-universal.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="serenade_universal" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">serenade_universal/</div>serenade-universal.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Build and run registered Serenade Universal apps.
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>std::process::Command;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -36,36 +36,37 @@
 <a href=#36 id=36 data-nosnippet>36</a>            </span>.join(<span class="string">"demo-front"</span>);
 <a href=#37 id=37 data-nosnippet>37</a>        <span class="kw">let </span>back_manifest = app.directory.join(<span class="string">"Cargo.toml"</span>);
 <a href=#38 id=38 data-nosnippet>38</a>        <span class="macro">println!</span>(<span class="string">"Building {} frontend with Trunk"</span>, app.name);
-<a href=#39 id=39 data-nosnippet>39</a>        <span class="kw">let </span>status = Command::new(<span class="string">"trunk"</span>)
-<a href=#40 id=40 data-nosnippet>40</a>            .arg(<span class="string">"build"</span>)
-<a href=#41 id=41 data-nosnippet>41</a>            .current_dir(<span class="kw-2">&amp;</span>front)
-<a href=#42 id=42 data-nosnippet>42</a>            .status()
-<a href=#43 id=43 data-nosnippet>43</a>            .context(<span class="string">"failed to start Trunk for Universal frontend"</span>)<span class="question-mark">?</span>;
-<a href=#44 id=44 data-nosnippet>44</a>        <span class="kw">if </span>!status.success() {
-<a href=#45 id=45 data-nosnippet>45</a>            <span class="macro">bail!</span>(<span class="string">"Trunk failed to build Universal app `{}`"</span>, app.name);
-<a href=#46 id=46 data-nosnippet>46</a>        }
-<a href=#47 id=47 data-nosnippet>47</a>        <span class="kw">let </span>dist = serenade_cli::html_output::dist_directory(<span class="kw-2">&amp;</span>front)<span class="question-mark">?</span>;
-<a href=#48 id=48 data-nosnippet>48</a>        <span class="kw">let </span>minified = serenade_cli::html_output::minify_html_files(<span class="kw-2">&amp;</span>dist)<span class="question-mark">?</span>;
-<a href=#49 id=49 data-nosnippet>49</a>        <span class="macro">println!</span>(
-<a href=#50 id=50 data-nosnippet>50</a>            <span class="string">"Minified {minified} frontend HTML document(s) for {}"</span>,
-<a href=#51 id=51 data-nosnippet>51</a>            app.name
-<a href=#52 id=52 data-nosnippet>52</a>        );
-<a href=#53 id=53 data-nosnippet>53</a>
-<a href=#54 id=54 data-nosnippet>54</a>        <span class="macro">println!</span>(<span class="string">"Starting {} backend"</span>, app.name);
-<a href=#55 id=55 data-nosnippet>55</a>        <span class="kw">let </span>status = Command::new(<span class="string">"cargo"</span>)
-<a href=#56 id=56 data-nosnippet>56</a>            .args([<span class="string">"run"</span>, <span class="string">"--manifest-path"</span>])
-<a href=#57 id=57 data-nosnippet>57</a>            .arg(back_manifest)
-<a href=#58 id=58 data-nosnippet>58</a>            .current_dir(<span class="kw-2">&amp;</span>root)
-<a href=#59 id=59 data-nosnippet>59</a>            .status()
-<a href=#60 id=60 data-nosnippet>60</a>            .with_context(|| <span class="macro">format!</span>(<span class="string">"failed to start backend for `{}`"</span>, app.name))<span class="question-mark">?</span>;
-<a href=#61 id=61 data-nosnippet>61</a>        <span class="kw">if </span>!status.success() {
-<a href=#62 id=62 data-nosnippet>62</a>            <span class="macro">bail!</span>(
-<a href=#63 id=63 data-nosnippet>63</a>                <span class="string">"Universal backend `{}` exited with status {status}"</span>,
-<a href=#64 id=64 data-nosnippet>64</a>                app.name
-<a href=#65 id=65 data-nosnippet>65</a>            );
-<a href=#66 id=66 data-nosnippet>66</a>        }
-<a href=#67 id=67 data-nosnippet>67</a>    }
-<a href=#68 id=68 data-nosnippet>68</a>
-<a href=#69 id=69 data-nosnippet>69</a>    <span class="prelude-val">Ok</span>(())
-<a href=#70 id=70 data-nosnippet>70</a>}
+<a href=#39 id=39 data-nosnippet>39</a>        serenade_cli::trunk::build(<span class="kw-2">&amp;</span>front, <span class="kw-2">&amp;</span>[]).map_err(|error| {
+<a href=#40 id=40 data-nosnippet>40</a>            <span class="macro">anyhow::anyhow!</span>(
+<a href=#41 id=41 data-nosnippet>41</a>                <span class="string">"failed to build Universal frontend for `{}`: {error:#}"</span>,
+<a href=#42 id=42 data-nosnippet>42</a>                app.name
+<a href=#43 id=43 data-nosnippet>43</a>            )
+<a href=#44 id=44 data-nosnippet>44</a>        })<span class="question-mark">?</span>;
+<a href=#45 id=45 data-nosnippet>45</a>        <span class="kw">let </span>dist = serenade_cli::html_output::dist_directory_for_build(<span class="kw-2">&amp;</span>front, <span class="kw-2">&amp;</span>[])<span class="question-mark">?</span>;
+<a href=#46 id=46 data-nosnippet>46</a>        <span class="kw">let </span>manifest = dist.join(serenade_view::TRUNK_ASSET_MANIFEST_FILE);
+<a href=#47 id=47 data-nosnippet>47</a>        <span class="kw">let </span>minified = serenade_cli::html_output::minify_html_files(<span class="kw-2">&amp;</span>dist)<span class="question-mark">?</span>;
+<a href=#48 id=48 data-nosnippet>48</a>        <span class="macro">println!</span>(
+<a href=#49 id=49 data-nosnippet>49</a>            <span class="string">"Minified {minified} frontend HTML document(s) for {}"</span>,
+<a href=#50 id=50 data-nosnippet>50</a>            app.name
+<a href=#51 id=51 data-nosnippet>51</a>        );
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>        <span class="macro">println!</span>(<span class="string">"Starting {} backend"</span>, app.name);
+<a href=#54 id=54 data-nosnippet>54</a>        <span class="kw">let </span>status = Command::new(<span class="string">"cargo"</span>)
+<a href=#55 id=55 data-nosnippet>55</a>            .args([<span class="string">"run"</span>, <span class="string">"--manifest-path"</span>])
+<a href=#56 id=56 data-nosnippet>56</a>            .arg(back_manifest)
+<a href=#57 id=57 data-nosnippet>57</a>            .current_dir(<span class="kw-2">&amp;</span>root)
+<a href=#58 id=58 data-nosnippet>58</a>            .env(serenade_view::TRUNK_DIST_DIRECTORY_ENV, <span class="kw-2">&amp;</span>dist)
+<a href=#59 id=59 data-nosnippet>59</a>            .env(serenade_view::TRUNK_ASSET_MANIFEST_ENV, <span class="kw-2">&amp;</span>manifest)
+<a href=#60 id=60 data-nosnippet>60</a>            .status()
+<a href=#61 id=61 data-nosnippet>61</a>            .with_context(|| <span class="macro">format!</span>(<span class="string">"failed to start backend for `{}`"</span>, app.name))<span class="question-mark">?</span>;
+<a href=#62 id=62 data-nosnippet>62</a>        <span class="kw">if </span>!status.success() {
+<a href=#63 id=63 data-nosnippet>63</a>            <span class="macro">bail!</span>(
+<a href=#64 id=64 data-nosnippet>64</a>                <span class="string">"Universal backend `{}` exited with status {status}"</span>,
+<a href=#65 id=65 data-nosnippet>65</a>                app.name
+<a href=#66 id=66 data-nosnippet>66</a>            );
+<a href=#67 id=67 data-nosnippet>67</a>        }
+<a href=#68 id=68 data-nosnippet>68</a>    }
+<a href=#69 id=69 data-nosnippet>69</a>
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="prelude-val">Ok</span>(())
+<a href=#71 id=71 data-nosnippet>71</a>}
 </code></pre></div></section></main></body></html>
