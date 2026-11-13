@@ -935,6 +935,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "leptos_meta"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "987b1a07addba2647da43c0689408cccc0f428236b714ea606127b9e347d35d8"
+dependencies = [
+ "futures",
+ "indexmap",
+ "leptos",
+ "or_poisoned",
+ "send_wrapper",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "leptos_server"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1492,7 +1507,12 @@ dependencies = [
 name = "serenade-view"
 version = "0.1.0"
 dependencies = [
+ "any_spawner",
  "base64 0.23.1",
+ "futures",
+ "hydration_context",
+ "leptos",
+ "leptos_meta",
  "serde",
  "serde_json",
  "serenade-form",

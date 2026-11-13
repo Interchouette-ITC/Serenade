@@ -315,11 +315,16 @@ fn managed_title_view(text: TextProp) -> AnyView {
 }
 
 /// Emits JSON-LD after JSON serialization and HTML raw-text-safe escaping.
+///
+/// # Panics
+///
+/// Panics while rendering when `json` is not valid JSON. Validate untrusted
+/// input before passing it in.
 #[component]
 pub fn JsonLd(#[prop(into)] json: TextProp) -> impl IntoView {
     let json = move || {
         let value: serde_json::Value = serde_json::from_str(&json.get())
-            .unwrap_or_else(|error| panic!("Rangular JSON-LD must be valid JSON: {error}"));
+            .unwrap_or_else(|error| panic!("JsonLd requires valid JSON: {error}"));
         let serialized = serde_json::to_string(&value)
             .expect("serializing a JSON value to a string cannot fail");
         serialized

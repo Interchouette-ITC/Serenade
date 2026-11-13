@@ -283,6 +283,17 @@ mod leptos_document_tests {
     }
 
     #[test]
+    #[should_panic(expected = "JsonLd requires valid JSON")]
+    fn json_ld_rejects_invalid_json_with_an_engine_neutral_message() {
+        initialize_executor();
+        let _ = Document::new(
+            || view! { <crate::JsonLd json="{not json" /> },
+            || view! { <main>"Body"</main> },
+        )
+        .render_leptos();
+    }
+
+    #[test]
     fn managed_metadata_is_injected_into_head_and_preserves_repeatable_entries() {
         initialize_executor();
         let rendered = Document::new(RegisteredMetadata, || view! { <main>"Product"</main> })
