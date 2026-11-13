@@ -30,6 +30,11 @@ pub fn dist_directory(app: &Path) -> anyhow::Result<std::path::PathBuf> {
 ///
 /// Trunk's precedence is command-line `--dist`, then `TRUNK_BUILD_DIST`, then
 /// `Trunk.toml`, then the default `dist/`.
+///
+/// # Errors
+///
+/// Returns an error when a CLI `--dist` option has no value or an existing
+/// `Trunk.toml` cannot be read or parsed.
 pub fn dist_directory_for_build(app: &Path, args: &[&str]) -> anyhow::Result<std::path::PathBuf> {
     let mut args_iter = args.iter();
     let mut cli_dist = None;

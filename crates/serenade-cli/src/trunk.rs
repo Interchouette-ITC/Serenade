@@ -38,10 +38,10 @@ pub fn command() -> anyhow::Result<Command> {
                 tools_dir.display()
             )
         })?;
-        if let Some(_lock) = acquire_install_lock(&tools_dir, &executable, &marker)? {
-            if !is_installed(&executable, &marker) {
-                install(&install_dir, &executable, &marker)?;
-            }
+        if let Some(_lock) = acquire_install_lock(&tools_dir, &executable, &marker)?
+            && !is_installed(&executable, &marker)
+        {
+            install(&install_dir, &executable, &marker)?;
         }
     }
 
@@ -193,6 +193,7 @@ impl Drop for InstallLock {
 }
 
 /// Converts program arguments into an owned vector, useful to forward CLI args.
+#[must_use]
 pub fn args_from_env() -> Vec<OsString> {
     std::env::args_os().skip(1).collect()
 }

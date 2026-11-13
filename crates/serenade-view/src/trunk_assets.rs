@@ -2,6 +2,7 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet},
+    ffi::OsString,
     path::{Component, Path, PathBuf},
 };
 
@@ -127,7 +128,11 @@ impl TrunkAssetManifest {
     /// Returns an error when the environment variable is missing or the
     /// manifest is missing, malformed, or incompatible.
     pub fn read_from_env() -> Result<Self, ViewError> {
-        let path = std::env::var_os(TRUNK_ASSET_MANIFEST_ENV).ok_or_else(|| {
+        Self::read_from_environment(std::env::var_os(TRUNK_ASSET_MANIFEST_ENV))
+    }
+
+    fn read_from_environment(path: Option<OsString>) -> Result<Self, ViewError> {
+        let path = path.ok_or_else(|| {
             ViewError::msg(format!(
                 "environment variable {TRUNK_ASSET_MANIFEST_ENV} is not set"
             ))
@@ -290,18 +295,11 @@ impl TrunkAssetManifest {
             }
             let wasm_path = self.local_asset_path(&bundle.wasm_url)?;
             let wasm_file = dist.join(wasm_path);
-            require_file(&wasm_file, "WebAssembly module")?;
+            let wasm_metadata = require_file(&wasm_file, "WebAssembly module")?;
             if let Some(content_digest) = &bundle.wasm_content_digest {
                 verify_digest(&wasm_file, content_digest)?;
             }
-            let actual_size = std::fs::metadata(&wasm_file)
-                .map_err(|error| {
-                    ViewError::msg(format!(
-                        "failed to inspect WebAssembly module {}: {error}",
-                        wasm_file.display()
-                    ))
-                })?
-                .len();
+            let actual_size = wasm_metadata.len();
             if actual_size != bundle.wasm_size {
                 return Err(ViewError::msg(format!(
                     "stale WebAssembly module `{}`: manifest size is {} bytes, file size is {actual_size} bytes",
@@ -397,7 +395,7 @@ fn percent_decode(path: &str) -> Result<String, ViewError> {
         .map_err(|_| ViewError::msg(format!("asset path `{path}` is not valid UTF-8")))
 }
 
-fn hex_digit(byte: u8) -> Option<u8> {
+const fn hex_digit(byte: u8) -> Option<u8> {
     match byte {
         b'0'..=b'9' => Some(byte - b'0'),
         b'a'..=b'f' => Some(byte - b'a' + 10),
@@ -406,9 +404,9 @@ fn hex_digit(byte: u8) -> Option<u8> {
     }
 }
 
-fn require_file(path: &Path, description: &str) -> Result<(), ViewError> {
+fn require_file(path: &Path, description: &str) -> Result<std::fs::Metadata, ViewError> {
     match std::fs::metadata(path) {
-        Ok(metadata) if metadata.is_file() => Ok(()),
+        Ok(metadata) if metadata.is_file() => Ok(metadata),
         Ok(_) => Err(ViewError::msg(format!(
             "{description} is not a file: {}",
             path.display()
@@ -507,6 +505,34 @@ mod tests {
         ]
     }"#;
 
+    fn manifest_value() -> serde_json::Value {
+        serde_json::from_str(MANIFEST).expect("fixture JSON should be valid")
+    }
+
+    fn version_two_manifest_value() -> serde_json::Value {
+        let mut json = manifest_value();
+        json["version"] = 2.into();
+        for asset in json["assets"]
+            .as_array_mut()
+            .expect("asset list")
+            .iter_mut()
+        {
+            asset["content_digest"] = "sha256-ZGlnZXN0".into();
+        }
+        json["wasm"][0]["js_content_digest"] = "sha256-ZGlnZXN0".into();
+        json["wasm"][0]["wasm_content_digest"] = "sha256-ZGlnZXN0".into();
+        json["wasm"][0]["preloads"][0]["content_digest"] = "sha256-ZGlnZXN0".into();
+        json
+    }
+
+    fn assert_manifest_error(json: &serde_json::Value, expected: &str) {
+        let bytes = serde_json::to_vec(json).expect("serialize manifest");
+        let error = TrunkAssetManifest::from_json(&bytes)
+            .expect_err("manifest should be rejected")
+            .to_string();
+        assert!(error.contains(expected), "{error}");
+    }
+
     #[test]
     fn reads_versioned_asset_and_wasm_metadata() {
         let manifest = TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("valid manifest");
@@ -528,8 +554,51 @@ mod tests {
             "wasm": []
         }"#;
         let manifest = TrunkAssetManifest::from_json(json).expect("HTML-only manifest");
-        assert!(manifest.assets.is_empty());
-        assert!(manifest.wasm.is_empty());
+        assert_eq!(manifest.assets, Vec::<TrunkAssetReference>::new());
+        assert_eq!(manifest.wasm, Vec::<TrunkWasmBundle>::new());
+    }
+
+    #[test]
+    fn reads_manifest_files_and_environment_values() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let path = temp.path().join(TRUNK_ASSET_MANIFEST_FILE);
+        std::fs::write(&path, MANIFEST).expect("write manifest");
+        let from_file = TrunkAssetManifest::read(&path).expect("read manifest");
+        assert_eq!(
+            from_file,
+            TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("parse manifest")
+        );
+        assert_eq!(
+            TrunkAssetManifest::read_from_environment(Some(path.clone().into_os_string()))
+                .expect("read environment manifest"),
+            from_file
+        );
+        assert!(
+            TrunkAssetManifest::read_from_environment(None)
+                .expect_err("missing manifest path")
+                .to_string()
+                .contains("environment variable")
+        );
+
+        let missing = temp.path().join("missing.json");
+        assert!(
+            TrunkAssetManifest::read(&missing)
+                .expect_err("missing file")
+                .to_string()
+                .contains("failed to read")
+        );
+
+        std::fs::write(&path, b"{").expect("write malformed manifest");
+        assert!(
+            TrunkAssetManifest::read(&path)
+                .expect_err("malformed file")
+                .to_string()
+                .contains("invalid Trunk asset manifest")
+        );
+
+        let configured = std::env::var_os(TRUNK_ASSET_MANIFEST_ENV)
+            .is_some_and(|path| TrunkAssetManifest::read(path).is_ok());
+        assert_eq!(TrunkAssetManifest::read_from_env().is_ok(), configured);
     }
 
     #[test]
@@ -552,6 +621,84 @@ mod tests {
                 .to_string()
                 .contains("strictly increasing source order")
         );
+    }
+
+    #[test]
+    fn rejects_empty_manifest_fields_and_invalid_asset_metadata() {
+        let mut invalid = manifest_value();
+        invalid["public_url"] = " ".into();
+        assert_manifest_error(&invalid, "empty public URL prefix");
+
+        let mut invalid = manifest_value();
+        invalid["html"] = "".into();
+        assert_manifest_error(&invalid, "empty HTML output filename");
+
+        let mut invalid = manifest_value();
+        invalid["assets"][0]["role"] = "font".into();
+        assert_manifest_error(&invalid, "unsupported Trunk asset role");
+
+        let mut invalid = manifest_value();
+        invalid["assets"][0]["url"] = "".into();
+        assert_manifest_error(&invalid, "has an empty URL");
+
+        let mut invalid = manifest_value();
+        invalid["wasm"][0]["js_url"] = "".into();
+        assert_manifest_error(&invalid, "empty JavaScript or WebAssembly URL");
+
+        let mut invalid = manifest_value();
+        invalid["wasm"][0]["wasm_url"] = "".into();
+        assert_manifest_error(&invalid, "empty JavaScript or WebAssembly URL");
+
+        let mut invalid = manifest_value();
+        let duplicate_bundle = invalid["wasm"][0].clone();
+        invalid["wasm"]
+            .as_array_mut()
+            .expect("WASM bundles")
+            .push(duplicate_bundle);
+        assert_manifest_error(&invalid, "duplicate source order");
+
+        let mut invalid = manifest_value();
+        invalid["wasm"][0]["preloads"][0]["url"] = "".into();
+        assert_manifest_error(&invalid, "invalid preload reference");
+    }
+
+    #[test]
+    fn rejects_version_two_manifests_with_missing_or_inconsistent_digests() {
+        let mut invalid = version_two_manifest_value();
+        invalid["assets"][0]["content_digest"] = serde_json::Value::Null;
+        assert_manifest_error(&invalid, "missing its version 2 content digest");
+
+        let mut invalid = version_two_manifest_value();
+        invalid["wasm"][0]["js_content_digest"] = serde_json::Value::Null;
+        assert_manifest_error(
+            &invalid,
+            "WASM bundle is missing a version 2 content digest",
+        );
+
+        let mut invalid = version_two_manifest_value();
+        invalid["wasm"][0]["wasm_content_digest"] = serde_json::Value::Null;
+        assert_manifest_error(
+            &invalid,
+            "WASM bundle is missing a version 2 content digest",
+        );
+
+        let mut invalid = version_two_manifest_value();
+        invalid["wasm"][0]["initializer_url"] = "/app/init.js".into();
+        assert_manifest_error(
+            &invalid,
+            "WASM bundle is missing a version 2 content digest",
+        );
+
+        let mut invalid = version_two_manifest_value();
+        invalid["wasm"][0]["initializer_content_digest"] = "sha256-ZGlnZXN0".into();
+        assert_manifest_error(
+            &invalid,
+            "WASM bundle is missing a version 2 content digest",
+        );
+
+        let mut invalid = version_two_manifest_value();
+        invalid["wasm"][0]["preloads"][0]["content_digest"] = serde_json::Value::Null;
+        assert_manifest_error(&invalid, "missing its version 2 content digest");
     }
 
     #[test]
@@ -708,6 +855,45 @@ mod tests {
     }
 
     #[test]
+    fn rejects_non_file_html_and_missing_wasm_runtime_files() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let manifest = write_valid_output(temp.path());
+        std::fs::remove_file(temp.path().join("index.html")).expect("remove HTML file");
+        std::fs::create_dir(temp.path().join("index.html")).expect("create HTML directory");
+        assert!(
+            manifest
+                .validate_output(temp.path())
+                .expect_err("HTML output must be a file")
+                .to_string()
+                .contains("HTML output is not a file")
+        );
+
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let mut manifest = write_valid_output(temp.path());
+        manifest.assets.retain(|asset| asset.role != "script");
+        std::fs::remove_file(temp.path().join("app-123.js")).expect("remove JS loader");
+        assert!(
+            manifest
+                .validate_output(temp.path())
+                .expect_err("WASM JavaScript loader must exist")
+                .to_string()
+                .contains("WASM JavaScript loader is missing")
+        );
+
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let mut manifest = write_valid_output(temp.path());
+        manifest.assets.retain(|asset| asset.role != "script");
+        std::fs::remove_file(temp.path().join("app-123_bg.wasm")).expect("remove WASM module");
+        assert!(
+            manifest
+                .validate_output(temp.path())
+                .expect_err("WASM module must exist")
+                .to_string()
+                .contains("WebAssembly module is missing")
+        );
+    }
+
+    #[test]
     fn validates_version_two_content_digests_without_sri() {
         let temp = tempfile::tempdir().expect("temporary directory");
         write_valid_output(temp.path());
@@ -750,6 +936,54 @@ mod tests {
     }
 
     #[test]
+    fn validates_version_two_initializer_and_preload_integrity() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        write_valid_output(temp.path());
+        let css = b"body { color: red; }";
+        let js = b"export default {};";
+        let wasm = vec![0; 1024];
+        let initializer = b"export function init() {}";
+        std::fs::write(temp.path().join("init-123.js"), initializer).expect("write initializer");
+
+        let mut json = version_two_manifest_value();
+        json["assets"][0]["attributes"]
+            .as_object_mut()
+            .expect("asset attributes")
+            .remove("integrity");
+        json["assets"][0]["content_digest"] =
+            format!("sha256-{}", STANDARD.encode(Sha256::digest(css))).into();
+        json["assets"][1]["content_digest"] =
+            format!("sha256-{}", STANDARD.encode(Sha256::digest(js))).into();
+        json["wasm"][0]["js_content_digest"] =
+            format!("sha256-{}", STANDARD.encode(Sha256::digest(js))).into();
+        json["wasm"][0]["wasm_content_digest"] =
+            format!("sha256-{}", STANDARD.encode(Sha256::digest(&wasm))).into();
+        json["wasm"][0]["initializer_url"] = "/app/init-123.js".into();
+        json["wasm"][0]["initializer_content_digest"] =
+            format!("sha256-{}", STANDARD.encode(Sha256::digest(initializer))).into();
+        json["wasm"][0]["preloads"][0]["content_digest"] =
+            format!("sha256-{}", STANDARD.encode(Sha256::digest(js))).into();
+        json["wasm"][0]["preloads"][0]["integrity"] =
+            format!("sha384-{}", STANDARD.encode(Sha384::digest(js))).into();
+
+        let bytes = serde_json::to_vec(&json).expect("serialize version 2 manifest");
+        let manifest = TrunkAssetManifest::from_json(&bytes).expect("valid version 2 manifest");
+        manifest
+            .validate_output(temp.path())
+            .expect("initializer and preload integrity validate");
+
+        std::fs::write(temp.path().join("init-123.js"), b"stale initializer")
+            .expect("replace initializer");
+        assert!(
+            manifest
+                .validate_output(temp.path())
+                .expect_err("stale initializer must fail")
+                .to_string()
+                .contains("content digest check failed")
+        );
+    }
+
+    #[test]
     fn rejects_version_two_manifest_missing_content_digest() {
         let json = MANIFEST.replace(r#""version": 1"#, r#""version": 2"#);
         assert!(
@@ -757,6 +991,78 @@ mod tests {
                 .expect_err("version 2 requires digest fields")
                 .to_string()
                 .contains("missing its version 2 content digest")
+        );
+    }
+
+    #[test]
+    fn validates_relative_paths_and_digest_formats() {
+        assert_eq!(
+            safe_relative_path("assets/%41.js").expect("decode asset path"),
+            PathBuf::from("assets/A.js")
+        );
+        for path in [
+            "",
+            "/absolute.js",
+            "../secret.js",
+            "bad\\path.js",
+            "%",
+            "%2",
+            "%GG",
+            "%FF",
+        ] {
+            assert!(
+                safe_relative_path(path).is_err(),
+                "path should be rejected: {path}"
+            );
+        }
+
+        let manifest = TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("valid manifest");
+        assert!(
+            manifest
+                .local_asset_path("/app/file.js?debug=true")
+                .is_err()
+        );
+        assert!(manifest.local_asset_path("/app/file.js#section").is_err());
+
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let file = temp.path().join("asset.bin");
+        std::fs::write(&file, b"content").expect("write asset");
+        let blocked_directory = temp.path().join("not-a-directory");
+        std::fs::write(&blocked_directory, b"file").expect("write blocking file");
+        assert!(
+            require_file(&blocked_directory.join("asset.bin"), "asset")
+                .expect_err("non-directory parent")
+                .to_string()
+                .contains("failed to inspect")
+        );
+
+        let digest = format!("sha512-{}", STANDARD.encode(Sha512::digest(b"content")));
+        verify_digest(&file, &digest).expect("validate SHA-512 digest");
+        assert!(verify_digest(&file, "malformed").is_err());
+        assert!(verify_digest(&file, "sha256-!").is_err());
+        assert!(
+            verify_digest(&file, &format!("unknown-{}", STANDARD.encode(b"content")))
+                .expect_err("unsupported algorithm")
+                .to_string()
+                .contains("unsupported asset digest algorithm")
+        );
+        assert!(
+            verify_digest(
+                &file,
+                &format!("sha256-{}", STANDARD.encode(Sha256::digest(b"other")))
+            )
+            .expect_err("stale digest")
+            .to_string()
+            .contains("content digest check failed")
+        );
+        assert!(
+            verify_digest(
+                &temp.path().join("missing.bin"),
+                &format!("sha256-{}", STANDARD.encode(Sha256::digest(b"content")))
+            )
+            .expect_err("missing digest file")
+            .to_string()
+            .contains("failed to read")
         );
     }
 }

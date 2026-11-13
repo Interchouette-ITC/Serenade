@@ -9,9 +9,9 @@ publish.workspace = true
 leptos = { version = "0.8", features = ["csr", "hydrate"] }
 serenade-demo-contract = { path = "../../libs/demo-contract" }
 serenade-view = { path = "../../../../crates/serenade-view", features = ["leptos-client"] }
-rangular-aot = { path = "../../../../../rangular/crates/rangular-aot" }
-rangular-expr = { path = "../../../../../rangular/crates/rangular-expr" }
-rangular-host = { path = "../../../../../rangular/crates/rangular-host" }
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-expr = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-host = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
 serde_json = { workspace = true }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
@@ -34,7 +34,11 @@ web-sys = { version = "0.3", features = [
 ] }
 
 [build-dependencies]
-rangular-aot = { path = "../../../../../rangular/crates/rangular-aot" }
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
+
+[package.metadata.cargo-machete]
+# Used by shared CMS host code and Rangular-generated Rust.
+ignored = ["rangular-expr", "rangular-host"]

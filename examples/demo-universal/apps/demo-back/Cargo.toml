@@ -17,12 +17,16 @@ serenade-minify = { path = "../../../../crates/serenade-minify" }
 serenade-http-actix = { path = "../../../../crates/serenade-http-actix" }
 serenade-kernel = { path = "../../../../crates/serenade-kernel" }
 serenade-view = { path = "../../../../crates/serenade-view", features = ["leptos-ssr"] }
-rangular-aot = { path = "../../../../../rangular/crates/rangular-aot" }
-rangular-expr = { path = "../../../../../rangular/crates/rangular-expr" }
-rangular-host = { path = "../../../../../rangular/crates/rangular-host" }
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-expr = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+rangular-host = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
 serde_json = { workspace = true }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 web-sys = { version = "0.3", features = ["MouseEvent"] }
 
 [build-dependencies]
-rangular-aot = { path = "../../../../../rangular/crates/rangular-aot" }
+rangular-aot = { git = "https://github.com/Interchouette-ITC/rangular.git", branch = "dev" }
+
+[package.metadata.cargo-machete]
+# Used by Rangular-generated Rust, including its browser event types.
+ignored = ["rangular-expr", "rangular-host", "web-sys"]

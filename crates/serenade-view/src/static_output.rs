@@ -1,6 +1,6 @@
 //! Static document output for route-oriented prerendering.
 
-use std::{fs, path::PathBuf};
+use std::{ffi::OsString, fs, path::PathBuf};
 
 use crate::{RenderedDocument, ViewError};
 
@@ -31,7 +31,11 @@ impl StaticDocumentWriter {
     ///
     /// Returns an error when the environment variable is missing or empty.
     pub fn from_env() -> Result<Self, ViewError> {
-        let output_directory = std::env::var_os(STATIC_OUTPUT_DIR_ENV)
+        Self::from_environment(std::env::var_os(STATIC_OUTPUT_DIR_ENV))
+    }
+
+    fn from_environment(output_directory: Option<OsString>) -> Result<Self, ViewError> {
+        let output_directory = output_directory
             .filter(|directory| !directory.is_empty())
             .ok_or_else(|| {
                 ViewError::msg(format!(
@@ -162,6 +166,19 @@ mod tests {
     }
 
     #[test]
+    fn reads_output_directory_from_environment_value() {
+        assert_eq!(
+            StaticDocumentWriter::from_environment(Some(OsString::from("dist")))
+                .expect("configured output directory"),
+            StaticDocumentWriter::new("dist")
+        );
+        assert!(StaticDocumentWriter::from_environment(None).is_err());
+        assert!(StaticDocumentWriter::from_environment(Some(OsString::new())).is_err());
+
+        let _from_env = StaticDocumentWriter::from_env();
+    }
+
+    #[test]
     fn writes_complete_documents_and_creates_route_directories() {
         let temp = tempfile::tempdir().expect("temporary directory");
         let writer = StaticDocumentWriter::new(temp.path());
@@ -172,6 +189,27 @@ mod tests {
             fs::read_to_string(output_path).expect("read output"),
             "<!doctype html><html><head><title>About</title></head><body><main>About page</main></body></html>"
         );
+    }
+
+    #[test]
+    fn reports_static_output_filesystem_errors() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let blocked_directory = temp.path().join("blocked");
+        fs::write(&blocked_directory, "not a directory").expect("create blocking file");
+        let error = StaticDocumentWriter::new(blocked_directory)
+            .write("/about", document())
+            .expect_err("creating a route directory beneath a file must fail")
+            .to_string();
+        assert!(error.contains("failed to create static output directory"));
+
+        let temp = tempfile::tempdir().expect("temporary directory");
+        fs::create_dir_all(temp.path().join("about/index.html"))
+            .expect("create directory at document file path");
+        let error = StaticDocumentWriter::new(temp.path())
+            .write("/about", document())
+            .expect_err("writing over a directory must fail")
+            .to_string();
+        assert!(error.contains("failed to write static document"));
     }
 
     #[test]

@@ -2376,6 +2376,7 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 [[package]]
 name = "rangular-aot"
 version = "1.0.4"
+source = "git+https://github.com/Interchouette-ITC/rangular.git?branch=dev#7821a80d85bab4f4df319bda8a8ba12e34b197c2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2388,6 +2389,7 @@ dependencies = [
 [[package]]
 name = "rangular-expr"
 version = "1.0.4"
+source = "git+https://github.com/Interchouette-ITC/rangular.git?branch=dev#7821a80d85bab4f4df319bda8a8ba12e34b197c2"
 dependencies = [
  "rangular-host",
 ]
@@ -2395,6 +2397,7 @@ dependencies = [
 [[package]]
 name = "rangular-host"
 version = "1.0.4"
+source = "git+https://github.com/Interchouette-ITC/rangular.git?branch=dev#7821a80d85bab4f4df319bda8a8ba12e34b197c2"
 dependencies = [
  "regex",
 ]
@@ -2402,6 +2405,7 @@ dependencies = [
 [[package]]
 name = "rangular-parser"
 version = "1.0.4"
+source = "git+https://github.com/Interchouette-ITC/rangular.git?branch=dev#7821a80d85bab4f4df319bda8a8ba12e34b197c2"
 dependencies = [
  "rangular-expr",
 ]

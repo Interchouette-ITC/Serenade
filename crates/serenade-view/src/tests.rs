@@ -82,6 +82,10 @@ fn document_composes_once_for_http_or_static_delivery() {
     assert_eq!(rendered.as_html(), expected);
     assert_eq!(rendered.clone().into_static_output(), expected);
 
+    let response = rendered.into_response();
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.body_str(), Some(expected));
+
     let response: RenderedDocument = Document::new("<title>Page</title>", "<main>Content</main>")
         .render(&TestDocumentTemplate)
         .expect("render document");
@@ -199,7 +203,7 @@ mod leptos_document_tests {
     #[component]
     fn EscapedMetadata() -> impl IntoView {
         let title = r#"Crème "citée" & <été>"#;
-        let description = r#"Résumé "vif" & <détail> — 日本語"#;
+        let description = r#"Résumé "vif" & <détail> - 日本語"#;
         let canonical = r#"/recherche?q="été"&lang=fr"#;
         let json = r#"{"name":"Crème \"citée\" & <été> </script><script>"}"#;
         view! {
@@ -338,7 +342,7 @@ mod leptos_document_tests {
             "{head}"
         );
         assert!(head.contains(
-            "name=\"description\" content=\"Résumé &quot;vif&quot; &amp; &lt;détail&gt; — 日本語\""
+            "name=\"description\" content=\"Résumé &quot;vif&quot; &amp; &lt;détail&gt; - 日本語\""
         ));
         assert!(head.contains("href=\"/recherche?q=&quot;été&quot;&amp;lang=fr\""));
         assert!(head.contains("property=\"og:description\""));
