@@ -20,37 +20,16 @@ fn cms_head_view(host: HostCell<CmsHelloHost>) -> impl IntoView {
     view! { <ManagedHead>{cms_hello::cms_head(host)}</ManagedHead> }
 }
 
-fn clear_server_rendered_head(document: &web_sys::Document, preserved: Option<&[web_sys::Node]>) {
-    let selectors = [
-        "head title",
-        "head meta[charset]",
-        "head meta[name='viewport']",
-        "head meta[name='description']",
-        "head meta[property='og:image']",
-        "head link[rel='canonical']",
-        "head link[rel='icon'][type='image/x-icon']",
-        "head link[rel='stylesheet'][href='/style.css']",
-        "head script[type='application/ld+json']",
-    ];
-    for selector in selectors {
-        let nodes = document
-            .query_selector_all(selector)
-            .unwrap_or_else(|error| {
-                panic!("querying server-rendered head selector {selector} failed: {error:?}")
-            });
-        for index in 0..nodes.length() {
-            if let Some(node) = nodes.item(index) {
-                if preserved.is_some_and(|original| {
-                    original
-                        .iter()
-                        .any(|original| node.is_same_node(Some(original)))
-                }) {
-                    continue;
-                }
-                node.dyn_into::<Element>()
-                    .expect("server-rendered head entry is an element")
-                    .remove();
-            }
+fn clear_server_rendered_head(document: &web_sys::Document) {
+    // Leptos claims the existing title node; only replace explicitly owned metadata.
+    let nodes = document
+        .query_selector_all("head > [data-serenade-head='ssr']")
+        .expect("valid server-owned head selector");
+    for index in 0..nodes.length() {
+        if let Some(node) = nodes.item(index) {
+            node.dyn_into::<Element>()
+                .expect("server-rendered head entry is an element")
+                .remove();
         }
     }
 }
@@ -184,7 +163,7 @@ fn main() {
         let (host, popstate) = create_cms_host(&window, route_specific);
         popstate.forget();
 
-        clear_server_rendered_head(&document, None);
+        clear_server_rendered_head(&document);
         let head_host = host.clone();
         leptos::mount::mount_to(head, move || cms_head_view(head_host)).forget();
         leptos::mount::hydrate_body(move || cms_hello::cms_body(host));
@@ -239,16 +218,24 @@ mod browser_tests {
     fn assert_head(document: &Document, title: &str, description: &str, canonical: &str) {
         assert_eq!(document.title(), title);
         assert_eq!(
-            attribute(document, "head meta[name='description']", "content"),
+            attribute(
+                document,
+                "head meta[name='description']:not(#unrelated-description)",
+                "content"
+            ),
             description
         );
         assert_eq!(
-            attribute(document, "head link[rel='canonical']", "href"),
+            attribute(
+                document,
+                "head link[rel='canonical']:not(#unrelated-canonical)",
+                "href"
+            ),
             canonical
         );
         assert_eq!(
             document
-                .query_selector_all("head meta[property='og:image']")
+                .query_selector_all("head meta[property='og:image']:not(#unrelated-social)")
                 .expect("valid selector")
                 .length(),
             2
@@ -275,6 +262,37 @@ mod browser_tests {
         let original_body_nodes = snapshot_children(&body);
         head.insert_adjacent_html("afterbegin", include_str!("fixtures/cms-hello-head.html"))
             .expect("insert server-rendered head fixture");
+        head.insert_adjacent_html(
+            "beforeend",
+            r#"
+            <meta id="unrelated-charset" charset="utf-8">
+            <meta id="unrelated-viewport" name="viewport" content="width=device-width">
+            <meta id="unrelated-description" name="description" content="Unrelated">
+            <meta id="unrelated-social" property="og:image" content="/other.png">
+            <link id="unrelated-canonical" rel="canonical" href="/other">
+            <link id="unrelated-style" rel="stylesheet" href="/style.css">
+            <link id="unrelated-icon" rel="icon" type="image/x-icon" href="/favicon.ico">
+            <script id="unrelated-json" type="application/ld+json">{"name":"unrelated"}</script>
+        "#,
+        )
+        .expect("insert unrelated application head entries");
+        let unrelated_nodes: Vec<_> = [
+            "unrelated-charset",
+            "unrelated-viewport",
+            "unrelated-description",
+            "unrelated-social",
+            "unrelated-canonical",
+            "unrelated-style",
+            "unrelated-icon",
+            "unrelated-json",
+        ]
+        .into_iter()
+        .map(|id| document.get_element_by_id(id).expect("unrelated node"))
+        .collect();
+        let server_title = document
+            .query_selector("head title")
+            .expect("title selector")
+            .expect("server title");
         body.insert_adjacent_html("afterbegin", include_str!("fixtures/cms-hello-body.html"))
             .expect("insert server-rendered body fixture");
 
@@ -294,11 +312,34 @@ mod browser_tests {
             .expect("valid main selector")
             .expect("server-rendered main");
         let (host, popstate) = create_cms_host(&window, true);
-        clear_server_rendered_head(&document, Some(&original_head_nodes));
+        clear_server_rendered_head(&document);
+        for node in &unrelated_nodes {
+            assert!(
+                node.parent_node()
+                    .expect("unrelated head node retained")
+                    .is_same_node(Some(head.as_ref()))
+            );
+        }
         let head_host = host.clone();
         let head_mount = mount_to(head.clone(), move || cms_head_view(head_host));
         let body_hydration = hydrate_from(body.clone(), move || cms_hello::cms_body(host));
         next_browser_task().await;
+        assert!(
+            server_title.is_same_node(
+                document
+                    .query_selector("head title")
+                    .expect("title selector")
+                    .as_ref()
+                    .map(|node| node.as_ref())
+            )
+        );
+        for node in &unrelated_nodes {
+            assert!(
+                node.parent_node()
+                    .expect("unrelated head node retained after mount")
+                    .is_same_node(Some(head.as_ref()))
+            );
+        }
 
         assert!(
             document_element.is_same_node(
@@ -391,6 +432,13 @@ mod browser_tests {
             "/cms/hello?source=universal&mode=ssr",
         );
 
+        for node in &unrelated_nodes {
+            assert!(
+                node.parent_node()
+                    .expect("unrelated node retained after navigation")
+                    .is_same_node(Some(head.as_ref()))
+            );
+        }
         window
             .history()
             .expect("browser history")

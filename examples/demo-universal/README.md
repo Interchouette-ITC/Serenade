@@ -20,6 +20,17 @@ Source to inspect the server-rendered response.
 
 The backend reads Trunk's validated `trunk-assets.json` manifest at startup and uses its exact
 URLs for the `/cms/hello` bootstrap and WASM bundle, including hashed filenames.
+Only scripts marked `data-serenade-universal-bootstrap="true"` qualify as the bootstrap.
+
+To run the backend directly after building the frontend (rather than through `make universal`),
+pass both absolute asset paths from the repository root:
+
+```sh
+SERENADE_UNIVERSAL_BIND=127.0.0.1:8080 \
+SERENADE_TRUNK_DIST_DIR="$PWD/examples/demo-universal/apps/demo-front/dist" \
+SERENADE_TRUNK_ASSET_MANIFEST="$PWD/examples/demo-universal/apps/demo-front/dist/trunk-assets.json" \
+cargo +stable run --manifest-path examples/demo-universal/Cargo.toml -p serenade-demo-back --locked
+```
 
 SSR renders the route on each request. SSG instead renders declared routes during the build and
 writes static HTML files. AOT compiles templates to view code; by itself it does not render
@@ -31,5 +42,7 @@ Universal frontend's favicon at `/favicon.ico` remain available. Set
 Head composition uses Serenade's generic Leptos head lifecycle, not Rangular-specific behavior:
 Rangular supplies the head view, while `ManagedHead` and its keyed metadata components manage
 route updates. See the [generic head extension point](../../docs-dev/VIEW.md#generic-head-extension-point).
+On hydration, only metadata marked `data-serenade-head="ssr"` is removed and remounted.
+Leptos reuses the existing title node; unrelated head nodes and the bootstrap script are retained.
 
 The full product reference is [rustashop](../../rustashop); this demo stays intentionally tiny.

@@ -331,12 +331,21 @@ impl TrunkAssetManifest {
     }
 
     fn local_asset_path(&self, url: &str) -> Result<PathBuf, ViewError> {
-        let relative = url.strip_prefix(&self.public_url).ok_or_else(|| {
-            ViewError::msg(format!(
-                "asset URL `{url}` does not use manifest public URL prefix `{}`",
-                self.public_url
-            ))
-        })?;
+        let relative = url
+            .strip_prefix(&self.public_url)
+            .and_then(|relative| {
+                if self.public_url.ends_with('/') {
+                    Some(relative)
+                } else {
+                    relative.strip_prefix('/')
+                }
+            })
+            .ok_or_else(|| {
+                ViewError::msg(format!(
+                    "asset URL `{url}` does not use manifest public URL prefix `{}`",
+                    self.public_url
+                ))
+            })?;
         if relative.contains(['?', '#']) {
             return Err(ViewError::msg(format!(
                 "asset URL `{url}` contains an unsupported query or fragment"
@@ -853,6 +862,39 @@ mod tests {
                 .expect_err("wrong public URL prefix must fail")
                 .to_string()
                 .contains("public URL prefix")
+        );
+    }
+
+    #[test]
+    fn asset_urls_require_a_public_prefix_path_boundary() {
+        let mut manifest =
+            TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("valid manifest");
+        for prefix in [
+            "/app",
+            "/app/",
+            "https://cdn.example/app",
+            "https://cdn.example/app/",
+        ] {
+            manifest.public_url = prefix.to_owned();
+            let base = prefix.trim_end_matches('/');
+            assert_eq!(
+                manifest
+                    .local_asset_path(&format!("{base}/nested/app.js"))
+                    .expect("matching prefix"),
+                PathBuf::from("nested/app.js")
+            );
+            for suffix in ["le.js", "", "%2fapp.js", "//app.js", "/%2e%2e/app.js"] {
+                assert!(
+                    manifest
+                        .local_asset_path(&format!("{base}{suffix}"))
+                        .is_err()
+                );
+            }
+        }
+        manifest.public_url = "/".to_owned();
+        assert_eq!(
+            manifest.local_asset_path("/app.js").expect("root prefix"),
+            PathBuf::from("app.js")
         );
     }
 

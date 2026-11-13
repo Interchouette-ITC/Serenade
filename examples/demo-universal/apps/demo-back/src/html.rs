@@ -96,6 +96,7 @@ mod tests {
             "{head}"
         );
         assert_eq!(head.matches("<title>").count(), 1);
+        assert_eq!(head.matches("data-serenade-head=\"ssr\"").count(), 9);
         assert!(!head.contains("A shared description"));
         assert!(head.contains("name=\"description\""));
         assert!(head.contains(
@@ -106,7 +107,7 @@ mod tests {
         assert_eq!(head.matches("property=\"og:image\"").count(), 2);
         assert!(head.contains("content=\"/serenade-banner.png?crop=cms&amp;width=1200\""));
         assert!(head.contains(
-            r#"<script type="application/ld+json">{"@context":"https://schema.org","name":"Serenade & \u003cUniversal>"}</script>"#
+            r#"<script type="application/ld+json" data-serenade-head="ssr">{"@context":"https://schema.org","name":"Serenade & \u003cUniversal>"}</script>"#
         ));
         assert!(head.contains(
             r#"<script type="module" src="/universal-bootstrap.js" data-serenade-universal-bootstrap="true" data-wasm-js="/serenade-demo-front.js" data-wasm-url="/serenade-demo-front_bg.wasm" data-init-with-object="true" data-import-bindings="true" data-import-bindings-name="wasmBindings"></script>"#

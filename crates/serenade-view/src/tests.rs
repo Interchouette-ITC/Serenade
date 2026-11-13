@@ -311,7 +311,8 @@ mod leptos_document_tests {
         assert!(head.contains("content=\"summary_large_image\""));
         assert!(head.contains("name=\"twitter:title\""));
         assert!(head.contains("href=\"/assets/site.css\""));
-        assert!(head.contains(r#"<script type="application/ld+json">{"name":"\u003c/script\u003e\u003cimg\u003e"}</script>"#));
+        assert!(head.contains(r#"<script type="application/ld+json" data-serenade-head="ssr">{"name":"\u003c/script\u003e\u003cimg\u003e"}</script>"#));
+        assert_eq!(head.matches("data-serenade-head=\"ssr\"").count(), 8);
         assert!(head.contains("<!--HEAD-->"));
         assert!(
             !rendered

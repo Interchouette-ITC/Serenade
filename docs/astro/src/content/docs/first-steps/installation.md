@@ -36,6 +36,9 @@ pinned Trunk release (`v0.22.1-itc.2`). It is cached under
 separate from any system-wide Trunk installation. To run Trunk directly with
 Serenade's pinned version, use
 `cargo run -p serenade-cli --bin serenade-trunk -- <trunk arguments>`.
+Concurrent builds share an OS installation lock, released automatically if the installer
+exits or is killed. The persistent `.install-lock` file is reusable; it does not need
+manual deletion after an interrupted installation.
 
 ## Next
 

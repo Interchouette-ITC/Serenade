@@ -35,7 +35,9 @@ impl CmsBootstrap {
             asset.role == "script"
                 && asset
                     .attributes
-                    .contains_key("data-serenade-universal-bootstrap")
+                    .get("data-serenade-universal-bootstrap")
+                    .map(String::as_str)
+                    == Some("true")
         });
         let asset = bootstrap_assets
             .next()
@@ -163,5 +165,36 @@ mod tests {
         let mut missing_script = manifest();
         missing_script.assets.clear();
         assert!(CmsBootstrap::from_manifest(&missing_script).is_err());
+
+        let mut duplicate_script = manifest();
+        duplicate_script
+            .assets
+            .push(duplicate_script.assets[0].clone());
+        assert!(CmsBootstrap::from_manifest(&duplicate_script).is_err());
+    }
+
+    #[test]
+    fn bootstrap_requires_the_exact_true_marker_and_module_type() {
+        for value in [
+            None,
+            Some(""),
+            Some("false"),
+            Some("TRUE"),
+            Some("unrelated"),
+        ] {
+            let mut manifest = manifest();
+            let attributes = &mut manifest.assets[0].attributes;
+            attributes.remove("data-serenade-universal-bootstrap");
+            if let Some(value) = value {
+                attributes.insert(
+                    "data-serenade-universal-bootstrap".to_owned(),
+                    value.to_owned(),
+                );
+            }
+            assert!(CmsBootstrap::from_manifest(&manifest).is_err(), "{value:?}");
+        }
+        let mut manifest = manifest();
+        manifest.assets[0].attributes.remove("type");
+        assert!(CmsBootstrap::from_manifest(&manifest).is_err());
     }
 }

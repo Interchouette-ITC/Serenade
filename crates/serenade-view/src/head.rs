@@ -221,6 +221,7 @@ fn head_entry_view(entry: HeadEntry) -> AnyView {
             content,
         } => view! {
             <meta
+                data-serenade-head=server_head_marker()
                 charset=move || charset.as_ref().map(TextProp::get)
                 name=move || name.as_ref().map(TextProp::get)
                 http-equiv=move || http_equiv.as_ref().map(TextProp::get)
@@ -252,6 +253,7 @@ fn head_entry_view(entry: HeadEntry) -> AnyView {
             blocking,
         } => view! {
             <link
+                data-serenade-head=server_head_marker()
                 id=move || id.as_ref().map(TextProp::get)
                 crossorigin=move || crossorigin.as_ref().map(TextProp::get)
                 fetchpriority=move || fetchpriority.as_ref().map(TextProp::get)
@@ -275,6 +277,14 @@ fn head_entry_view(entry: HeadEntry) -> AnyView {
         }
         .into_any(),
     }
+}
+
+fn server_head_marker() -> Option<&'static str> {
+    #[cfg(feature = "leptos-ssr")]
+    if use_context::<leptos_meta::ServerMetaContext>().is_some() {
+        return Some("ssr");
+    }
+    None
 }
 
 /// Uses Leptos' title stack, escaping server-rendered text before metadata injection.
@@ -321,7 +331,7 @@ pub fn JsonLd(#[prop(into)] json: TextProp) -> impl IntoView {
     };
 
     view! {
-        <script type="application/ld+json">{json}</script>
+        <script type="application/ld+json" data-serenade-head=server_head_marker()>{json}</script>
     }
 }
 

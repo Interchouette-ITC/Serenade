@@ -89,6 +89,11 @@ This lifecycle is not tied to Rangular: any Leptos view or template adapter can 
 view. Rangular AOT is one producer of those views. On the server,
 `Document::render_with_leptos()` wraps the supplied head view in the same managed context so
 the initial document and browser updates share the head contract.
+Server-rendered `ManagedMeta`, `ManagedLink`, and `JsonLd` entries carry
+`data-serenade-head="ssr"`. Applications that remount their head during body hydration
+must remove only those owned entries, never all matching metadata in the document.
+Raw application-owned head elements need an explicit ownership marker if they are to
+be replaced. Leptos claims the existing title node through its title lifecycle.
 
 ### Minimal Rangular head and body
 
@@ -261,6 +266,10 @@ build with no WASM bundles. `read_from_env()` returns an error when the environm
 manifest, or schema is missing or invalid; `validate_output(dist)` additionally checks
 the generated files, digests, and URLs against the output directory. Do not reconstruct
 hashed filenames or silently fall back to guessed asset paths.
+Asset URLs must sit under the manifest public URL at a path boundary: with a
+`/app` public URL, `/app/app.js` is accepted but `/apple.js` is rejected. Select the
+Universal bootstrap module by an explicit marker value, such as
+`data-serenade-universal-bootstrap="true"`, not by the attribute's mere presence.
 
 ### Migration from marker-based rendering
 

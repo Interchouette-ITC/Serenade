@@ -2,6 +2,7 @@
 
 use std::{
     ffi::OsString,
+    fs::{File, TryLockError},
     path::{Path, PathBuf},
     process::Command,
     thread,
@@ -114,22 +115,32 @@ fn acquire_install_lock(
     marker: &Path,
 ) -> anyhow::Result<Option<InstallLock>> {
     let lock_path = tools_dir.join(format!("trunk-{TRUNK_TAG}.install-lock"));
+    // OS advisory lock: released by the kernel when the holder exits or is killed, so an
+    // abandoned lock file is simply re-locked. Keep the inode in place: deleting it could
+    // let two installers lock different files.
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(&lock_path)
+        .with_context(|| {
+            format!(
+                "failed to open Trunk installation lock {}",
+                lock_path.display()
+            )
+        })?;
     let started = Instant::now();
 
     loop {
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&lock_path)
-        {
-            Ok(_) => return Ok(Some(InstallLock(lock_path))),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+        match file.try_lock() {
+            Ok(()) => return Ok(Some(InstallLock { _file: file })),
+            Err(TryLockError::WouldBlock) => {
                 if is_installed(executable, marker) {
                     return Ok(None);
                 }
                 if started.elapsed() >= INSTALL_LOCK_TIMEOUT {
                     bail!(
-                        "timed out waiting for Serenade's Trunk installation lock at {}",
+                        "timed out waiting for a running process holding Serenade's Trunk installation lock at {}",
                         lock_path.display()
                     );
                 }
@@ -138,7 +149,7 @@ fn acquire_install_lock(
             Err(error) => {
                 return Err(error).with_context(|| {
                     format!(
-                        "failed to create Serenade's Trunk installation lock {}",
+                        "failed to acquire Serenade's Trunk installation lock {}",
                         lock_path.display()
                     )
                 });
@@ -179,17 +190,8 @@ fn install(install_dir: &Path, executable: &Path, marker: &Path) -> anyhow::Resu
     Ok(())
 }
 
-struct InstallLock(PathBuf);
-
-impl Drop for InstallLock {
-    fn drop(&mut self) {
-        if let Err(error) = std::fs::remove_file(&self.0) {
-            eprintln!(
-                "Warning: failed to remove Trunk installation lock {}: {error}",
-                self.0.display()
-            );
-        }
-    }
+struct InstallLock {
+    _file: File,
 }
 
 /// Converts program arguments into an owned vector, useful to forward CLI args.
@@ -201,6 +203,70 @@ pub fn args_from_env() -> Vec<OsString> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn install_lock_subprocess() {
+        let Some(directory) = std::env::var_os("SERENADE_TEST_INSTALL_LOCK_DIR") else {
+            return;
+        };
+        let directory = PathBuf::from(directory);
+        let _lock =
+            acquire_install_lock(&directory, &directory.join("trunk"), &directory.join("tag"))
+                .expect("child acquires installation lock");
+        std::fs::write(directory.join("ready"), "").expect("signal locked");
+        thread::sleep(Duration::from_secs(10));
+    }
+
+    #[test]
+    fn installation_lock_is_released_when_its_process_is_killed() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let mut child = Command::new(std::env::current_exe().expect("test executable"))
+            .args(["--exact", "trunk::tests::install_lock_subprocess"])
+            .env("SERENADE_TEST_INSTALL_LOCK_DIR", temp.path())
+            .spawn()
+            .expect("spawn installer");
+        let ready = (0..100).any(|_| {
+            if temp.path().join("ready").is_file() {
+                true
+            } else {
+                thread::sleep(Duration::from_millis(50));
+                false
+            }
+        });
+        child.kill().expect("kill installer");
+        child.wait().expect("reap installer");
+        assert!(ready, "child must acquire the lock before it is killed");
+        let _lock = acquire_install_lock(
+            temp.path(),
+            &temp.path().join("trunk"),
+            &temp.path().join("tag"),
+        )
+        .expect("recover killed installer lock")
+        .expect("installation required");
+    }
+
+    #[test]
+    fn abandoned_install_lock_file_is_reused_and_never_unlinked() {
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let lock_path = temp.path().join(format!("trunk-{TRUNK_TAG}.install-lock"));
+        std::fs::write(&lock_path, "abandoned installer").expect("stale lock");
+        let executable = temp.path().join("trunk");
+        let marker = temp.path().join("tag");
+        let lock = acquire_install_lock(temp.path(), &executable, &marker)
+            .expect("recover stale lock")
+            .expect("installation required");
+        let contender = File::options()
+            .write(true)
+            .open(&lock_path)
+            .expect("open contender");
+        assert!(matches!(
+            contender.try_lock(),
+            Err(TryLockError::WouldBlock)
+        ));
+        drop(lock);
+        assert!(lock_path.is_file());
+        contender.try_lock().expect("released on owner drop");
+    }
 
     #[test]
     fn managed_executable_is_isolated_under_its_revision_directory() {
