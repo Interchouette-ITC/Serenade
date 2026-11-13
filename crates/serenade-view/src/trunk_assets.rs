@@ -271,13 +271,22 @@ impl TrunkAssetManifest {
     /// artifact is missing or stale, or an integrity digest does not match.
     pub fn validate_output(&self, dist: impl AsRef<Path>) -> Result<(), ViewError> {
         let dist = dist.as_ref();
+        let root = dist.canonicalize().map_err(|error| {
+            ViewError::msg(format!(
+                "failed to resolve Trunk output directory {}: {error}",
+                dist.display()
+            ))
+        })?;
         let html_path = safe_relative_path(&self.html)?;
-        require_file(&dist.join(html_path), "HTML output")?;
+        contained_file(&root, &html_path, "HTML output")?;
 
         for asset in &self.assets {
             let path = self.local_asset_path(&asset.url)?;
-            let file = dist.join(path);
-            require_file(&file, &format!("{} asset `{}`", asset.role, asset.url))?;
+            let (file, _) = contained_file(
+                &root,
+                &path,
+                &format!("{} asset `{}`", asset.role, asset.url),
+            )?;
             if let Some(content_digest) = &asset.content_digest {
                 verify_digest(&file, content_digest)?;
             }
@@ -288,14 +297,13 @@ impl TrunkAssetManifest {
 
         for bundle in &self.wasm {
             let js_path = self.local_asset_path(&bundle.js_url)?;
-            let js_file = dist.join(js_path);
-            require_file(&js_file, "WASM JavaScript loader")?;
+            let (js_file, _) = contained_file(&root, &js_path, "WASM JavaScript loader")?;
             if let Some(content_digest) = &bundle.js_content_digest {
                 verify_digest(&js_file, content_digest)?;
             }
             let wasm_path = self.local_asset_path(&bundle.wasm_url)?;
-            let wasm_file = dist.join(wasm_path);
-            let wasm_metadata = require_file(&wasm_file, "WebAssembly module")?;
+            let (wasm_file, wasm_metadata) =
+                contained_file(&root, &wasm_path, "WebAssembly module")?;
             if let Some(content_digest) = &bundle.wasm_content_digest {
                 verify_digest(&wasm_file, content_digest)?;
             }
@@ -308,16 +316,14 @@ impl TrunkAssetManifest {
             }
             if let Some(initializer_url) = &bundle.initializer_url {
                 let path = self.local_asset_path(initializer_url)?;
-                let file = dist.join(path);
-                require_file(&file, "WASM initializer")?;
+                let (file, _) = contained_file(&root, &path, "WASM initializer")?;
                 if let Some(content_digest) = &bundle.initializer_content_digest {
                     verify_digest(&file, content_digest)?;
                 }
             }
             for preload in &bundle.preloads {
                 let path = self.local_asset_path(&preload.url)?;
-                let file = dist.join(path);
-                require_file(&file, "WASM preload")?;
+                let (file, _) = contained_file(&root, &path, "WASM preload")?;
                 if let Some(content_digest) = &preload.content_digest {
                     verify_digest(&file, content_digest)?;
                 }
@@ -328,6 +334,21 @@ impl TrunkAssetManifest {
         }
 
         Ok(())
+    }
+
+    /// Maps a public asset URL or request path to its path relative to the
+    /// Trunk output directory, using the same rules as [`Self::validate_output`].
+    ///
+    /// Servers must use this instead of joining the raw request path onto the
+    /// output directory: with a non-root `public_url` such as `/app/`, the URL
+    /// `/app/app.js` is the output file `app.js`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the URL is not under `public_url` at a path
+    /// boundary, has a query or fragment, or escapes the output directory.
+    pub fn output_path_for_url(&self, url: &str) -> Result<PathBuf, ViewError> {
+        self.local_asset_path(url)
     }
 
     fn local_asset_path(&self, url: &str) -> Result<PathBuf, ViewError> {
@@ -411,6 +432,30 @@ const fn hex_digit(byte: u8) -> Option<u8> {
         b'A'..=b'F' => Some(byte - b'A' + 10),
         _ => None,
     }
+}
+
+/// Resolves `relative` under the canonical output `root`, following symlinks,
+/// and rejects files whose real location is outside that root.
+fn contained_file(
+    root: &Path,
+    relative: &Path,
+    description: &str,
+) -> Result<(PathBuf, std::fs::Metadata), ViewError> {
+    let path = root.join(relative);
+    let metadata = require_file(&path, description)?;
+    let resolved = path.canonicalize().map_err(|error| {
+        ViewError::msg(format!(
+            "failed to resolve {description} {}: {error}",
+            path.display()
+        ))
+    })?;
+    if !resolved.starts_with(root) {
+        return Err(ViewError::msg(format!(
+            "{description} {} escapes the Trunk output directory through a symbolic link",
+            path.display()
+        )));
+    }
+    Ok((resolved, metadata))
 }
 
 fn require_file(path: &Path, description: &str) -> Result<std::fs::Metadata, ViewError> {
@@ -896,6 +941,73 @@ mod tests {
             manifest.local_asset_path("/app.js").expect("root prefix"),
             PathBuf::from("app.js")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_output_files_that_escape_dist_through_symlinks() {
+        use std::os::unix::fs::symlink;
+
+        let outside = tempfile::tempdir().expect("outside directory");
+        for name in [
+            "index.html",
+            "site-123.css",
+            "app-123.js",
+            "app-123_bg.wasm",
+        ] {
+            let temp = tempfile::tempdir().expect("temporary directory");
+            let manifest = write_valid_output(temp.path());
+            let target = outside.path().join(name);
+            std::fs::rename(temp.path().join(name), &target).expect("move file outside dist");
+            symlink(&target, temp.path().join(name)).expect("link outside dist");
+            assert!(
+                manifest
+                    .validate_output(temp.path())
+                    .expect_err("escaping symlink must fail")
+                    .to_string()
+                    .contains("escapes the Trunk output directory through a symbolic link"),
+                "{name}"
+            );
+        }
+
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let manifest = write_valid_output(temp.path());
+        std::fs::create_dir(outside.path().join("dir")).expect("outside directory");
+        std::fs::rename(
+            temp.path().join("site-123.css"),
+            outside.path().join("dir/site-123.css"),
+        )
+        .expect("move CSS outside dist");
+        let mut nested = manifest;
+        nested.assets[0].url = "/app/linked/site-123.css".to_owned();
+        symlink(outside.path().join("dir"), temp.path().join("linked")).expect("link directory");
+        assert!(
+            nested
+                .validate_output(temp.path())
+                .expect_err("escaping directory symlink must fail")
+                .to_string()
+                .contains("escapes the Trunk output directory")
+        );
+
+        let temp = tempfile::tempdir().expect("temporary directory");
+        let manifest = write_valid_output(temp.path());
+        std::fs::create_dir(temp.path().join("real")).expect("inner directory");
+        std::fs::rename(
+            temp.path().join("site-123.css"),
+            temp.path().join("real/site-123.css"),
+        )
+        .expect("move CSS inside dist");
+        symlink("real/site-123.css", temp.path().join("site-123.css")).expect("inner link");
+        manifest
+            .validate_output(temp.path())
+            .expect("symlinks that stay inside dist are accepted");
+
+        let linked_root = tempfile::tempdir().expect("link parent");
+        let linked_dist = linked_root.path().join("dist");
+        symlink(temp.path(), &linked_dist).expect("link dist root");
+        manifest
+            .validate_output(&linked_dist)
+            .expect("a symlinked dist root is resolved before containment checks");
     }
 
     #[test]

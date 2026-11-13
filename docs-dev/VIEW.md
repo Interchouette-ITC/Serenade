@@ -264,12 +264,17 @@ Read `TrunkAssetManifest::read_from_env()` once at startup to get the exact publ
 preloads, and bootstrap metadata emitted by Trunk. The manifest may describe an HTML-only
 build with no WASM bundles. `read_from_env()` returns an error when the environment,
 manifest, or schema is missing or invalid; `validate_output(dist)` additionally checks
-the generated files, digests, and URLs against the output directory. Do not reconstruct
+the generated files, digests, and URLs against the output directory, and rejects any
+referenced file whose real path (after following symbolic links) is outside it. Do not reconstruct
 hashed filenames or silently fall back to guessed asset paths.
 Asset URLs must sit under the manifest public URL at a path boundary: with a
 `/app` public URL, `/app/app.js` is accepted but `/apple.js` is rejected. Select the
 Universal bootstrap module by an explicit marker value, such as
 `data-serenade-universal-bootstrap="true"`, not by the attribute's mere presence.
+A server that hosts the output itself must map request paths with
+`output_path_for_url(path)`, which applies the same public-URL rules as
+`validate_output`, rather than joining the raw request path onto `dist`. With a
+`/app/` public URL, `/app/app.js` is the output file `app.js`.
 
 ### Migration from marker-based rendering
 

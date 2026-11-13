@@ -77,6 +77,10 @@ mod tests {
         });
 
         let bootstrap = test_bootstrap();
+        let manifest = serenade_view::TrunkAssetManifest::from_json(
+            br#"{"version":2,"public_url":"/","html":"index.html","assets":[],"wasm":[]}"#,
+        )
+        .expect("valid manifest");
         let page = cms_hello_page(true, &bootstrap).expect("render CMS Hello document");
         let lower = page.to_ascii_lowercase();
         assert!(lower.starts_with("<!doctype html>"));
@@ -140,8 +144,13 @@ mod tests {
         assert!(shared_page.contains("id=\"show-route\""));
 
         let mut request = crate::Request::new(crate::Method::Get, "/cms/hello");
-        let response = crate::response(&mut request, std::path::Path::new("unused"), &bootstrap)
-            .expect("serve CMS Hello route");
+        let response = crate::response(
+            &mut request,
+            std::path::Path::new("unused"),
+            &manifest,
+            &bootstrap,
+        )
+        .expect("serve CMS Hello route");
         assert_eq!(response.status(), 200);
         assert_eq!(
             response.headers().get("content-type"),
@@ -156,8 +165,13 @@ mod tests {
 
         let mut request =
             crate::Request::new(crate::Method::Get, "/cms/hello").with_query("view=shared");
-        let response = crate::response(&mut request, std::path::Path::new("unused"), &bootstrap)
-            .expect("serve shared CMS route");
+        let response = crate::response(
+            &mut request,
+            std::path::Path::new("unused"),
+            &manifest,
+            &bootstrap,
+        )
+        .expect("serve shared CMS route");
         assert!(
             response
                 .body_str()
@@ -166,8 +180,13 @@ mod tests {
         );
 
         let mut request = crate::Request::new(crate::Method::Get, "/hello");
-        let response = crate::response(&mut request, std::path::Path::new("unused"), &bootstrap)
-            .expect("serve existing hello API route");
+        let response = crate::response(
+            &mut request,
+            std::path::Path::new("unused"),
+            &manifest,
+            &bootstrap,
+        )
+        .expect("serve existing hello API route");
         assert_eq!(response.status(), 200);
         assert_eq!(
             response.headers().get("content-type"),

@@ -15,6 +15,7 @@ mod html;
 fn response(
     request: &mut Request,
     dist: &std::path::Path,
+    manifest: &TrunkAssetManifest,
     bootstrap: &assets::CmsBootstrap,
 ) -> Result<Response, serenade_http::HttpError> {
     match (request.method(), request.path()) {
@@ -37,21 +38,22 @@ fn response(
                 .with_header("content-type", "text/html; charset=utf-8")
                 .with_body(body.into_bytes()))
         }
-        (Method::Get, path) => Ok(serve_asset(dist, path)),
+        (Method::Get, path) => Ok(serve_asset(dist, manifest, path)),
         _ => Ok(Response::text(404, "Not found")),
     }
 }
 
-fn serve_asset(dist: &std::path::Path, uri: &str) -> Response {
-    let relative = uri.trim_start_matches('/');
-    let requested = if relative.is_empty() {
-        "index.html"
+fn serve_asset(dist: &std::path::Path, manifest: &TrunkAssetManifest, uri: &str) -> Response {
+    let requested = if uri == "/" {
+        PathBuf::from(&manifest.html)
     } else {
-        relative
+        // Same URL-to-file mapping as `validate_output`, so validated assets are reachable
+        // under a non-root Trunk `public_url`.
+        match manifest.output_path_for_url(uri) {
+            Ok(path) => path,
+            Err(_) => return Response::text(404, "Not found"),
+        }
     };
-    if requested.split('/').any(|part| part == "." || part == "..") {
-        return Response::text(400, "Invalid asset path");
-    }
     let path = dist.join(requested);
     let Ok(bytes) = std::fs::read(&path) else {
         return Response::text(404, "Not found");
@@ -82,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     manifest.validate_output(&dist)?;
     let bootstrap = assets::CmsBootstrap::from_manifest(&manifest)?;
     let mut kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| {
-        response(request, &dist, &bootstrap)
+        response(request, &dist, &manifest, &bootstrap)
     });
     kernel.push_middleware(HtmlMinifier);
     let bind =
@@ -90,4 +92,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("demo-universal listening on http://{bind}");
     serenade_http_actix::listen(bind, kernel).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn manifest(public_url: &str) -> TrunkAssetManifest {
+        TrunkAssetManifest::from_json(
+            format!(
+                r#"{{"version":2,"public_url":"{public_url}","html":"index.html","assets":[],"wasm":[]}}"#
+            )
+            .as_bytes(),
+        )
+        .expect("valid manifest")
+    }
+
+    #[test]
+    fn assets_are_served_under_the_manifest_public_url() {
+        let dist = std::env::temp_dir().join(format!(
+            "serenade-demo-back-public-url-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dist).expect("dist");
+        std::fs::write(dist.join("index.html"), "<html></html>").expect("html");
+        std::fs::write(dist.join("app-123.js"), "export {}").expect("asset");
+
+        let root = manifest("/");
+        assert_eq!(serve_asset(&dist, &root, "/app-123.js").status(), 200);
+        assert_eq!(serve_asset(&dist, &root, "/").status(), 200);
+
+        for public_url in ["/app/", "/app"] {
+            let nested = manifest(public_url);
+            let served = serve_asset(&dist, &nested, "/app/app-123.js");
+            assert_eq!(served.status(), 200, "{public_url}");
+            assert_eq!(served.body(), b"export {}");
+            assert_eq!(serve_asset(&dist, &nested, "/").status(), 200);
+            for outside in [
+                "/app-123.js",
+                "/apple-123.js",
+                "/app/../app-123.js",
+                "/app/%2e%2e/x",
+            ] {
+                assert_eq!(
+                    serve_asset(&dist, &nested, outside).status(),
+                    404,
+                    "{public_url} {outside}"
+                );
+            }
+        }
+        std::fs::remove_dir_all(&dist).expect("cleanup");
+    }
 }
