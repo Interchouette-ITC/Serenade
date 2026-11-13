@@ -15,6 +15,7 @@ mod error;
 mod head;
 mod partial;
 mod path;
+#[cfg(not(target_arch = "wasm32"))]
 mod static_output;
 mod trunk_assets;
 
@@ -30,6 +31,7 @@ pub use head::{JsonLd, ManagedHead, ManagedLink, ManagedMeta, ManagedTitle};
 pub use partial::partial;
 pub use path::path;
 pub use serenade_form::{escape_attr, escape_html};
+#[cfg(not(target_arch = "wasm32"))]
 pub use static_output::{STATIC_OUTPUT_DIR_ENV, StaticDocumentWriter};
 pub use trunk_assets::{
     TRUNK_ASSET_MANIFEST_ENV, TRUNK_ASSET_MANIFEST_FILE, TRUNK_DIST_DIRECTORY_ENV,

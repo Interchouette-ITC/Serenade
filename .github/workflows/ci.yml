@@ -201,6 +201,10 @@ jobs:
         run: cd examples/demo-universal/apps/demo-front && cargo +stable run --locked --manifest-path ../../../../Cargo.toml -p serenade-cli --bin serenade-trunk -- build
       - name: Build Universal backend
         run: cargo +stable check --manifest-path examples/demo-universal/Cargo.toml --workspace --locked
+      - name: Install wasm-pack
+        run: cargo +stable install wasm-pack --locked --version 0.15.1
+      - name: Run serenade-view browser tests
+        run: wasm-pack test --headless --chrome crates/serenade-view --test browser_head --features leptos-client --locked
       - name: Compile Universal backend for smoke test
         run: cargo +stable build --manifest-path examples/demo-universal/Cargo.toml -p serenade-demo-back --locked
       - name: Smoke test Universal server

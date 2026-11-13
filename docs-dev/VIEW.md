@@ -245,6 +245,7 @@ another status. `as_html()` reads the complete document, and `into_static_output
 it for other output APIs.
 
 The `serenade-ssg` command supplies `SERENADE_STATIC_OUTPUT_DIR` to the prerender process.
+`StaticDocumentWriter` is a server-side API and is not included in `wasm32` builds.
 Construct the writer from that environment and pass the URL route, not a filesystem path:
 
 ```rust

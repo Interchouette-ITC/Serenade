@@ -20,8 +20,10 @@ serenade-http = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
-tempfile = { workspace = true }
 thiserror = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tempfile = { workspace = true }
 
 [features]
 leptos-client = ["dep:leptos", "dep:leptos_meta", "leptos/hydrate"]

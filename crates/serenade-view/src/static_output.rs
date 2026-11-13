@@ -15,7 +15,8 @@ pub const STATIC_OUTPUT_DIR_ENV: &str = "SERENADE_STATIC_OUTPUT_DIR";
 /// Writes complete documents to route-derived `index.html` files.
 ///
 /// Applications enumerate routes and provide page data; this writer owns the
-/// filesystem mapping from each route to its static output path.
+/// filesystem mapping from each route to its static output path. This
+/// server-side API is omitted from `wasm32` builds.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StaticDocumentWriter {
     output_directory: PathBuf,
