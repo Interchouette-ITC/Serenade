@@ -1,7 +1,7 @@
 # CI / quality gates.
 
 .PHONY: check test lint format format-check sweep doc doc-open doc-clean clean ci audit deny \
-	coverage coverage-summary coverage-html tarpaulin machete outdated fuzz fuzz-build geiger
+	coverage coverage-summary coverage-html tarpaulin machete outdated cargo_update fuzz fuzz-build geiger
 
 # Keep in sync with codecov.yml ignore paths and CI coverage.
 COVERAGE_FEATURES := --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth,serenade-security/ldap,serenade-mailer/esp,serenade-search/http
@@ -51,6 +51,21 @@ machete:
 ## Outdated crates report. Requires `cargo install cargo-outdated`.
 outdated:
 	cd $(ROOT) && $(CARGO) outdated --workspace
+
+## Update every repository Cargo.lock using its colocated Cargo.toml.
+cargo_update:
+	@set -euo pipefail; \
+	find "$(ROOT)" -type d \( -name .git -o -name target -o -path "$(ROOT)/fuzz" \) -prune -o \
+		-type f -name Cargo.lock -print0 | \
+	while IFS= read -r -d '' lockfile; do \
+		manifest="$${lockfile%/Cargo.lock}/Cargo.toml"; \
+		if [[ ! -f "$$manifest" ]]; then \
+			echo "Missing Cargo.toml for $$lockfile" >&2; \
+			exit 1; \
+		fi; \
+		echo "Updating $$lockfile"; \
+		$(CARGO) update --manifest-path "$$manifest"; \
+	done
 
 ## Default fuzz target: serenade_form::parse_urlencoded.
 ## Requires nightly + `cargo install cargo-fuzz`. Override: FUZZ_TARGET=… FUZZ_TIME=…

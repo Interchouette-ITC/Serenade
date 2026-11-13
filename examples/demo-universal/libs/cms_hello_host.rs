@@ -35,13 +35,21 @@ impl Host for CmsHelloHost {
         let route_specific = self.route_specific.get();
         match name {
             "route_specific" => Some(Value::Bool(route_specific)),
-            "route_title" => Some(Value::Str("Serenade CMS & <Hello>".to_owned())),
-            "route_description" => Some(Value::Str(
-                "A request-time generated description with & <angle brackets>.".to_owned(),
-            )),
-            "route_canonical" => Some(Value::Str(
-                "/cms/hello?source=universal&mode=ssr".to_owned(),
-            )),
+            "route_title" => Some(Value::Str(if route_specific {
+                "Serenade CMS & <Hello>".to_owned()
+            } else {
+                "Serenade Universal".to_owned()
+            })),
+            "route_description" => Some(Value::Str(if route_specific {
+                "A request-time generated description with & <angle brackets>.".to_owned()
+            } else {
+                "A shared description for the Universal document.".to_owned()
+            })),
+            "route_canonical" => Some(Value::Str(if route_specific {
+                "/cms/hello?source=universal&mode=ssr".to_owned()
+            } else {
+                "/".to_owned()
+            })),
             "route_social_image" => Some(Value::Str(
                 "/serenade-banner.png?crop=cms&width=1200".to_owned(),
             )),

@@ -27,6 +27,7 @@ help:
 	@echo "  make tarpaulin        cargo tarpaulin → coverage/tarpaulin/ (local alternate)"
 	@echo "  make machete          cargo machete (unused deps)"
 	@echo "  make outdated         cargo outdated --workspace"
+	@echo "  make cargo_update     update project Cargo.lock files (excluding fuzz)"
 	@echo "  make fuzz             cargo +nightly fuzz run $(FUZZ_TARGET) (FUZZ_TIME=$(FUZZ_TIME)s)"
 	@echo "  make fuzz-build       cargo +nightly fuzz build"
 	@echo "  make geiger           cargo geiger vs .geiger-budget.toml (CI job)"
