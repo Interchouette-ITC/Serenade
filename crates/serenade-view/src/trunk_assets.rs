@@ -596,9 +596,11 @@ mod tests {
                 .contains("invalid Trunk asset manifest")
         );
 
-        let configured = std::env::var_os(TRUNK_ASSET_MANIFEST_ENV)
-            .is_some_and(|path| TrunkAssetManifest::read(path).is_ok());
-        assert_eq!(TrunkAssetManifest::read_from_env().is_ok(), configured);
+        let configured_path = std::env::var_os(TRUNK_ASSET_MANIFEST_ENV);
+        assert_eq!(
+            TrunkAssetManifest::read_from_env().is_ok(),
+            TrunkAssetManifest::read_from_environment(configured_path).is_ok()
+        );
     }
 
     #[test]

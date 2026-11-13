@@ -1,6 +1,10 @@
 //! Static document output for route-oriented prerendering.
 
-use std::{ffi::OsString, fs, path::PathBuf};
+use std::{
+    ffi::OsString,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::{RenderedDocument, ViewError};
 
@@ -97,17 +101,7 @@ impl StaticDocumentWriter {
     /// document cannot be written.
     pub fn write(&self, route: &str, document: RenderedDocument) -> Result<PathBuf, ViewError> {
         let output_path = self.output_path(route)?;
-        if let Some(parent) = output_path
-            .parent()
-            .filter(|parent| !parent.as_os_str().is_empty())
-        {
-            fs::create_dir_all(parent).map_err(|error| {
-                ViewError::msg(format!(
-                    "failed to create static output directory {}: {error}",
-                    parent.display()
-                ))
-            })?;
-        }
+        ensure_parent_directory(&output_path)?;
         fs::write(&output_path, document.into_static_output()).map_err(|error| {
             ViewError::msg(format!(
                 "failed to write static document {}: {error}",
@@ -116,6 +110,21 @@ impl StaticDocumentWriter {
         })?;
         Ok(output_path)
     }
+}
+
+fn ensure_parent_directory(output_path: &Path) -> Result<(), ViewError> {
+    if let Some(parent) = output_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        fs::create_dir_all(parent).map_err(|error| {
+            ViewError::msg(format!(
+                "failed to create static output directory {}: {error}",
+                parent.display()
+            ))
+        })?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -210,6 +219,11 @@ mod tests {
             .expect_err("writing over a directory must fail")
             .to_string();
         assert!(error.contains("failed to write static document"));
+    }
+
+    #[test]
+    fn skips_creating_an_empty_parent_directory() {
+        ensure_parent_directory(Path::new("index.html")).expect("no parent directory to create");
     }
 
     #[test]
