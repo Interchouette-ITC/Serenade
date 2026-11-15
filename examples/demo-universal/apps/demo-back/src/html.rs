@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 use rangular_aot::HostCell;
-use serenade_view::{Document, ViewError};
+use serenade_view::{Document, DocumentSlot, ViewError};
 
 use crate::{assets::CmsBootstrap, cms_hello_host::CmsHelloHost};
 
@@ -20,7 +20,7 @@ pub fn cms_hello_page(route_specific: bool, bootstrap: &CmsBootstrap) -> Result<
     );
     let bootstrap = bootstrap.clone();
     let rendered = document
-        .render_with_leptos(move |head, body| {
+        .render_with(move |head: DocumentSlot, body: DocumentSlot| {
             let bootstrap: Children = Box::new(move || bootstrap_view(bootstrap).into_any());
             view! {
                 <!DOCTYPE html>

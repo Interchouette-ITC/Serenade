@@ -224,13 +224,10 @@ mod tests {
 
     struct TestTemplate;
 
-    impl DocumentTemplate for TestTemplate {
-        type Head = &'static str;
-        type Body = &'static str;
-
+    impl DocumentTemplate<&'static str, &'static str> for TestTemplate {
         fn render(
-            &self,
-            parts: DocumentParts<Self::Head, Self::Body>,
+            self,
+            parts: DocumentParts<&'static str, &'static str>,
         ) -> Result<String, ViewError> {
             Ok(format!(
                 "<!doctype html><html><head>{}</head><body>{}</body></html>",
@@ -241,7 +238,7 @@ mod tests {
 
     fn document() -> RenderedDocument {
         Document::new("<title>About</title>", "<main>About page</main>")
-            .render(&TestTemplate)
+            .render_with(TestTemplate)
             .expect("render document")
     }
 

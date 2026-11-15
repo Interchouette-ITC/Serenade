@@ -68,8 +68,8 @@ assemble the final HTML string or static output path.
 
 | `serenade-view` feature | Provides |
 | --- | --- |
-| No feature | Engine-neutral `Document`, `DocumentTemplate`, `RenderedDocument`, static output writer, manifest reader, and existing view helpers. No Leptos dependency is enabled. |
-| `leptos-ssr` | `initialize_leptos_ssr`, `Document::render_leptos`, and `Document::render_with_leptos`. |
+| No feature | Engine-neutral `Document`, `DocumentTemplate`, `DefaultDocumentTemplate`, `RenderedDocument`, static output writer, manifest reader, and existing view helpers. No Leptos dependency is enabled. |
+| `leptos-ssr` | View-factory support for `Document::render` and `Document::render_with`, `DocumentSlot`, and `initialize_leptos_ssr`. |
 | `leptos-client` | Client head components such as `ManagedHead`, `ManagedTitle`, `ManagedMeta`, `ManagedLink`, and `JsonLd`. |
 
 The application selects its Leptos CSR or hydration features separately. Rangular AOT is
@@ -86,9 +86,9 @@ entries. Entries with the same stable `head_key` replace earlier entries, while 
 repeatable entries remain and registered entries are removed when their view unmounts.
 
 This lifecycle is not tied to Rangular: any Leptos view or template adapter can supply the head
-view. Rangular AOT is one producer of those views. On the server,
-`Document::render_with_leptos()` wraps the supplied head view in the same managed context so
-the initial document and browser updates share the head contract.
+view. Rangular AOT is one producer of those views. On the server, both `Document::render()`
+and `Document::render_with(template)` wrap the supplied head view in the same managed context
+so the initial document and browser updates share the head contract.
 Server-rendered `ManagedMeta`, `ManagedLink`, and `JsonLd` entries carry
 `data-serenade-head="ssr"`. Applications that remount their head during body hydration
 must remove only those owned entries, never all matching metadata in the document.
@@ -142,11 +142,12 @@ use serenade_view::{Document, initialize_leptos_ssr};
 initialize_leptos_ssr()?;
 
 let host = HostCell::new(PageHost::from(page_data));
+let head_host = host.clone();
 let rendered = Document::new(
-    move || page_head_view(host.clone()),
+    move || page_head_view(head_host),
     move || page_body_view(host),
 )
-.render_leptos()?;
+.render()?;
 let response = rendered.into_response();
 ```
 
@@ -187,17 +188,20 @@ components when client-side singleton replacement by stable key is required.
 
 ### Custom document structure
 
-`render_leptos()` supplies a default `<!DOCTYPE html><html lang="en">` document.
-`render_with_leptos()` is for an application-owned document shell; its `head` and `body`
-slots are rendered in the same request-scoped owner and the returned view must be the
-complete document.
+`render()` supplies a default `<!DOCTYPE html><html lang="en">` document.
+`render_with(template)` selects an application-owned document template instead. Both
+paths use the same composition and metadata handling; the template's `head` and `body`
+slots render in the same request-scoped owner and its view must be the complete document.
 
 ```rust
+use serenade_view::{Document, DocumentSlot};
+
+let head_host = host.clone();
 let rendered = Document::new(
-    move || page_head_view(host.clone()),
+    move || page_head_view(head_host),
     move || page_body_view(host),
 )
-.render_with_leptos(|head, body| {
+.render_with(|head: DocumentSlot, body: DocumentSlot| {
     view! {
         <!DOCTYPE html>
         <html lang="fr">
@@ -215,10 +219,33 @@ let rendered = Document::new(
 ```
 
 This is also the boundary for an AOT-generated Rangular document component with head and
-body projection slots. For a different template engine, implement `DocumentTemplate` and
-pass the rendered head/body outputs to that engine. The application owns the document
-structure and must use that engine's escaping rules; Serenade does not sanitize an
-arbitrary HTML string.
+body projection slots. A named function accepting `DocumentSlot` arguments can be passed
+directly to `render_with`.
+
+Without a view engine, `Document::new(head, body).render()` also accepts already-rendered
+string inputs. To use a different template engine, implement `DocumentTemplate<Head, Body>`
+for its template and pass that template to `render_with`:
+
+```rust
+use serenade_view::{Document, DocumentParts, DocumentTemplate, ViewError};
+
+struct PageTemplate;
+
+impl DocumentTemplate<&str, &str> for PageTemplate {
+    fn render(self, parts: DocumentParts<&str, &str>) -> Result<String, ViewError> {
+        Ok(format!(
+            "<!DOCTYPE html><html lang=\"fr\"><head>{}</head><body>{}</body></html>",
+            parts.head, parts.body
+        ))
+    }
+}
+
+let rendered = Document::new("<title>Page</title>", "<main>Content</main>")
+    .render_with(PageTemplate)?;
+```
+
+The application owns custom document structure and must use its engine's escaping rules;
+Serenade does not sanitize arbitrary HTML strings.
 
 ## Delivery behavior
 
@@ -303,8 +330,8 @@ the Rangular head/body templates. Replace the consumer code that locates
 1. Compile the head template with `compile_head_named` and the body with the normal
    Rangular AOT compiler. Keep both in the app's build inputs.
 2. Create the page-data `HostCell` and pass the generated head/body views to
-   `Document::new(...).render_leptos()`; use `render_with_leptos()` when the document
-   shell is custom.
+   `Document::new(...).render()`; use `render_with(template)` when the document shell
+   is custom.
 3. For request-time rendering, return `RenderedDocument::into_response()` from the
    handler. Do not split or patch a Trunk HTML file per request.
 4. For SSG, keep the app's route loop but replace manual output paths with
