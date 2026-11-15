@@ -3,8 +3,8 @@
 use serenade_http::{Method, Route, RouteCollection};
 
 use crate::{
-    AssetConfig, Document, DocumentParts, DocumentTemplate, RenderedDocument, ViewError, asset,
-    escape_html, partial, path, version,
+    AssetConfig, DefaultDocumentTemplate, Document, DocumentParts, DocumentTemplate,
+    RenderedDocument, ViewError, asset, escape_html, partial, path, version,
 };
 
 #[test]
@@ -61,11 +61,8 @@ fn partial_runs_fragment() {
 
 struct TestDocumentTemplate;
 
-impl DocumentTemplate for TestDocumentTemplate {
-    type Head = &'static str;
-    type Body = &'static str;
-
-    fn render(&self, parts: DocumentParts<Self::Head, Self::Body>) -> Result<String, ViewError> {
+impl DocumentTemplate<&'static str, &'static str> for TestDocumentTemplate {
+    fn render(self, parts: DocumentParts<&'static str, &'static str>) -> Result<String, ViewError> {
         Ok(format!(
             "<!doctype html><html lang=\"en\"><head>{}</head><body>{}</body></html>",
             parts.head, parts.body
@@ -76,7 +73,7 @@ impl DocumentTemplate for TestDocumentTemplate {
 #[test]
 fn document_composes_once_for_http_or_static_delivery() {
     let rendered = Document::new("<title>Page</title>", "<main>Content</main>")
-        .render(&TestDocumentTemplate)
+        .render_with(TestDocumentTemplate)
         .expect("render document");
     let expected = "<!doctype html><html lang=\"en\"><head><title>Page</title></head><body><main>Content</main></body></html>";
     assert_eq!(rendered.as_html(), expected);
@@ -87,7 +84,7 @@ fn document_composes_once_for_http_or_static_delivery() {
     assert_eq!(response.body_str(), Some(expected));
 
     let response: RenderedDocument = Document::new("<title>Page</title>", "<main>Content</main>")
-        .render(&TestDocumentTemplate)
+        .render_with(TestDocumentTemplate)
         .expect("render document");
     let response = response.into_response_with_status(201);
     assert_eq!(response.status(), 201);
@@ -98,11 +95,56 @@ fn document_composes_once_for_http_or_static_delivery() {
     assert_eq!(response.body_str(), Some(expected));
 }
 
+#[test]
+fn default_document_template_composes_borrowed_and_owned_outputs() {
+    let head = "<title>Page</title>";
+    let body = "<main>Content</main>";
+    let rendered = Document::new(head, body)
+        .render()
+        .expect("default document");
+    let explicit = Document::new(head.to_owned(), body.to_owned())
+        .render_with(DefaultDocumentTemplate)
+        .expect("explicit default document");
+
+    assert_eq!(
+        rendered.as_html(),
+        "<!DOCTYPE html><html lang=\"en\"><head><title>Page</title></head><body><main>Content</main></body></html>"
+    );
+    assert_eq!(rendered, explicit);
+    assert_eq!(
+        Document::new(head.to_owned(), body)
+            .render()
+            .expect("mixed owned and borrowed document"),
+        rendered
+    );
+}
+
+#[test]
+fn custom_document_template_errors_are_propagated() {
+    struct FailingTemplate;
+
+    impl DocumentTemplate<&'static str, &'static str> for FailingTemplate {
+        fn render(
+            self,
+            _parts: DocumentParts<&'static str, &'static str>,
+        ) -> Result<String, ViewError> {
+            Err(ViewError("template failed".to_owned()))
+        }
+    }
+
+    assert_eq!(
+        Document::new("head", "body")
+            .render_with(FailingTemplate)
+            .expect_err("template failure must be returned"),
+        ViewError("template failed".to_owned())
+    );
+}
+
 #[cfg(feature = "leptos-ssr")]
 mod leptos_document_tests {
     use leptos::prelude::*;
 
-    use crate::{Document, initialize_leptos_ssr};
+    use crate::{Document, DocumentSlot, initialize_leptos_ssr};
     use std::sync::Once;
 
     fn initialize_executor() {
@@ -150,7 +192,7 @@ mod leptos_document_tests {
     fn render_request(request: &'static str) -> String {
         initialize_executor();
         Document::new(RequestHead, RequestBody)
-            .render_with_leptos(move |head, body| {
+            .render_with(move |head: DocumentSlot, body: DocumentSlot| {
                 provide_context(request.to_owned());
                 custom_document(head, body)
             })
@@ -261,7 +303,7 @@ mod leptos_document_tests {
                 }
             },
         )
-        .render_leptos()
+        .render()
         .expect("render document")
         .into_static_output();
 
@@ -290,14 +332,14 @@ mod leptos_document_tests {
             || view! { <crate::JsonLd json="{not json" /> },
             || view! { <main>"Body"</main> },
         )
-        .render_leptos();
+        .render();
     }
 
     #[test]
     fn managed_metadata_is_injected_into_head_and_preserves_repeatable_entries() {
         initialize_executor();
         let rendered = Document::new(RegisteredMetadata, || view! { <main>"Product"</main> })
-            .render_leptos()
+            .render()
             .expect("render document")
             .into_static_output();
         let head = rendered
@@ -338,7 +380,7 @@ mod leptos_document_tests {
     fn escapes_unicode_quotes_markup_and_script_breaking_metadata() {
         initialize_executor();
         let rendered = Document::new(EscapedMetadata, || view! { <main>"Page"</main> })
-            .render_leptos()
+            .render()
             .expect("render document")
             .into_static_output();
         let head = rendered
@@ -373,7 +415,7 @@ mod leptos_document_tests {
             || view! { <title>"Hydration fixture"</title> },
             HydrationProbe,
         )
-        .render_leptos()
+        .render()
         .expect("render hydration fixture")
         .into_static_output();
         let body = rendered
@@ -399,6 +441,37 @@ mod leptos_document_tests {
         assert!(rendered.contains("data-request=\"request-one\""));
         assert!(rendered.contains("<link rel=\"stylesheet\" href=\"/assets/app.css\">"));
         assert!(rendered.contains("<script type=\"module\" src=\"/assets/app.js\"></script>"));
+    }
+
+    #[test]
+    fn default_and_custom_templates_share_metadata_and_hydration_rendering() {
+        initialize_executor();
+        let default = Document::new(RegisteredMetadata, HydrationProbe)
+            .render()
+            .expect("render default document");
+        let custom = Document::new(RegisteredMetadata, HydrationProbe)
+            .render_with(|head: DocumentSlot, body: DocumentSlot| {
+                view! {
+                    <!DOCTYPE html>
+                    <html lang="en">
+                        <head>{head()}</head>
+                        <body>{body()}</body>
+                    </html>
+                }
+            })
+            .expect("render equivalent custom document");
+
+        assert_eq!(default, custom);
+        assert!(
+            default
+                .as_html()
+                .contains("<title>Route &amp; &lt;title&gt;</title>")
+        );
+        assert!(
+            default
+                .as_html()
+                .contains(include_str!("../tests/fixtures/hydration.html").trim_end())
+        );
     }
 
     #[test]

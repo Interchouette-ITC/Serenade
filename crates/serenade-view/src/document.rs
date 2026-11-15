@@ -19,17 +19,17 @@ use leptos_meta::ServerMetaContext;
 #[cfg(feature = "leptos-ssr")]
 use std::sync::Arc;
 
-/// Rendered head and body inputs supplied to a document template.
+/// Head and body inputs supplied to a document template.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DocumentParts<Head, Body> {
-    /// Application-owned head template output.
+    /// Application-owned head output or view factory.
     pub head: Head,
-    /// Application-owned body template or component output.
+    /// Application-owned body output or view factory.
     pub body: Body,
 }
 
 impl<Head, Body> DocumentParts<Head, Body> {
-    /// Creates document parts from the head and body template outputs.
+    /// Creates document parts from the head and body inputs.
     #[must_use]
     pub const fn new(head: Head, body: Body) -> Self {
         Self { head, body }
@@ -39,8 +39,7 @@ impl<Head, Body> DocumentParts<Head, Body> {
 /// A template engine's document-level composition boundary.
 ///
 /// Implementations own the document structure, language, and head/body slots.
-/// They receive already-rendered head and body template outputs and return one
-/// complete HTML document.
+/// They consume the head and body inputs and return one complete HTML document.
 ///
 /// The application head template owns title, metadata, canonical links, JSON-LD,
 /// and custom head markup; the body template/component owns page content. Shared
@@ -53,18 +52,36 @@ impl<Head, Body> DocumentParts<Head, Body> {
 /// Rust controllers remain responsible for data and orchestration, not markup.
 /// Template-engine and AOT adapters can implement this contract as optional
 /// integrations; the engine-neutral `serenade-view` helpers do not require them.
-pub trait DocumentTemplate {
-    /// The rendered head template output type.
-    type Head;
-    /// The rendered body template or component output type.
-    type Body;
-
+pub trait DocumentTemplate<Head, Body> {
     /// Composes the complete HTML document.
     ///
     /// # Errors
     ///
     /// Returns an error if the template engine cannot render the document.
-    fn render(&self, parts: DocumentParts<Self::Head, Self::Body>) -> Result<String, ViewError>;
+    fn render(self, parts: DocumentParts<Head, Body>) -> Result<String, ViewError>;
+}
+
+/// The framework's default document template.
+///
+/// It composes a complete English-language HTML document from already-rendered
+/// strings or, with the `leptos-ssr` feature, from view factories.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DefaultDocumentTemplate;
+
+impl<Head: AsRef<str>> DocumentTemplate<Head, String> for DefaultDocumentTemplate {
+    fn render(self, parts: DocumentParts<Head, String>) -> Result<String, ViewError> {
+        Ok(default_document_html(parts.head.as_ref(), &parts.body))
+    }
+}
+
+impl<Head: AsRef<str>> DocumentTemplate<Head, &str> for DefaultDocumentTemplate {
+    fn render(self, parts: DocumentParts<Head, &str>) -> Result<String, ViewError> {
+        Ok(default_document_html(parts.head.as_ref(), parts.body))
+    }
+}
+
+fn default_document_html(head: &str, body: &str) -> String {
+    format!("<!DOCTYPE html><html lang=\"en\"><head>{head}</head><body>{body}</body></html>")
 }
 
 /// Application-provided head and body ready for document composition.
@@ -82,52 +99,87 @@ impl<Head, Body> Document<Head, Body> {
         }
     }
 
-    /// Renders the document through `template`.
+    /// Renders the document through the framework's default template.
+    ///
+    /// String inputs must already be rendered and escaped; they are not sanitized.
+    /// View factories require the `leptos-ssr` feature and a process-wide SSR
+    /// executor initialized with `initialize_leptos_ssr` or by the application.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use serenade_view::Document;
+    ///
+    /// let document = Document::new("<title>Home</title>", "<main>Welcome</main>");
+    /// let rendered = document.render()?;
+    /// assert!(rendered.as_html().contains("<main>Welcome</main>"));
+    /// # Ok::<(), serenade_view::ViewError>(())
+    /// ```
     ///
     /// # Errors
     ///
-    /// Returns the template engine's rendering error.
-    pub fn render(
+    /// Returns the default template's rendering error.
+    pub fn render(self) -> Result<RenderedDocument, ViewError>
+    where
+        DefaultDocumentTemplate: DocumentTemplate<Head, Body>,
+    {
+        self.render_with(DefaultDocumentTemplate)
+    }
+
+    /// Renders the document through an application-provided template.
+    ///
+    /// With the `leptos-ssr` feature, a template can be a function or closure
+    /// accepting the head and body `DocumentSlot`s. Both slots and the
+    /// template render under the same request-scoped owner. The application
+    /// must initialize the SSR executor before rendering view factories.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use serenade_view::{Document, DocumentParts, DocumentTemplate, ViewError};
+    ///
+    /// struct FrenchTemplate;
+    ///
+    /// impl DocumentTemplate<&str, &str> for FrenchTemplate {
+    ///     fn render(self, parts: DocumentParts<&str, &str>) -> Result<String, ViewError> {
+    ///         Ok(format!(
+    ///             "<!DOCTYPE html><html lang=\"fr\"><head>{}</head><body>{}</body></html>",
+    ///             parts.head, parts.body
+    ///         ))
+    ///     }
+    /// }
+    ///
+    /// let document = Document::new("<title>Accueil</title>", "<main>Bienvenue</main>");
+    /// let rendered = document.render_with(FrenchTemplate)?;
+    /// assert!(rendered.as_html().contains("<html lang=\"fr\">"));
+    /// # Ok::<(), ViewError>(())
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns the template's rendering error.
+    pub fn render_with(
         self,
-        template: &impl DocumentTemplate<Head = Head, Body = Body>,
+        template: impl DocumentTemplate<Head, Body>,
     ) -> Result<RenderedDocument, ViewError> {
         template.render(self.parts).map(RenderedDocument)
     }
 }
 
 #[cfg(feature = "leptos-ssr")]
-impl<Head, Body> Document<Head, Body> {
-    /// Renders head and body template factories inside the framework's default document.
-    ///
-    /// The factories are invoked under one request-scoped Leptos owner, so component state,
-    /// context, and hydration data are shared across the document and disposed after rendering.
-    /// Use [`Self::render_with_leptos`] when an application supplies its own document template.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let page = Document::new(
-    ///     || head_template(host.clone()),
-    ///     || body_template(host),
-    /// )
-    /// .render_leptos();
-    /// ```
-    ///
-    /// Call [`initialize_leptos_ssr`] once before rendering, or initialize
-    /// [`LeptosExecutor`] with the application's executor. The executor is process-wide.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when metadata injection cannot produce the document chunk.
-    /// The application must initialize a Leptos executor before rendering.
-    pub fn render_leptos<HeadView, BodyView>(self) -> Result<RenderedDocument, ViewError>
-    where
-        Head: FnOnce() -> HeadView + Send + 'static,
-        Body: FnOnce() -> BodyView + Send + 'static,
-        HeadView: IntoView + 'static,
-        BodyView: IntoView + 'static,
-    {
-        self.render_with_leptos(|head, body| {
+/// A one-shot head or body slot passed to a document template.
+pub type DocumentSlot = Children;
+
+#[cfg(feature = "leptos-ssr")]
+impl<Head, Body, HeadView, BodyView> DocumentTemplate<Head, Body> for DefaultDocumentTemplate
+where
+    Head: FnOnce() -> HeadView + Send + 'static,
+    Body: FnOnce() -> BodyView + Send + 'static,
+    HeadView: IntoView + 'static,
+    BodyView: IntoView + 'static,
+{
+    fn render(self, parts: DocumentParts<Head, Body>) -> Result<String, ViewError> {
+        render_view_document(parts, |head, body| {
             view! {
                 <!DOCTYPE html>
                 <html lang="en">
@@ -137,61 +189,54 @@ impl<Head, Body> Document<Head, Body> {
             }
         })
     }
+}
 
-    /// Renders through an application-owned complete document template.
-    ///
-    /// The template receives one-shot head and body content slots. It can call an
-    /// AOT-generated Rangular document component with these slots, or compose them
-    /// with another Leptos view. The template and both slots are rendered under the
-    /// same request-scoped owner; the returned view must contain the complete document.
-    /// Call [`initialize_leptos_ssr`] once before rendering, or initialize
-    /// [`LeptosExecutor`] with the application's executor. The executor is process-wide.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when metadata injection cannot produce the document chunk.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let page = Document::new(
-    ///     || head_template(host.clone()),
-    ///     || body_template(host.clone()),
-    /// )
-    /// .render_with_leptos(|head, body| document_template(host, head, body));
-    /// ```
-    pub fn render_with_leptos<HeadView, BodyView, View>(
-        self,
-        template: impl FnOnce(Children, Children) -> View,
-    ) -> Result<RenderedDocument, ViewError>
-    where
-        Head: FnOnce() -> HeadView + Send + 'static,
-        Body: FnOnce() -> BodyView + Send + 'static,
-        HeadView: IntoView + 'static,
-        BodyView: IntoView + 'static,
-        View: RenderHtml,
-    {
-        let (meta_context, meta_output) = ServerMetaContext::new();
-        let owner = Owner::new_root(Some(Arc::new(SsrSharedContext::new())));
-        let DocumentParts { head, body } = self.parts;
-        let html = owner.with(move || {
-            provide_context(meta_context);
-            let head: Children =
-                Box::new(move || view! { <ManagedHead>{head()}</ManagedHead> }.into_any());
-            let body: Children = Box::new(move || body().into_any());
-            template(head, body).to_html()
-        });
-        owner.cleanup();
-        let html = futures::executor::block_on(async move {
-            let input = futures::stream::iter([html]);
-            let mut output = Box::pin(meta_output.inject_meta_context(input).await);
-            output
-                .next()
-                .await
-                .ok_or_else(|| ViewError::msg("metadata injection produced no document chunk"))
-        })?;
-        Ok(RenderedDocument(html))
+#[cfg(feature = "leptos-ssr")]
+impl<Head, Body, HeadView, BodyView, Template, View> DocumentTemplate<Head, Body> for Template
+where
+    Head: FnOnce() -> HeadView + Send + 'static,
+    Body: FnOnce() -> BodyView + Send + 'static,
+    HeadView: IntoView + 'static,
+    BodyView: IntoView + 'static,
+    Template: FnOnce(DocumentSlot, DocumentSlot) -> View,
+    View: RenderHtml,
+{
+    fn render(self, parts: DocumentParts<Head, Body>) -> Result<String, ViewError> {
+        render_view_document(parts, self)
     }
+}
+
+#[cfg(feature = "leptos-ssr")]
+fn render_view_document<Head, Body, HeadView, BodyView, View>(
+    parts: DocumentParts<Head, Body>,
+    template: impl FnOnce(DocumentSlot, DocumentSlot) -> View,
+) -> Result<String, ViewError>
+where
+    Head: FnOnce() -> HeadView + Send + 'static,
+    Body: FnOnce() -> BodyView + Send + 'static,
+    HeadView: IntoView + 'static,
+    BodyView: IntoView + 'static,
+    View: RenderHtml,
+{
+    let (meta_context, meta_output) = ServerMetaContext::new();
+    let owner = Owner::new_root(Some(Arc::new(SsrSharedContext::new())));
+    let DocumentParts { head, body } = parts;
+    let html = owner.with(move || {
+        provide_context(meta_context);
+        let head: DocumentSlot =
+            Box::new(move || view! { <ManagedHead>{head()}</ManagedHead> }.into_any());
+        let body: DocumentSlot = Box::new(move || body().into_any());
+        template(head, body).to_html()
+    });
+    owner.cleanup();
+    futures::executor::block_on(async move {
+        let input = futures::stream::iter([html]);
+        let mut output = Box::pin(meta_output.inject_meta_context(input).await);
+        output
+            .next()
+            .await
+            .ok_or_else(|| ViewError::msg("metadata injection produced no document chunk"))
+    })
 }
 
 #[cfg(feature = "leptos-ssr")]

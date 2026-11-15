@@ -230,6 +230,9 @@ fn render_route(route: &'static Route, assets: &PageAssets) -> anyhow::Result<Re
     let document = Document::new(
         move || {
             view! {
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <link rel="icon" type="image/x-icon" href=favicon />
                 <ManagedTitle text=route.title />
                 <ManagedMeta
                     head_key="meta:name:description"
@@ -237,26 +240,12 @@ fn render_route(route: &'static Route, assets: &PageAssets) -> anyhow::Result<Re
                     content=route.description
                 />
                 <ManagedLink head_key="link:canonical" rel="canonical" href=canonical />
+                {asset_tags(assets)}
             }
         },
         move || view! { <HelloUi page=route.page /> },
     );
-    let rendered = document.render_with_leptos(move |head, body| {
-        view! {
-            <!DOCTYPE html>
-            <html lang="en">
-                <head>
-                    <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1" />
-                    <link rel="icon" type="image/x-icon" href=favicon />
-                    {head()}
-                    {asset_tags(assets)}
-                </head>
-                <body>{body()}</body>
-            </html>
-        }
-    })?;
-    Ok(rendered)
+    Ok(document.render()?)
 }
 
 fn initialize() -> anyhow::Result<()> {
@@ -338,9 +327,10 @@ mod tests {
         let home = fs::read_to_string(output.join("index.html")).expect("home route");
         let about = fs::read_to_string(output.join("about/index.html")).expect("about route");
 
-        for (page, title, description, canonical, heading) in [
+        for (page, page_name, title, description, canonical, heading) in [
             (
                 &home,
+                "home",
                 "Serenade SSG demo",
                 "prerendered by Serenade",
                 "/app/",
@@ -348,13 +338,20 @@ mod tests {
             ),
             (
                 &about,
+                "about",
                 "About Serenade",
                 "framework-rendered UI",
                 "/app/about/",
                 "About Serenade",
             ),
         ] {
+            assert!(page.to_ascii_lowercase().starts_with("<!doctype html>"));
+            assert_eq!(page.matches("<html ").count(), 1, "{page}");
+            assert_eq!(page.matches("<head>").count(), 1, "{page}");
+            assert_eq!(page.matches("<body>").count(), 1, "{page}");
             let head = head(page);
+            assert!(head.contains("<meta charset=\"utf-8\">"), "{head}");
+            assert!(head.contains("name=\"viewport\""), "{head}");
             assert_eq!(head.matches("<title>").count(), 1, "{head}");
             assert!(head.contains(&format!("<title>{title}</title>")), "{head}");
             assert_eq!(head.matches("name=\"description\"").count(), 1, "{head}");
@@ -386,6 +383,15 @@ mod tests {
                 "{head}"
             );
             assert!(page.contains(&format!("<h1>{heading}</h1>")), "{page}");
+            let body = page
+                .split_once("<body>")
+                .expect("document body")
+                .1
+                .split_once("</body>")
+                .expect("document body end")
+                .0;
+            assert_eq!(body, serenade_demo_ssg::render_page(page_name));
+            assert!(!page.contains("SERENADE_SSG_HEAD"), "{page}");
             assert!(!page.contains("SERENADE_SSG_CONTENT"), "{page}");
         }
         fs::remove_dir_all(output).expect("cleanup");

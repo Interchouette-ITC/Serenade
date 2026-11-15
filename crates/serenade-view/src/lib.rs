@@ -23,8 +23,10 @@ mod trunk_assets;
 pub use any_spawner::Executor as LeptosExecutor;
 pub use asset::{AssetConfig, asset};
 #[cfg(feature = "leptos-ssr")]
-pub use document::initialize_leptos_ssr;
-pub use document::{Document, DocumentParts, DocumentTemplate, RenderedDocument};
+pub use document::{DocumentSlot, initialize_leptos_ssr};
+pub use document::{
+    DefaultDocumentTemplate, Document, DocumentParts, DocumentTemplate, RenderedDocument,
+};
 pub use error::ViewError;
 #[cfg(any(feature = "leptos-client", feature = "leptos-ssr"))]
 pub use head::{JsonLd, ManagedHead, ManagedLink, ManagedMeta, ManagedTitle};
