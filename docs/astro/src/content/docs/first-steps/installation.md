@@ -31,7 +31,7 @@ rustup target add wasm32-unknown-unknown
 ```
 
 The first SPA, SSG, or Universal frontend build downloads and compiles Serenade's
-pinned Trunk release (`v0.22.1-itc.2`). It is cached under
+pinned Trunk release (`v0.22.1-itc.5`). It is cached under
 `~/.serenade/tools`; set `SERENADE_HOME` to use another cache location. This is
 separate from any system-wide Trunk installation. To run Trunk directly with
 Serenade's pinned version, use

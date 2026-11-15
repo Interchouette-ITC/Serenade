@@ -95,7 +95,7 @@ mod tests {
     fn manifest(public_url: &str) -> TrunkAssetManifest {
         TrunkAssetManifest::from_json(
             format!(
-                r#"{{"version":2,"public_url":"{public_url}","html":"index.html","assets":[],"wasm":[]}}"#
+                r#"{{"version":3,"public_url":"{public_url}","html":"index.html","assets":[],"wasm":[],"document_assets":[]}}"#
             )
             .as_bytes(),
         )

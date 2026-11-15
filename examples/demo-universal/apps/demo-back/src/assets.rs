@@ -127,6 +127,7 @@ mod tests {
                 pattern_parameters: BTreeMap::new(),
                 preloads: Vec::new(),
             }],
+            document_assets: Vec::new(),
         }
     }
 

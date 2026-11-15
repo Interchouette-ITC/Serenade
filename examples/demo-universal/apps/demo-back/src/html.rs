@@ -121,7 +121,7 @@ mod tests {
 
         let bootstrap = test_bootstrap();
         let manifest = serenade_view::TrunkAssetManifest::from_json(
-            br#"{"version":2,"public_url":"/","html":"index.html","assets":[],"wasm":[]}"#,
+            br#"{"version":3,"public_url":"/","html":"index.html","assets":[],"wasm":[],"document_assets":[]}"#,
         )
         .expect("valid manifest");
         let page = cms_hello_page(true, &bootstrap).expect("render CMS Hello document");

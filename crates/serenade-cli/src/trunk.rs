@@ -12,7 +12,7 @@ use std::{
 use anyhow::{Context, bail};
 
 const TRUNK_REPOSITORY: &str = "https://github.com/Interchouette-ITC/trunk.git";
-const TRUNK_TAG: &str = "v0.22.1-itc.2";
+const TRUNK_TAG: &str = "v0.22.1-itc.5";
 const INSTALL_LOCK_TIMEOUT: Duration = Duration::from_secs(300);
 const INSTALL_LOCK_RETRY: Duration = Duration::from_millis(250);
 

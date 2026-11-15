@@ -289,6 +289,7 @@ mod tests {
     use super::*;
 
     fn output_with_build(public_url: &str, name: &str) -> (PathBuf, TrunkAssetManifest) {
+        let empty_digest = "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
         let output = std::env::temp_dir().join(format!(
             "serenade-demo-ssg-prerender-{}-{name}",
             std::process::id()
@@ -299,11 +300,13 @@ mod tests {
         }
         let manifest = TrunkAssetManifest::from_json(
             format!(
-                r#"{{"version":1,"public_url":"{public_url}","html":"index.html",
-                "assets":[{{"order":0,"role":"stylesheet","url":"{public_url}style-1a.css","attributes":{{}}}}],
-                "wasm":[{{"app_type":"main","order":1,"js_url":"{public_url}app-2b.js","wasm_url":"{public_url}app-3c_bg.wasm",
+                r#"{{"version":3,"public_url":"{public_url}","html":"index.html",
+                "assets":[{{"order":0,"role":"stylesheet","url":"{public_url}style-1a.css","content_digest":"{empty_digest}","attributes":{{}}}}],
+                "wasm":[{{"app_type":"main","order":1,"js_url":"{public_url}app-2b.js","js_content_digest":"{empty_digest}",
+                "wasm_url":"{public_url}app-3c_bg.wasm","wasm_content_digest":"{empty_digest}",
                 "wasm_size":0,"init_with_object":true,"import_bindings":true,"cross_origin":"anonymous","inject_scripts":true,"pattern_parameters":{{}},
-                "preloads":[{{"rel":"modulepreload","url":"{public_url}app-2b.js","cross_origin":"anonymous"}}]}}]}}"#
+                "preloads":[{{"rel":"modulepreload","url":"{public_url}app-2b.js","content_digest":"{empty_digest}","cross_origin":"anonymous"}}]}}],
+                "document_assets":[]}}"#
             )
             .as_bytes(),
         )

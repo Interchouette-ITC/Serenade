@@ -3,8 +3,8 @@
 use serenade_http::{Method, Route, RouteCollection};
 
 use crate::{
-    AssetConfig, DefaultDocumentTemplate, Document, DocumentParts, DocumentTemplate,
-    RenderedDocument, ViewError, asset, escape_html, partial, path, version,
+    AssetConfig, DefaultDocumentTemplate, Document, DocumentAssets, DocumentParts,
+    DocumentTemplate, RenderedDocument, ViewError, asset, escape_html, partial, path, version,
 };
 
 #[test]
@@ -138,6 +138,80 @@ fn custom_document_template_errors_are_propagated() {
             .expect_err("template failure must be returned"),
         ViewError("template failed".to_owned())
     );
+}
+
+#[test]
+fn document_assets_are_delivered_at_the_end_of_head_and_body() {
+    struct Uppercase;
+    impl DocumentTemplate<&'static str, &'static str> for Uppercase {
+        fn render(
+            self,
+            parts: DocumentParts<&'static str, &'static str>,
+        ) -> Result<String, ViewError> {
+            Ok(format!(
+                "<HTML><HEAD>{}</HEAD><BODY>{}</BODY></HTML>",
+                parts.head, parts.body
+            ))
+        }
+    }
+
+    let assets = DocumentAssets::new(
+        "<link rel=\"stylesheet\" href=\"/app-1.css\">",
+        "<script type=\"module\">init()</script>",
+    );
+    let rendered = Document::new("<title>Home</title>", "<main></body></main>")
+        .with_assets(&assets)
+        .render()
+        .expect("render document with assets");
+    assert_eq!(
+        rendered.as_html(),
+        concat!(
+            "<!DOCTYPE html><html lang=\"en\"><head><title>Home</title>",
+            "<link rel=\"stylesheet\" href=\"/app-1.css\"></head>",
+            "<body><main></body></main><script type=\"module\">init()</script></body></html>",
+        )
+    );
+
+    let uppercase = Document::new("", "")
+        .with_assets(&assets)
+        .render_with(Uppercase)
+        .expect("tags are matched case-insensitively");
+    assert!(uppercase.as_html().contains("/app-1.css\"></HEAD>"));
+    assert!(uppercase.as_html().contains("</script></BODY>"));
+
+    assert_eq!(
+        Document::new("", "").render().expect("no assets"),
+        Document::new("", "")
+            .with_assets(&DocumentAssets::default())
+            .render()
+            .expect("empty assets")
+    );
+}
+
+#[test]
+fn document_assets_require_head_and_body_closing_tags() {
+    struct Fragment;
+    impl DocumentTemplate<&'static str, &'static str> for Fragment {
+        fn render(
+            self,
+            parts: DocumentParts<&'static str, &'static str>,
+        ) -> Result<String, ViewError> {
+            Ok(format!("{}{}", parts.head, parts.body))
+        }
+    }
+    for (assets, missing) in [
+        (DocumentAssets::new("<style></style>", ""), "</head>"),
+        (DocumentAssets::new("", "<script></script>"), "</body>"),
+    ] {
+        let error = Document::new("", "")
+            .with_assets(&assets)
+            .render_with(Fragment)
+            .expect_err("assets need a place in the document");
+        assert!(error.to_string().contains(missing), "{error}");
+    }
+    Document::new("", "")
+        .render_with(Fragment)
+        .expect("fragments without assets still render");
 }
 
 #[cfg(feature = "leptos-ssr")]
@@ -472,6 +546,28 @@ mod leptos_document_tests {
                 .as_html()
                 .contains(include_str!("../tests/fixtures/hydration.html").trim_end())
         );
+    }
+
+    #[test]
+    fn trunk_assets_follow_managed_metadata_without_changing_hydrated_body() {
+        initialize_executor();
+        let assets = crate::DocumentAssets::new(
+            "<link rel=\"modulepreload\" href=\"/app-1.js\">",
+            "<script type=\"module\">init()</script>",
+        );
+        let rendered = Document::new(RegisteredMetadata, HydrationProbe)
+            .with_assets(&assets)
+            .render()
+            .expect("render document with assets")
+            .into_static_output();
+        let title = rendered.find("<title>").expect("managed title");
+        let preload = rendered.find("modulepreload").expect("head asset");
+        assert!(title < preload, "{rendered}");
+        assert!(rendered.contains("href=\"/app-1.js\"></head>"));
+        assert!(rendered.contains(&format!(
+            "{}<script type=\"module\">init()</script></body>",
+            include_str!("../tests/fixtures/hydration.html").trim_end()
+        )));
     }
 
     #[test]
