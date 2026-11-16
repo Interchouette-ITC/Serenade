@@ -25,15 +25,23 @@ fn executable(path: &Path, contents: &str) {
 fn external_ssg_forwards_profile_and_environment_to_trunk_and_cargo() {
     let temp = tempfile::tempdir().expect("temporary directory");
     let app = temp.path().join("consumer").join("site");
-    let tools = temp.path().join("home/tools/trunk-v0.22.1-itc.5");
+    let tools = temp.path().join("home/tools/trunk-itc-dev");
     let bin = temp.path().join("bin");
     fs::create_dir_all(&app).expect("create application");
     fs::create_dir_all(tools.join("bin")).expect("create Trunk tools");
     fs::create_dir_all(&bin).expect("create executable directory");
     fs::write(app.join("Cargo.toml"), "[package]\nname = \"site\"\n")
         .expect("write application manifest");
-    fs::write(tools.join(".serenade-trunk-tag"), "v0.22.1-itc.5\n")
-        .expect("write Trunk version marker");
+    fs::write(
+        tools.join(".serenade-trunk-sha256"),
+        format!("{}\n", "0".repeat(64)),
+    )
+    .expect("write Trunk checksum marker");
+    fs::write(
+        tools.join(".serenade-trunk-provenance"),
+        format!("commit {}\n", "0".repeat(40)),
+    )
+    .expect("write Trunk provenance marker");
 
     executable(
         &tools.join("bin/trunk"),
