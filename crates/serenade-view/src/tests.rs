@@ -186,6 +186,9 @@ fn document_assets_are_delivered_at_the_end_of_head_and_body() {
             .render()
             .expect("empty assets")
     );
+    assert!(DocumentAssets::default().is_empty());
+    assert!(!DocumentAssets::new("<style></style>", "").is_empty());
+    assert!(!DocumentAssets::new("", "<script></script>").is_empty());
 }
 
 #[test]

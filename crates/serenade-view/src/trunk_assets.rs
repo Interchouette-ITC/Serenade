@@ -349,26 +349,18 @@ impl TrunkAssetManifest {
                 &path,
                 &format!("{} asset `{}`", asset.role, asset.url),
             )?;
-            if let Some(content_digest) = &asset.content_digest {
-                verify_digest(&file, content_digest)?;
-            }
-            if let Some(integrity) = asset.attributes.get("integrity") {
-                verify_digest(&file, integrity)?;
-            }
+            let integrity = asset.attributes.get("integrity");
+            verify_digests(&file, asset.content_digest.iter().chain(integrity))?;
         }
 
         for bundle in &self.wasm {
             let js_path = self.local_asset_path(&bundle.js_url)?;
             let (js_file, _) = contained_file(&root, &js_path, "WASM JavaScript loader")?;
-            if let Some(content_digest) = &bundle.js_content_digest {
-                verify_digest(&js_file, content_digest)?;
-            }
+            verify_digests(&js_file, &bundle.js_content_digest)?;
             let wasm_path = self.local_asset_path(&bundle.wasm_url)?;
             let (wasm_file, wasm_metadata) =
                 contained_file(&root, &wasm_path, "WebAssembly module")?;
-            if let Some(content_digest) = &bundle.wasm_content_digest {
-                verify_digest(&wasm_file, content_digest)?;
-            }
+            verify_digests(&wasm_file, &bundle.wasm_content_digest)?;
             let actual_size = wasm_metadata.len();
             if actual_size != bundle.wasm_size {
                 return Err(ViewError::msg(format!(
@@ -379,19 +371,15 @@ impl TrunkAssetManifest {
             if let Some(initializer_url) = &bundle.initializer_url {
                 let path = self.local_asset_path(initializer_url)?;
                 let (file, _) = contained_file(&root, &path, "WASM initializer")?;
-                if let Some(content_digest) = &bundle.initializer_content_digest {
-                    verify_digest(&file, content_digest)?;
-                }
+                verify_digests(&file, &bundle.initializer_content_digest)?;
             }
             for preload in &bundle.preloads {
                 let path = self.local_asset_path(&preload.url)?;
                 let (file, _) = contained_file(&root, &path, "WASM preload")?;
-                if let Some(content_digest) = &preload.content_digest {
-                    verify_digest(&file, content_digest)?;
-                }
-                if let Some(integrity) = &preload.integrity {
-                    verify_digest(&file, integrity)?;
-                }
+                verify_digests(
+                    &file,
+                    preload.content_digest.iter().chain(&preload.integrity),
+                )?;
             }
         }
 
@@ -601,6 +589,15 @@ fn file_error(path: &Path, description: &str, error: &std::io::Error) -> ViewErr
             path.display()
         ))
     }
+}
+
+fn verify_digests<'a>(
+    path: &Path,
+    digests: impl IntoIterator<Item = &'a String>,
+) -> Result<(), ViewError> {
+    digests
+        .into_iter()
+        .try_for_each(|digest| verify_digest(path, digest))
 }
 
 fn verify_digest(path: &Path, digest: &str) -> Result<(), ViewError> {

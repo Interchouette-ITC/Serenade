@@ -126,9 +126,6 @@ impl DocumentAssets {
     }
 
     fn insert_into(&self, html: String) -> Result<String, ViewError> {
-        if self.is_empty() {
-            return Ok(html);
-        }
         let mut html = html;
         if !self.head.is_empty() {
             let index = find_ascii_case_insensitive(&html, "</head>", false).ok_or_else(|| {
