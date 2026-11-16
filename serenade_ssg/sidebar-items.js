@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"struct":["Cli"]};
+window.SIDEBAR_ITEMS = {"fn":["external_app","main"],"struct":["CargoManifest","Cli","Package"]};
