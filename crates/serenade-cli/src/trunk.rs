@@ -135,19 +135,36 @@ fn trunk_executable(install_dir: &Path) -> PathBuf {
     install_dir.join("bin").join(name)
 }
 
-/// Installed with a recorded checksum and verified provenance, and the executable
-/// still matches the SHA-256 recorded when it was installed. Installs made before
-/// provenance was checked, or whose executable was corrupted or replaced, are
-/// reinstalled.
+/// Installed with a recorded checksum, verified provenance and version, all matching
+/// the install record written last, and the executable still matches the SHA-256 in
+/// that record. Installs made before provenance was checked, interrupted
+/// replacements, and corrupted or replaced executables are reinstalled.
 fn is_installed(executable: &Path, marker: &Path) -> bool {
     let Some(install_dir) = marker.parent() else {
         return false;
     };
-    read_marker(marker).is_some()
-        && read_provenance_commit(install_dir).is_some()
-        && read_marker(&install_dir.join(BINARY_MARKER)).is_some_and(|recorded| {
-            std::fs::read(executable).is_ok_and(|binary| sha256_hex(&binary) == recorded)
-        })
+    let (Some(release), Some(commit), Ok(version), Ok(record)) = (
+        read_marker(marker),
+        read_provenance_commit(install_dir),
+        std::fs::read_to_string(install_dir.join(VERSION_MARKER)),
+        std::fs::read_to_string(install_dir.join(BINARY_MARKER)),
+    ) else {
+        return false;
+    };
+    std::fs::read(executable).is_ok_and(|binary| {
+        record == install_record(&sha256_hex(&binary), &release, &commit, version.trim())
+    })
+}
+
+/// Contents of [`BINARY_MARKER`]: the executable's SHA-256 bound to the release
+/// checksum, attested commit and version it was installed with.
+fn install_record(
+    binary_sha256: &str,
+    release_sha256: &str,
+    commit: &str,
+    version: &str,
+) -> String {
+    format!("{binary_sha256}\nrelease {release_sha256}\ncommit {commit}\nversion {version}\n")
 }
 
 /// Installed and checked against the release within the refresh interval.
@@ -403,8 +420,18 @@ fn update(release: &Release, tools_dir: &Path, install_dir: &Path) -> anyhow::Re
     write_provenance(&staging, &provenance.commit)?;
     let binary = std::fs::read(&staged_executable)
         .with_context(|| format!("failed to read {}", staged_executable.display()))?;
-    write_marker(&staging.join(BINARY_MARKER), &sha256_hex(&binary))?;
     write_marker(&staging.join(CHECKSUM_MARKER), &expected)?;
+    let record = staging.join(BINARY_MARKER);
+    std::fs::write(
+        &record,
+        install_record(
+            &sha256_hex(&binary),
+            &expected,
+            &provenance.commit,
+            &version,
+        ),
+    )
+    .with_context(|| format!("failed to record Trunk install at {}", record.display()))?;
 
     replace_install(&staging, install_dir)?;
     eprintln!(
@@ -416,9 +443,10 @@ fn update(release: &Release, tools_dir: &Path, install_dir: &Path) -> anyhow::Re
 
 /// Moves a staged install into place file by file. Each rename atomically replaces
 /// its target, so a concurrent caller never finds the executable missing, and runs
-/// already started keep their binary. The binary checksum follows the executable
-/// and the release checksum goes last, so an interrupted replacement fails the
-/// `is_installed` check and is reinstalled.
+/// already started keep their binary (`rename` replaces existing files on Windows
+/// too, but fails while `trunk.exe` is running). The install record goes last and
+/// commits the update: until it is in place, the old record no longer matches the
+/// new files, so an interrupted replacement fails `is_installed` and is reinstalled.
 fn replace_install(staging: &Path, install_dir: &Path) -> anyhow::Result<()> {
     let executable = trunk_executable(install_dir);
     let bin_dir = executable
@@ -428,7 +456,6 @@ fn replace_install(staging: &Path, install_dir: &Path) -> anyhow::Result<()> {
         .with_context(|| format!("failed to create {}", bin_dir.display()))?;
     let files = [
         (trunk_executable(staging), executable),
-        (staging.join(BINARY_MARKER), install_dir.join(BINARY_MARKER)),
         (
             staging.join(VERSION_MARKER),
             install_dir.join(VERSION_MARKER),
@@ -441,6 +468,7 @@ fn replace_install(staging: &Path, install_dir: &Path) -> anyhow::Result<()> {
             staging.join(CHECKSUM_MARKER),
             install_dir.join(CHECKSUM_MARKER),
         ),
+        (staging.join(BINARY_MARKER), install_dir.join(BINARY_MARKER)),
     ];
     for (from, to) in files {
         std::fs::rename(&from, &to).with_context(|| {
@@ -717,10 +745,22 @@ mod tests {
         assert_eq!(read_provenance_commit(temp.path()), Some("c".repeat(40)));
         assert!(
             !is_installed(&executable, &marker),
-            "an install without a binary checksum is replaced"
+            "an install without an install record is replaced"
         );
-        write_marker(&temp.path().join(BINARY_MARKER), &sha256_hex(b"trunk"))
-            .expect("binary marker");
+        std::fs::write(temp.path().join(VERSION_MARKER), "trunk 1+itc.cccc\n").expect("version");
+        let record = |binary: &[u8]| {
+            std::fs::write(
+                temp.path().join(BINARY_MARKER),
+                install_record(
+                    &sha256_hex(binary),
+                    &"a".repeat(64),
+                    &"c".repeat(40),
+                    "trunk 1+itc.cccc",
+                ),
+            )
+            .expect("install record");
+        };
+        record(b"trunk");
         assert!(is_installed(&executable, &marker));
         assert!(is_current(&executable, &marker));
         std::fs::write(&executable, "trunc").expect("corrupt executable");
@@ -728,7 +768,14 @@ mod tests {
             !is_installed(&executable, &marker),
             "a modified executable is replaced"
         );
-        std::fs::write(&executable, "trunk").expect("restore executable");
+        record(b"trunc");
+        write_provenance(temp.path(), &"d".repeat(40)).expect("newer provenance");
+        assert!(
+            !is_installed(&executable, &marker),
+            "an interrupted update with mixed metadata is replaced"
+        );
+        write_provenance(temp.path(), &"c".repeat(40)).expect("provenance marker");
+        assert!(is_installed(&executable, &marker));
         std::fs::write(&marker, "v0.22.1-itc.5\n").expect("legacy tag marker");
         assert!(!is_installed(&executable, &marker));
     }

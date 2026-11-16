@@ -22,6 +22,16 @@ fn executable(path: &Path, contents: &str) {
         .expect("set executable permissions");
 }
 
+fn sha256_hex(path: &Path) -> String {
+    sha2::Sha256::digest(fs::read(path).expect("read file"))
+        .iter()
+        .fold(String::new(), |mut hex, byte| {
+            use std::fmt::Write as _;
+            let _ = write!(hex, "{byte:02x}");
+            hex
+        })
+}
+
 #[test]
 fn external_ssg_forwards_profile_and_environment_to_trunk_and_cargo() {
     let temp = tempfile::tempdir().expect("temporary directory");
@@ -55,19 +65,21 @@ printf '<html><head></head><body>shell</body></html>' > dist/index.html
 printf '{"public_url":"/","html":"index.html","assets":[],"wasm":[],"document_assets":[]}' > dist/trunk-assets.json
 "#,
     );
-    let trunk_sha256 =
-        sha2::Sha256::digest(fs::read(tools.join("bin/trunk")).expect("read fake Trunk"))
-            .iter()
-            .fold(String::new(), |mut hex, byte| {
-                use std::fmt::Write as _;
-                let _ = write!(hex, "{byte:02x}");
-                hex
-            });
+    let trunk_sha256 = sha256_hex(&tools.join("bin/trunk"));
+    fs::write(
+        tools.join(".serenade-trunk-version"),
+        "trunk 0.22.1+itc.000000000000\n",
+    )
+    .expect("write Trunk version marker");
     fs::write(
         tools.join(".serenade-trunk-bin-sha256"),
-        format!("{trunk_sha256}\n"),
+        format!(
+            "{trunk_sha256}\nrelease {}\ncommit {}\nversion trunk 0.22.1+itc.000000000000\n",
+            "0".repeat(64),
+            "0".repeat(40)
+        ),
     )
-    .expect("write Trunk binary checksum marker");
+    .expect("write Trunk install record");
     executable(
         &bin.join("cargo"),
         r#"#!/bin/sh
