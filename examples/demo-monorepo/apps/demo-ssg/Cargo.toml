@@ -32,7 +32,7 @@ ssr = [
 [dependencies]
 leptos = { workspace = true, default-features = false }
 serenade-demo-ui = { path = "../../libs/demo-ui", default-features = false }
-web-sys = { version = "0.3", features = ["Location", "Window"] }
+web-sys = { version = "0.3", features = ["Document", "Element", "Location", "Window"] }
 anyhow = "1"
 hydration_context = { version = "0.3.2", optional = true, default-features = false }
 serenade-view = { path = "../../../../crates/serenade-view", optional = true, features = ["leptos-ssr"] }

@@ -61,16 +61,17 @@ fn remove_added_nodes(parent: &HtmlElement, original: &[web_sys::Node]) {
     }
 }
 
-/// Matches only the bootstrap marked exactly as `CmsBootstrap::from_manifest` requires.
-const BOOTSTRAP_SELECTOR: &str = "script[data-serenade-universal-bootstrap=\"true\"]";
+/// Matches only the server-rendered public URL metadata, not unrelated application metadata.
+const PUBLIC_URL_SELECTOR: &str =
+    "head > meta[name=\"serenade-public-url\"][data-serenade-head=\"ssr\"]";
 
-/// Reads the Trunk public URL the server rendered onto the bootstrap script, so
-/// hydration resolves frontend asset URLs exactly as the server did.
+/// Reads the Trunk public URL the server rendered into the head, so hydration resolves
+/// frontend asset URLs exactly as the server did.
 fn server_public_url(document: &web_sys::Document) -> String {
     document
-        .query_selector(BOOTSTRAP_SELECTOR)
-        .expect("valid bootstrap selector")
-        .and_then(|script| script.get_attribute("data-serenade-public-url"))
+        .query_selector(PUBLIC_URL_SELECTOR)
+        .expect("valid public URL selector")
+        .and_then(|meta| meta.get_attribute("content"))
         .unwrap_or_else(|| "/".to_owned())
 }
 
@@ -279,9 +280,9 @@ mod browser_tests {
             .expect("insert server-rendered head fixture");
         head.insert_adjacent_html(
             "afterbegin",
-            r#"<script id="decoy-bootstrap" type="application/json" data-serenade-universal-bootstrap="false" data-serenade-public-url="/decoy/"></script>"#,
+            r#"<meta id="decoy-public-url" name="serenade-public-url" content="/decoy/">"#,
         )
-        .expect("insert decoy bootstrap marker");
+        .expect("insert decoy public URL marker");
         head.insert_adjacent_html(
             "beforeend",
             r#"
@@ -297,7 +298,7 @@ mod browser_tests {
         )
         .expect("insert unrelated application head entries");
         let unrelated_nodes: Vec<_> = [
-            "decoy-bootstrap",
+            "decoy-public-url",
             "unrelated-charset",
             "unrelated-viewport",
             "unrelated-description",
@@ -317,14 +318,6 @@ mod browser_tests {
         body.insert_adjacent_html("afterbegin", include_str!("fixtures/cms-hello-body.html"))
             .expect("insert server-rendered body fixture");
 
-        let bootstrap_element = document
-            .query_selector(BOOTSTRAP_SELECTOR)
-            .expect("valid bootstrap selector")
-            .expect("CMS bootstrap script is in the fixture");
-        assert_eq!(
-            bootstrap_element.get_attribute("data-wasm-js").as_deref(),
-            Some("/serenade-demo-front.js")
-        );
         let heading = document
             .get_element_by_id("cms-heading")
             .expect("server-rendered heading");

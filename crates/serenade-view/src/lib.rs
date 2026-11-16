@@ -23,7 +23,8 @@ mod trunk_assets;
 pub use any_spawner::Executor as LeptosExecutor;
 pub use asset::{AssetConfig, asset};
 pub use document::{
-    DefaultDocumentTemplate, Document, DocumentParts, DocumentTemplate, RenderedDocument,
+    DefaultDocumentTemplate, Document, DocumentAssets, DocumentParts, DocumentTemplate,
+    RenderedDocument,
 };
 #[cfg(feature = "leptos-ssr")]
 pub use document::{DocumentSlot, initialize_leptos_ssr};
@@ -37,7 +38,8 @@ pub use serenade_form::{escape_attr, escape_html};
 pub use static_output::{STATIC_OUTPUT_DIR_ENV, StaticDocumentWriter};
 pub use trunk_assets::{
     TRUNK_ASSET_MANIFEST_ENV, TRUNK_ASSET_MANIFEST_FILE, TRUNK_DIST_DIRECTORY_ENV,
-    TrunkAssetManifest, TrunkAssetReference, TrunkPreloadReference, TrunkWasmBundle,
+    TrunkAssetManifest, TrunkAssetReference, TrunkDocumentAsset, TrunkPreloadReference,
+    TrunkWasmBundle,
 };
 
 /// Compile-time crate version for diagnostics.

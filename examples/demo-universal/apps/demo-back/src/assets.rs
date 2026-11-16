@@ -1,77 +1,31 @@
-use serenade_view::TrunkAssetManifest;
+use serenade_view::{DocumentAssets, TrunkAssetManifest};
 
+/// Everything `/cms/hello` needs from the Trunk build: the public URL that frontend files
+/// are served under and the exact markup Trunk generated for styles, preloads, and the
+/// WASM loader.
 #[derive(Clone, Debug)]
-pub struct CmsBootstrap {
+pub struct CmsAssets {
     pub public_url: String,
-    pub script_url: String,
-    pub js_url: String,
-    pub wasm_url: String,
-    pub init_with_object: bool,
-    pub import_bindings: bool,
-    pub import_bindings_name: String,
-    pub integrity: Option<String>,
-    pub crossorigin: Option<String>,
+    pub document: DocumentAssets,
 }
 
-impl CmsBootstrap {
+impl CmsAssets {
     pub fn from_manifest(manifest: &TrunkAssetManifest) -> Result<Self, std::io::Error> {
-        let mut main_bundles = manifest
-            .wasm
-            .iter()
-            .filter(|bundle| bundle.app_type == "main");
-        let bundle = main_bundles
-            .next()
-            .ok_or_else(|| invalid_manifest("Trunk manifest has no main WASM bundle"))?;
-        if main_bundles.next().is_some() {
+        let [bundle] = manifest.wasm.as_slice() else {
             return Err(invalid_manifest(
-                "Trunk manifest has multiple main WASM bundles",
+                "the Universal demo needs exactly one Trunk WASM bundle to hydrate",
+            ));
+        };
+        if bundle.app_type != "main" || !bundle.inject_scripts {
+            return Err(invalid_manifest(
+                "the Universal demo requires one main Trunk WASM bundle with script injection for hydration",
             ));
         }
-        if bundle.compression_algorithm.is_some() || bundle.custom_script_pattern.is_some() {
-            return Err(invalid_manifest(
-                "Universal CMS bootstrap does not support compressed WASM or custom script patterns",
-            ));
-        }
-        let mut bootstrap_assets = manifest.assets.iter().filter(|asset| {
-            asset.role == "script"
-                && asset
-                    .attributes
-                    .get("data-serenade-universal-bootstrap")
-                    .map(String::as_str)
-                    == Some("true")
-        });
-        let asset = bootstrap_assets
-            .next()
-            .ok_or_else(|| invalid_manifest("Trunk manifest has no Universal bootstrap script"))?;
-        if bootstrap_assets.next().is_some() {
-            return Err(invalid_manifest(
-                "Trunk manifest has multiple Universal bootstrap scripts",
-            ));
-        }
-        if asset.attributes.get("type").map(String::as_str) != Some("module") {
-            return Err(invalid_manifest(
-                "Universal bootstrap script must be emitted as an ES module",
-            ));
-        }
-
         Ok(Self {
             public_url: manifest.public_url.clone(),
-            script_url: asset.url.clone(),
-            js_url: bundle
-                .initializer_url
-                .as_ref()
-                .unwrap_or(&bundle.js_url)
-                .clone(),
-            wasm_url: bundle.wasm_url.clone(),
-            init_with_object: bundle.init_with_object,
-            import_bindings: bundle.import_bindings,
-            import_bindings_name: bundle
-                .import_bindings_name
-                .clone()
-                .or_else(|| bundle.import_bindings.then(|| "wasmBindings".to_owned()))
-                .unwrap_or_default(),
-            integrity: asset.attributes.get("integrity").cloned(),
-            crossorigin: asset.attributes.get("crossorigin").cloned(),
+            document: manifest
+                .document_assets()
+                .map_err(|error| invalid_manifest(&error.to_string()))?,
         })
     }
 }
@@ -84,34 +38,24 @@ fn invalid_manifest(message: &str) -> std::io::Error {
 mod tests {
     use std::collections::BTreeMap;
 
-    use serenade_view::{TrunkAssetReference, TrunkWasmBundle};
+    use serenade_view::{TrunkDocumentAsset, TrunkWasmBundle};
 
     use super::*;
 
+    const STYLESHEET: &str = r#"<link rel="stylesheet" href="/style-1a.css"/>"#;
+    const LOADER: &str = "<script type=\"module\">import init from '/serenade-demo-front-2b.js';await init({ module_or_path: '/serenade-demo-front-3c_bg.wasm' });</script>";
+
     fn manifest() -> TrunkAssetManifest {
         TrunkAssetManifest {
-            version: 1,
             public_url: "/".to_owned(),
             html: "index.html".to_owned(),
-            assets: vec![TrunkAssetReference {
-                order: 0,
-                role: "script".to_owned(),
-                url: "/universal-bootstrap-9e728797de5d0532.js".to_owned(),
-                content_digest: None,
-                attributes: BTreeMap::from([
-                    (
-                        "data-serenade-universal-bootstrap".to_owned(),
-                        "true".to_owned(),
-                    ),
-                    ("type".to_owned(), "module".to_owned()),
-                ]),
-            }],
+            assets: Vec::new(),
             wasm: vec![TrunkWasmBundle {
                 app_type: "main".to_owned(),
                 order: None,
-                js_url: "/serenade-demo-front-207ccdec1d7c64a5.js".to_owned(),
+                js_url: "/serenade-demo-front-2b.js".to_owned(),
                 js_content_digest: None,
-                wasm_url: "/serenade-demo-front-7be888fcafbfe0c3_bg.wasm".to_owned(),
+                wasm_url: "/serenade-demo-front-3c_bg.wasm".to_owned(),
                 wasm_content_digest: None,
                 wasm_size: 1,
                 initializer_url: None,
@@ -127,77 +71,46 @@ mod tests {
                 pattern_parameters: BTreeMap::new(),
                 preloads: Vec::new(),
             }],
+            document_assets: vec![
+                TrunkDocumentAsset {
+                    order: Some(0),
+                    location: "head".to_owned(),
+                    html: STYLESHEET.to_owned(),
+                },
+                TrunkDocumentAsset {
+                    order: None,
+                    location: "head".to_owned(),
+                    html: LOADER.to_owned(),
+                },
+            ],
         }
     }
 
     #[test]
-    fn bootstrap_uses_exact_hashed_manifest_urls_and_trunk_default_binding_name() {
-        let bootstrap = CmsBootstrap::from_manifest(&manifest()).expect("valid bootstrap");
+    fn assets_carry_the_exact_trunk_markup_and_public_url() {
+        let assets = CmsAssets::from_manifest(&manifest()).expect("valid assets");
 
-        assert_eq!(
-            bootstrap.script_url,
-            "/universal-bootstrap-9e728797de5d0532.js"
-        );
-        assert_eq!(bootstrap.js_url, "/serenade-demo-front-207ccdec1d7c64a5.js");
-        assert_eq!(
-            bootstrap.wasm_url,
-            "/serenade-demo-front-7be888fcafbfe0c3_bg.wasm"
-        );
-        assert!(bootstrap.init_with_object);
-        assert!(bootstrap.import_bindings);
-        assert_eq!(bootstrap.import_bindings_name, "wasmBindings");
-        assert_eq!(bootstrap.public_url, "/");
+        assert_eq!(assets.public_url, "/");
+        assert_eq!(assets.document.head_html(), format!("{STYLESHEET}{LOADER}"));
+        assert_eq!(assets.document.body_html(), "");
     }
 
     #[test]
-    fn bootstrap_preserves_an_explicit_trunk_bindings_name() {
-        let mut manifest = manifest();
-        manifest.wasm[0].import_bindings_name = Some("customBindings".to_owned());
+    fn assets_reject_bundles_that_cannot_hydrate() {
+        let mut no_bundle = manifest();
+        no_bundle.wasm.clear();
+        let mut two_bundles = manifest();
+        two_bundles.wasm.push(two_bundles.wasm[0].clone());
+        let mut no_injection = manifest();
+        no_injection.wasm[0].inject_scripts = false;
+        let mut worker = manifest();
+        worker.wasm[0].app_type = "worker".to_owned();
+        let mut misplaced = manifest();
+        misplaced.document_assets[0].location = "unknown".to_owned();
 
-        let bootstrap = CmsBootstrap::from_manifest(&manifest).expect("valid bootstrap");
-
-        assert_eq!(bootstrap.import_bindings_name, "customBindings");
-    }
-
-    #[test]
-    fn bootstrap_rejects_an_ambiguous_or_incomplete_manifest() {
-        let mut missing_main = manifest();
-        missing_main.wasm.clear();
-        assert!(CmsBootstrap::from_manifest(&missing_main).is_err());
-
-        let mut missing_script = manifest();
-        missing_script.assets.clear();
-        assert!(CmsBootstrap::from_manifest(&missing_script).is_err());
-
-        let mut duplicate_script = manifest();
-        duplicate_script
-            .assets
-            .push(duplicate_script.assets[0].clone());
-        assert!(CmsBootstrap::from_manifest(&duplicate_script).is_err());
-    }
-
-    #[test]
-    fn bootstrap_requires_the_exact_true_marker_and_module_type() {
-        for value in [
-            None,
-            Some(""),
-            Some("false"),
-            Some("TRUE"),
-            Some("unrelated"),
-        ] {
-            let mut manifest = manifest();
-            let attributes = &mut manifest.assets[0].attributes;
-            attributes.remove("data-serenade-universal-bootstrap");
-            if let Some(value) = value {
-                attributes.insert(
-                    "data-serenade-universal-bootstrap".to_owned(),
-                    value.to_owned(),
-                );
-            }
-            assert!(CmsBootstrap::from_manifest(&manifest).is_err(), "{value:?}");
+        for manifest in [no_bundle, two_bundles, no_injection, worker, misplaced] {
+            let error = CmsAssets::from_manifest(&manifest).expect_err("unusable manifest");
+            assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
         }
-        let mut manifest = manifest();
-        manifest.assets[0].attributes.remove("type");
-        assert!(CmsBootstrap::from_manifest(&manifest).is_err());
     }
 }

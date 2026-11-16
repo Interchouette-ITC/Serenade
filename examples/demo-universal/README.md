@@ -18,13 +18,15 @@ existing body markup. In-place route buttons update the URL and managed title, d
 canonical URL, and repeatable social-image metadata without a full-page navigation. Use View
 Source to inspect the server-rendered response.
 
-The backend reads Trunk's validated `trunk-assets.json` manifest at startup and uses its exact
-URLs for the `/cms/hello` bootstrap and WASM bundle, including hashed filenames.
-Only scripts marked `data-serenade-universal-bootstrap="true"` qualify as the bootstrap.
-Frontend files (favicon, banner, stylesheet) and the SPA home link are resolved under the
+The backend reads Trunk's validated `trunk-assets.json` manifest at startup and attaches its
+`document_assets()` to every `/cms/hello` document with `Document::with_assets`: the hashed
+stylesheet, preloads, and Trunk's own WASM loader script are inserted exactly as Trunk generated
+them, so the page needs no hand-written bootstrap. Trunk's loader starts the same WASM entry point
+as the SPA, which hydrates when the path is `/cms/hello`.
+Frontend files (favicon, banner) and the SPA home link are resolved under the
 manifest `public_url`, so the demo also works with a non-root public URL such as
-`serenade-trunk build --public-url /app/`. The server writes that public URL onto the
-bootstrap script as `data-serenade-public-url`, and hydration reads it back so client and
+`serenade-trunk build --public-url /app/`. The server renders that public URL as
+`<meta name="serenade-public-url">`, and hydration reads it back so client and
 server produce the same URLs. The SPA shell uses `<base data-trunk-public-url />` with
 relative asset paths. `/cms/hello` and `/hello` remain backend routes at the site root.
 
@@ -49,6 +51,6 @@ Head composition uses Serenade's generic Leptos head lifecycle, not Rangular-spe
 Rangular supplies the head view, while `ManagedHead` and its keyed metadata components manage
 route updates. See the [generic head extension point](../../docs-dev/VIEW.md#generic-head-extension-point).
 On hydration, only metadata marked `data-serenade-head="ssr"` is removed and remounted.
-Leptos reuses the existing title node; unrelated head nodes and the bootstrap script are retained.
+Leptos reuses the existing title node; unrelated head nodes and Trunk's asset markup are retained.
 
 The full product reference is [rustashop](../../rustashop); this demo stays intentionally tiny.

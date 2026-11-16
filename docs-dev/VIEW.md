@@ -306,9 +306,7 @@ The manifest public URL must be a root-relative path (`/`, `/app/`) or an absolu
 prefixes, whitespace, quotes, backslashes, and angle brackets are rejected when the
 manifest is parsed. Every asset, WASM, initializer, and preload URL must sit under the
 manifest public URL at a path boundary: with a `/app` public URL, `/app/app.js` is
-accepted but `/apple.js` is rejected. Select the
-Universal bootstrap module by an explicit marker value, such as
-`data-serenade-universal-bootstrap="true"`, not by the attribute's mere presence.
+accepted but `/apple.js` is rejected.
 A server that hosts the output itself must resolve request paths with
 `resolve_output_file(dist, path)`, rather than joining the raw request path onto `dist`.
 It applies the same public-URL rules as `validate_output` and returns the real file path
@@ -318,8 +316,8 @@ the manifest does not list. `output_path_for_url(path)` returns the relative map
 (`/app/` or `/app`) is the HTML entry point named by the manifest.
 Application templates must build frontend file URLs (icons, images, stylesheets, links
 to the SPA root) from the same manifest `public_url` rather than hard-coding `/`; when the
-page hydrates, hand that value to the client (for example as an attribute on the bootstrap
-script) so both sides render identical URLs.
+page hydrates, hand that value to the client (for example as a server-rendered
+`<meta>` in the head) so both sides render identical URLs.
 
 ### Migration from marker-based rendering
 

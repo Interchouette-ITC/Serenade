@@ -84,10 +84,81 @@ fn default_document_html(head: &str, body: &str) -> String {
     format!("<!DOCTYPE html><html lang=\"en\"><head>{head}</head><body>{body}</body></html>")
 }
 
+/// Build-generated markup delivered with every rendered document.
+///
+/// Typically obtained once at startup from
+/// [`TrunkAssetManifest::document_assets`](crate::TrunkAssetManifest::document_assets).
+/// The markup is trusted build output and is inserted verbatim: head markup
+/// immediately before the document's `</head>`, body markup immediately before
+/// its `</body>`. Document templates must not repeat these tags themselves.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DocumentAssets {
+    head: String,
+    body: String,
+}
+
+impl DocumentAssets {
+    /// Creates document assets from trusted head and body markup.
+    #[must_use]
+    pub fn new(head: impl Into<String>, body: impl Into<String>) -> Self {
+        Self {
+            head: head.into(),
+            body: body.into(),
+        }
+    }
+
+    /// Markup inserted at the end of the document head.
+    #[must_use]
+    pub fn head_html(&self) -> &str {
+        &self.head
+    }
+
+    /// Markup inserted at the end of the document body.
+    #[must_use]
+    pub fn body_html(&self) -> &str {
+        &self.body
+    }
+
+    /// Whether there is no markup to insert.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.head.is_empty() && self.body.is_empty()
+    }
+
+    fn insert_into(&self, html: String) -> Result<String, ViewError> {
+        let mut html = html;
+        if !self.head.is_empty() {
+            let index = find_ascii_case_insensitive(&html, "</head>", false).ok_or_else(|| {
+                ViewError::msg("rendered document has no </head> for its head assets")
+            })?;
+            html.insert_str(index, &self.head);
+        }
+        if !self.body.is_empty() {
+            let index = find_ascii_case_insensitive(&html, "</body>", true).ok_or_else(|| {
+                ViewError::msg("rendered document has no </body> for its body assets")
+            })?;
+            html.insert_str(index, &self.body);
+        }
+        Ok(html)
+    }
+}
+
+fn find_ascii_case_insensitive(haystack: &str, needle: &str, last: bool) -> Option<usize> {
+    let (haystack, needle) = (haystack.as_bytes(), needle.as_bytes());
+    let mut windows = haystack.windows(needle.len());
+    let matches = |window: &[u8]| window.eq_ignore_ascii_case(needle);
+    if last {
+        windows.rposition(matches)
+    } else {
+        windows.position(matches)
+    }
+}
+
 /// Application-provided head and body ready for document composition.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Document<Head, Body> {
     parts: DocumentParts<Head, Body>,
+    assets: DocumentAssets,
 }
 
 impl<Head, Body> Document<Head, Body> {
@@ -96,7 +167,36 @@ impl<Head, Body> Document<Head, Body> {
     pub const fn new(head: Head, body: Body) -> Self {
         Self {
             parts: DocumentParts::new(head, body),
+            assets: DocumentAssets {
+                head: String::new(),
+                body: String::new(),
+            },
         }
+    }
+
+    /// Delivers build-generated assets, such as Trunk's stylesheets, scripts
+    /// and WASM bootstrap, with the rendered document.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use serenade_view::{Document, DocumentAssets};
+    ///
+    /// let assets = DocumentAssets::new(
+    ///     r#"<link rel="stylesheet" href="/app-1a2b.css">"#,
+    ///     r#"<script type="module" src="/app-1a2b.js"></script>"#,
+    /// );
+    /// let rendered = Document::new("<title>Home</title>", "<main>Welcome</main>")
+    ///     .with_assets(&assets)
+    ///     .render()?;
+    /// assert!(rendered.as_html().contains(r#"href="/app-1a2b.css"></head>"#));
+    /// assert!(rendered.as_html().contains(r#"</script></body>"#));
+    /// # Ok::<(), serenade_view::ViewError>(())
+    /// ```
+    #[must_use]
+    pub fn with_assets(mut self, assets: &DocumentAssets) -> Self {
+        self.assets = assets.clone();
+        self
     }
 
     /// Renders the document through the framework's default template.
@@ -118,7 +218,8 @@ impl<Head, Body> Document<Head, Body> {
     ///
     /// # Errors
     ///
-    /// Returns the default template's rendering error.
+    /// Returns the default template's rendering error, or an asset insertion
+    /// error as described for [`Self::render_with`].
     pub fn render(self) -> Result<RenderedDocument, ViewError>
     where
         DefaultDocumentTemplate: DocumentTemplate<Head, Body>,
@@ -157,12 +258,14 @@ impl<Head, Body> Document<Head, Body> {
     ///
     /// # Errors
     ///
-    /// Returns the template's rendering error.
+    /// Returns the template's rendering error, or an error when assets are
+    /// configured and the rendered document lacks `</head>` or `</body>`.
     pub fn render_with(
         self,
         template: impl DocumentTemplate<Head, Body>,
     ) -> Result<RenderedDocument, ViewError> {
-        template.render(self.parts).map(RenderedDocument)
+        let html = template.render(self.parts)?;
+        self.assets.insert_into(html).map(RenderedDocument)
     }
 }
 
