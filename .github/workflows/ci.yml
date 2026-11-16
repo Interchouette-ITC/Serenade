@@ -191,12 +191,8 @@ jobs:
         run: cargo +stable check -p serenade-demo-html --locked
       - name: Build demo-spa
         run: make spa
-      - name: Build and prerender demo-ssg
-        run: make ssg
-      - name: Verify prerendered routes
-        run: |
-          grep -q 'Hello from Serenade' examples/demo-monorepo/apps/demo-ssg/dist/index.html
-          grep -q 'About Serenade' examples/demo-monorepo/apps/demo-ssg/dist/about/index.html
+      - name: Build, prerender and hydrate demo-ssg through the external SSG flow
+        run: cargo +stable test -p serenade-cli --locked --test external_ssg -- --include-ignored
       - name: Build Universal frontend
         run: cd examples/demo-universal/apps/demo-front && cargo +stable run --locked --manifest-path ../../../../Cargo.toml -p serenade-cli --bin serenade-trunk -- build
       - name: Build Universal backend
@@ -250,6 +246,7 @@ jobs:
             (.wasm[] | .js_url, .wasm_url, (.initializer_url // empty))
           ' "$SERENADE_TRUNK_ASSET_MANIFEST" > /tmp/universal-assets.txt
           while IFS= read -r asset; do
+            grep -qF "$asset" /tmp/cms-hello.html
             curl --fail --silent "http://127.0.0.1:8080$asset" --output /tmp/universal-asset
             test -s /tmp/universal-asset
           done < /tmp/universal-assets.txt

@@ -5,8 +5,8 @@ use anyhow::{Context, bail};
 use leptos::prelude::*;
 use serenade_demo_ui::HelloUi;
 use serenade_view::{
-    Document, ManagedLink, ManagedMeta, ManagedTitle, RenderedDocument, STATIC_OUTPUT_DIR_ENV,
-    StaticDocumentWriter, TrunkAssetManifest, initialize_leptos_ssr,
+    Document, DocumentAssets, ManagedLink, ManagedMeta, ManagedTitle, RenderedDocument,
+    STATIC_OUTPUT_DIR_ENV, StaticDocumentWriter, TrunkAssetManifest, initialize_leptos_ssr,
 };
 
 /// A prerendered route with its own head metadata.
@@ -32,124 +32,24 @@ const ROUTES: [Route; 2] = [
     },
 ];
 
-const TRUNK_STARTED_EVENT: &str = "TrunkApplicationStarted";
-
-#[derive(Clone)]
-struct Tag {
-    url: String,
-    type_: Option<String>,
-    integrity: Option<String>,
-    crossorigin: Option<String>,
-}
-
-#[derive(Clone)]
-struct Preload {
-    rel: String,
-    url: String,
-    as_: Option<String>,
-    type_: Option<String>,
-    integrity: Option<String>,
-    crossorigin: String,
-}
-
-/// Head tags for the frontend bundle, taken from Trunk's validated asset manifest
-/// rather than from Trunk's generated HTML.
-#[derive(Clone)]
-struct PageAssets {
+/// The Trunk build's public URL and the exact markup Trunk generated for it.
+struct Site {
     public_url: String,
-    stylesheets: Vec<Tag>,
-    scripts: Vec<Tag>,
-    icons: Vec<Tag>,
-    preloads: Vec<Preload>,
-    loader: String,
+    assets: DocumentAssets,
 }
 
-impl PageAssets {
+impl Site {
     fn from_manifest(manifest: &TrunkAssetManifest) -> anyhow::Result<Self> {
-        let mut assets = Self {
-            public_url: format!("{}/", manifest.public_url.trim_end_matches('/')),
-            stylesheets: Vec::new(),
-            scripts: Vec::new(),
-            icons: Vec::new(),
-            preloads: Vec::new(),
-            loader: String::new(),
-        };
-        for asset in &manifest.assets {
-            if let Some(name) = asset
-                .attributes
-                .keys()
-                .find(|name| !matches!(name.as_str(), "type" | "integrity" | "crossorigin"))
-            {
-                bail!(
-                    "unsupported attribute `{name}` on Trunk {} asset `{}`",
-                    asset.role,
-                    asset.url
-                );
-            }
-            let tag = Tag {
-                url: asset.url.clone(),
-                type_: asset.attributes.get("type").cloned(),
-                integrity: asset.attributes.get("integrity").cloned(),
-                crossorigin: asset.attributes.get("crossorigin").cloned(),
-            };
-            match asset.role.as_str() {
-                "stylesheet" => assets.stylesheets.push(tag),
-                "script" => assets.scripts.push(tag),
-                _ => assets.icons.push(tag),
-            }
-        }
-
         let [bundle] = manifest.wasm.as_slice() else {
             bail!("the SSG demo needs exactly one Trunk WASM bundle to hydrate");
         };
         if !bundle.inject_scripts {
             bail!("the SSG demo requires Trunk WASM script injection for hydration");
         }
-        if bundle.app_type != "main"
-            || bundle.compression_algorithm.is_some()
-            || bundle.custom_script_pattern.is_some()
-            || bundle.custom_preload_pattern.is_some()
-            || bundle.initializer_url.is_some()
-        {
-            bail!(
-                "the SSG demo supports only an uncompressed main WASM bundle without custom patterns or initializers"
-            );
-        }
-        assets.preloads = bundle
-            .preloads
-            .iter()
-            .map(|preload| Preload {
-                rel: preload.rel.clone(),
-                url: preload.url.clone(),
-                as_: preload.as_type.clone(),
-                type_: preload.media_type.clone(),
-                integrity: preload.integrity.clone(),
-                crossorigin: preload.cross_origin.clone(),
-            })
-            .collect();
-        let init = if bundle.init_with_object {
-            format!(
-                "init({{ module_or_path: {} }})",
-                js_string(&bundle.wasm_url)
-            )
-        } else {
-            format!("init({})", js_string(&bundle.wasm_url))
-        };
-        let bindings = if bundle.import_bindings {
-            let name = bundle
-                .import_bindings_name
-                .as_deref()
-                .unwrap_or("wasmBindings");
-            format!("window[{}] = bindings;\n", js_string(name))
-        } else {
-            String::new()
-        };
-        assets.loader = format!(
-            "import init, * as bindings from {};\nconst wasm = await {init};\n{bindings}dispatchEvent(new CustomEvent({}, {{ detail: {{ wasm }} }}));\n",
-            js_string(&bundle.js_url),
-            js_string(TRUNK_STARTED_EVENT),
-        );
-        Ok(assets)
+        Ok(Self {
+            public_url: format!("{}/", manifest.public_url.trim_end_matches('/')),
+            assets: manifest.document_assets()?,
+        })
     }
 
     fn canonical(&self, route: &str) -> String {
@@ -160,73 +60,9 @@ impl PageAssets {
     }
 }
 
-/// Encodes `value` as a JavaScript string literal that is also safe inside an HTML
-/// `<script>` element.
-fn js_string(value: &str) -> String {
-    let mut literal = String::from("\"");
-    for unit in value.encode_utf16() {
-        match char::from_u32(u32::from(unit)) {
-            Some(character)
-                if character.is_ascii_alphanumeric() || "/._-~:".contains(character) =>
-            {
-                literal.push(character);
-            }
-            _ => literal.push_str(&format!("\\u{unit:04x}")),
-        }
-    }
-    literal.push('"');
-    literal
-}
-
-fn asset_tags(assets: PageAssets) -> impl IntoView {
-    let PageAssets {
-        stylesheets,
-        scripts,
-        icons,
-        preloads,
-        loader,
-        ..
-    } = assets;
-    view! {
-        {icons
-            .into_iter()
-            .map(|tag| view! {
-                <link rel="icon" href=tag.url type=tag.type_ integrity=tag.integrity crossorigin=tag.crossorigin />
-            })
-            .collect_view()}
-        {stylesheets
-            .into_iter()
-            .map(|tag| view! {
-                <link rel="stylesheet" href=tag.url type=tag.type_ integrity=tag.integrity crossorigin=tag.crossorigin />
-            })
-            .collect_view()}
-        {scripts
-            .into_iter()
-            .map(|tag| view! {
-                <script src=tag.url type=tag.type_ integrity=tag.integrity crossorigin=tag.crossorigin></script>
-            })
-            .collect_view()}
-        <script type="module">{loader}</script>
-        {preloads
-            .into_iter()
-            .map(|preload| view! {
-                <link
-                    rel=preload.rel
-                    href=preload.url
-                    r#as=preload.as_
-                    type=preload.type_
-                    integrity=preload.integrity
-                    crossorigin=preload.crossorigin
-                />
-            })
-            .collect_view()}
-    }
-}
-
-fn render_route(route: &'static Route, assets: &PageAssets) -> anyhow::Result<RenderedDocument> {
-    let canonical = assets.canonical(route.path);
-    let favicon = format!("{}favicon.ico", assets.public_url);
-    let assets = assets.clone();
+fn render_route(route: &'static Route, site: &Site) -> anyhow::Result<RenderedDocument> {
+    let canonical = site.canonical(route.path);
+    let favicon = format!("{}favicon.ico", site.public_url);
     let document = Document::new(
         move || {
             view! {
@@ -240,11 +76,11 @@ fn render_route(route: &'static Route, assets: &PageAssets) -> anyhow::Result<Re
                     content=route.description
                 />
                 <ManagedLink head_key="link:canonical" rel="canonical" href=canonical />
-                {asset_tags(assets)}
             }
         },
         move || view! { <HelloUi page=route.page /> },
-    );
+    )
+    .with_assets(&site.assets);
     Ok(document.render()?)
 }
 
@@ -273,11 +109,11 @@ fn prerender(output: &Path, manifest: &TrunkAssetManifest) -> anyhow::Result<()>
             output.display()
         )
     })?;
-    let assets = PageAssets::from_manifest(manifest)?;
+    let site = Site::from_manifest(manifest)?;
     initialize()?;
     let writer = StaticDocumentWriter::new(output);
     for route in &ROUTES {
-        writer.write(route.path, render_route(route, &assets)?)?;
+        writer.write(route.path, render_route(route, &site)?)?;
     }
     Ok(())
 }
@@ -285,6 +121,8 @@ fn prerender(output: &Path, manifest: &TrunkAssetManifest) -> anyhow::Result<()>
 #[cfg(test)]
 mod tests {
     use std::fs;
+
+    use serenade_view::TrunkDocumentAsset;
 
     use super::*;
 
@@ -300,7 +138,7 @@ mod tests {
         }
         let manifest = TrunkAssetManifest::from_json(
             format!(
-                r#"{{"version":3,"public_url":"{public_url}","html":"index.html",
+                r#"{{"public_url":"{public_url}","html":"index.html",
                 "assets":[{{"order":0,"role":"stylesheet","url":"{public_url}style-1a.css","content_digest":"{empty_digest}","attributes":{{}}}}],
                 "wasm":[{{"app_type":"main","order":1,"js_url":"{public_url}app-2b.js","js_content_digest":"{empty_digest}",
                 "wasm_url":"{public_url}app-3c_bg.wasm","wasm_content_digest":"{empty_digest}",
@@ -311,7 +149,42 @@ mod tests {
             .as_bytes(),
         )
         .unwrap_or_else(|error| panic!("valid manifest: {error}"));
+        let mut manifest = manifest;
+        manifest.document_assets = trunk_markup(public_url)
+            .into_iter()
+            .map(|(location, html)| TrunkDocumentAsset {
+                order: None,
+                location: location.to_owned(),
+                html,
+            })
+            .collect();
         (output, manifest)
+    }
+
+    /// Markup in the shape Trunk records for the demo's `index.html`.
+    fn trunk_markup(public_url: &str) -> [(&'static str, String); 4] {
+        [
+            (
+                "head",
+                format!(r#"<link rel="stylesheet" href="{public_url}style-1a.css"/>"#),
+            ),
+            (
+                "head",
+                format!(
+                    r#"<link rel="modulepreload" href="{public_url}app-2b.js" crossorigin="anonymous">"#
+                ),
+            ),
+            (
+                "head",
+                format!(
+                    "<script type=\"module\">import init, * as bindings from '{public_url}app-2b.js';\
+                     const wasm = await init({{ module_or_path: '{public_url}app-3c_bg.wasm' }});\
+                     window.wasmBindings = bindings;\
+                     dispatchEvent(new CustomEvent(\"TrunkApplicationStarted\", {{detail: {{wasm}}}}));</script>"
+                ),
+            ),
+            ("body", "<svg data-trunk-inline></svg>".to_owned()),
+        ]
     }
 
     fn head(page: &str) -> &str {
@@ -365,25 +238,15 @@ mod tests {
                 "{head}"
             );
             assert!(head.contains("href=\"/app/favicon.ico\""), "{head}");
+            let markup = trunk_markup("/app/");
+            let head_assets: String = markup
+                .iter()
+                .filter(|(location, _)| *location == "head")
+                .map(|(_, html)| html.as_str())
+                .collect();
             assert!(
-                head.contains("rel=\"stylesheet\" href=\"/app/style-1a.css\""),
-                "{head}"
-            );
-            assert!(
-                head.contains(r#"import init, * as bindings from "/app/app-2b.js";"#),
-                "{head}"
-            );
-            assert!(
-                head.contains(r#"await init({ module_or_path: "/app/app-3c_bg.wasm" })"#),
-                "{head}"
-            );
-            assert!(
-                head.contains(r#"window["wasmBindings"] = bindings;"#),
-                "{head}"
-            );
-            assert!(
-                head.contains("rel=\"modulepreload\" href=\"/app/app-2b.js\""),
-                "{head}"
+                head.ends_with(&head_assets),
+                "Trunk head markup must be inserted verbatim, in order, before </head>: {head}"
             );
             assert!(page.contains(&format!("<h1>{heading}</h1>")), "{page}");
             let body = page
@@ -393,7 +256,14 @@ mod tests {
                 .split_once("</body>")
                 .expect("document body end")
                 .0;
-            assert_eq!(body, serenade_demo_ssg::render_page(page_name));
+            assert_eq!(
+                body,
+                format!(
+                    "{}{}",
+                    serenade_demo_ssg::render_page(page_name),
+                    markup[3].1
+                )
+            );
             assert!(!page.contains("SERENADE_SSG_HEAD"), "{page}");
             assert!(!page.contains("SERENADE_SSG_CONTENT"), "{page}");
         }
@@ -401,13 +271,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_missing_output_and_unsupported_bundles() {
+    fn rejects_missing_output_and_bundles_that_cannot_hydrate() {
         let (output, manifest) = output_with_build("/", "rejects");
         assert!(prerender(&output.join("missing"), &manifest).is_err());
-
-        let mut compressed = manifest.clone();
-        compressed.wasm[0].compression_algorithm = Some("brotli".to_owned());
-        assert!(prerender(&output, &compressed).is_err());
 
         let mut no_injection = manifest.clone();
         no_injection.wasm[0].inject_scripts = false;
@@ -422,20 +288,14 @@ mod tests {
         no_bundle.wasm.clear();
         assert!(prerender(&output, &no_bundle).is_err());
 
-        let mut unknown_attribute = manifest;
-        unknown_attribute.assets[0]
-            .attributes
-            .insert("data-x".to_owned(), "1".to_owned());
-        assert!(prerender(&output, &unknown_attribute).is_err());
-        fs::remove_dir_all(output).expect("cleanup");
-    }
-
-    #[test]
-    fn js_strings_cannot_break_out_of_the_loader_script() {
-        assert_eq!(js_string("/app/a-1.js"), r#""/app/a-1.js""#);
-        assert_eq!(
-            js_string("</script>\"'\u{2028}é"),
-            r#""\u003c/script\u003e\u0022\u0027\u2028\u00e9""#
+        let mut misplaced = manifest;
+        misplaced.document_assets[0].location = "unknown".to_owned();
+        assert!(
+            prerender(&output, &misplaced)
+                .expect_err("markup outside head and body")
+                .to_string()
+                .contains("outside <head> and <body>")
         );
+        fs::remove_dir_all(output).expect("cleanup");
     }
 }

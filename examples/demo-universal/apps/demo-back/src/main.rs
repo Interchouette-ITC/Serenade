@@ -16,7 +16,7 @@ fn response(
     request: &mut Request,
     dist: &std::path::Path,
     manifest: &TrunkAssetManifest,
-    bootstrap: &assets::CmsBootstrap,
+    assets: &assets::CmsAssets,
 ) -> Result<Response, serenade_http::HttpError> {
     match (request.method(), request.path()) {
         (Method::Get, "/hello") => {
@@ -31,7 +31,7 @@ fn response(
         (Method::Get, "/cms/hello") => {
             let body = html::cms_hello_page(
                 cms_hello_host::route_specific_from_query(request.query()),
-                bootstrap,
+                assets,
             )
             .map_err(|error| serenade_http::HttpError::status(500, error.to_string()))?;
             Ok(Response::new(200)
@@ -76,9 +76,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .ok_or_else(|| format!("{TRUNK_DIST_DIRECTORY_ENV} is not set"))?;
     let manifest = TrunkAssetManifest::read_from_env()?;
     manifest.validate_output(&dist)?;
-    let bootstrap = assets::CmsBootstrap::from_manifest(&manifest)?;
+    let assets = assets::CmsAssets::from_manifest(&manifest)?;
     let mut kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| {
-        response(request, &dist, &manifest, &bootstrap)
+        response(request, &dist, &manifest, &assets)
     });
     kernel.push_middleware(HtmlMinifier);
     let bind =
@@ -95,7 +95,7 @@ mod tests {
     fn manifest(public_url: &str) -> TrunkAssetManifest {
         TrunkAssetManifest::from_json(
             format!(
-                r#"{{"version":3,"public_url":"{public_url}","html":"index.html","assets":[],"wasm":[],"document_assets":[]}}"#
+                r#"{{"public_url":"{public_url}","html":"index.html","assets":[],"wasm":[],"document_assets":[]}}"#
             )
             .as_bytes(),
         )

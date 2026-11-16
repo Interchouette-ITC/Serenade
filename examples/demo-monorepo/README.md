@@ -38,3 +38,19 @@ cargo run -p serenade-cli --bin serenade-ssg
 
 The CLI defaults to `demo-ssg`; `make ssg-all` or `serenade-ssg --all` builds every app
 registered with `mode = "ssg"`.
+
+The prerenderer takes Trunk's generated stylesheet, preload and WASM bootstrap markup from
+`dist/trunk-assets.json` (`TrunkAssetManifest::document_assets`) and inserts it unchanged with
+`Document::with_assets`, so each route references the same hashed files as Trunk's own build.
+After hydration the wasm build marks `<html data-hydrated>`.
+
+The end-to-end check builds this app the way an external project would, with
+`serenade-ssg --manifest-path` in debug and release. It validates the hashed outputs, serves
+`dist/` and loads every route in headless Chrome to confirm hydration:
+
+```sh
+cargo test -p serenade-cli --test external_ssg -- --include-ignored
+```
+
+It needs the `wasm32-unknown-unknown` target and Chrome or Chromium on `PATH` (or
+`SERENADE_TEST_CHROME`).

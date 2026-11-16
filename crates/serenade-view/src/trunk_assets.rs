@@ -1,4 +1,4 @@
-//! Reader for Trunk's versioned `trunk-assets.json` output.
+//! Reader for Trunk's `trunk-assets.json` output.
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -24,8 +24,6 @@ pub const TRUNK_DIST_DIRECTORY_ENV: &str = "SERENADE_TRUNK_DIST_DIR";
 /// Assets produced by Trunk for one frontend build.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct TrunkAssetManifest {
-    /// Schema version reported by Trunk.
-    pub version: u32,
     /// Configured public URL prefix.
     pub public_url: String,
     /// Finalized HTML output filename.
@@ -635,7 +633,6 @@ mod tests {
     use sha2::{Digest, Sha384};
 
     const MANIFEST: &str = r#"{
-        "version": 3,
         "public_url": "/app/",
         "html": "index.html",
         "assets": [
@@ -705,7 +702,6 @@ mod tests {
     #[test]
     fn reads_current_asset_and_wasm_metadata() {
         let manifest = TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("valid manifest");
-        assert_eq!(manifest.version, 3);
         assert_eq!(manifest.assets[0].role, "stylesheet");
         assert_eq!(manifest.assets[0].url, "/app/site-123.css");
         assert_eq!(manifest.wasm[0].wasm_url, "/app/app-123_bg.wasm");
@@ -716,7 +712,6 @@ mod tests {
     #[test]
     fn supports_html_only_manifests() {
         let json = br#"{
-            "version": 3,
             "public_url": "/",
             "html": "index.html",
             "assets": [],
@@ -774,15 +769,22 @@ mod tests {
     }
 
     #[test]
-    fn accepts_manifest_versions_with_compatible_fields() {
-        for version in [0, 1, 2, 3, 4, u32::MAX] {
-            let mut json = manifest_value();
-            json["version"] = version.into();
-            json["future_field"] = "ignored".into();
-            let manifest = TrunkAssetManifest::from_json(json.to_string().as_bytes())
-                .expect("compatible manifest");
-            assert_eq!(manifest.version, version);
-        }
+    fn ignores_the_version_and_unknown_fields_trunk_writes() {
+        let expected = TrunkAssetManifest::from_json(MANIFEST.as_bytes()).expect("manifest");
+        let mut json = manifest_value();
+        json.as_object_mut()
+            .expect("manifest object")
+            .remove("version");
+        json["future_field"] = "ignored".into();
+        assert_eq!(
+            TrunkAssetManifest::from_json(json.to_string().as_bytes()).expect("no version"),
+            expected
+        );
+        json["version"] = "anything".into();
+        assert_eq!(
+            TrunkAssetManifest::from_json(json.to_string().as_bytes()).expect("any version"),
+            expected
+        );
     }
 
     #[test]

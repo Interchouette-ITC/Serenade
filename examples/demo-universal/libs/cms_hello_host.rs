@@ -67,7 +67,6 @@ impl Host for CmsHelloHost {
             "home_url" => Some(Value::Str(self.public_url.clone())),
             "banner_url" => Some(Value::Str(self.public_file("serenade-banner.png"))),
             "favicon_url" => Some(Value::Str(self.public_file("favicon.ico"))),
-            "stylesheet_url" => Some(Value::Str(self.public_file("style.css"))),
             "json_ld" => Some(Value::Str(
                 r#"{"@context":"https://schema.org","name":"Serenade & <Universal>"}"#.to_owned(),
             )),
