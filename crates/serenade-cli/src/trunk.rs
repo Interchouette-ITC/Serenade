@@ -3,7 +3,7 @@
 //! Trunk is downloaded as a prebuilt binary from the rolling `trunk-itc-dev`
 //! pre-release of the Interchouette Trunk fork. Before installation it must match
 //! its published SHA-256 checksum, carry a GitHub build-provenance attestation
-//! signed by the fork's release workflow (see [`provenance`]), and report
+//! signed by the fork's release workflow (see `trunk/provenance.rs`), and report
 //! `trunk <version>+itc.<revision>` for the attested commit. It is cached below
 //! Serenade's tools directory together with its version and provenance.
 
