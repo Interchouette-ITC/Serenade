@@ -1,4 +1,4 @@
-//! Run the Trunk version pinned and managed by Serenade.
+//! Run the Trunk build managed by Serenade (fork release `trunk-itc-dev`).
 
 use anyhow::{Context, bail};
 
