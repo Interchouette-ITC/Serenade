@@ -14,6 +14,7 @@ use std::{
 };
 
 use serenade_view::{TRUNK_ASSET_MANIFEST_FILE, TrunkAssetManifest};
+use sha2::Digest;
 
 fn executable(path: &Path, contents: &str) {
     fs::write(path, contents).expect("write executable");
@@ -54,6 +55,19 @@ printf '<html><head></head><body>shell</body></html>' > dist/index.html
 printf '{"public_url":"/","html":"index.html","assets":[],"wasm":[],"document_assets":[]}' > dist/trunk-assets.json
 "#,
     );
+    let trunk_sha256 =
+        sha2::Sha256::digest(fs::read(tools.join("bin/trunk")).expect("read fake Trunk"))
+            .iter()
+            .fold(String::new(), |mut hex, byte| {
+                use std::fmt::Write as _;
+                let _ = write!(hex, "{byte:02x}");
+                hex
+            });
+    fs::write(
+        tools.join(".serenade-trunk-bin-sha256"),
+        format!("{trunk_sha256}\n"),
+    )
+    .expect("write Trunk binary checksum marker");
     executable(
         &bin.join("cargo"),
         r#"#!/bin/sh

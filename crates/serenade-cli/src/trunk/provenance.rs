@@ -181,16 +181,31 @@ fn verify_bundle(
         .and_then(|verifier| verifier.verify(digest, &bundle, &policy))
         .map_err(|error| anyhow::anyhow!("Sigstore verification failed: {error}"))?;
 
-    let commit = statement.predicate["buildDefinition"]["resolvedDependencies"]
+    let commit = source_commit(&statement.predicate, signer_workflow)?;
+    Ok(Provenance { commit })
+}
+
+/// Returns the Git commit of the signer's own repository among the provenance's
+/// resolved dependencies, ignoring any other Git input.
+fn source_commit(predicate: &serde_json::Value, signer_workflow: &str) -> anyhow::Result<String> {
+    let repository = signer_workflow
+        .split_once("/.github/workflows/")
+        .map(|(repository, _)| repository)
+        .context("signer workflow is not a GitHub Actions workflow URI")?;
+    let source_prefix = format!("git+{repository}@");
+    predicate["buildDefinition"]["resolvedDependencies"]
         .as_array()
         .into_iter()
         .flatten()
+        .filter(|dependency| {
+            dependency["uri"]
+                .as_str()
+                .is_some_and(|uri| uri.starts_with(&source_prefix))
+        })
         .find_map(|dependency| dependency["digest"]["gitCommit"].as_str())
         .filter(|commit| commit.len() == 40 && commit.bytes().all(|byte| byte.is_ascii_hexdigit()))
-        .context("provenance does not name the source Git commit")?;
-    Ok(Provenance {
-        commit: commit.to_ascii_lowercase(),
-    })
+        .map(str::to_ascii_lowercase)
+        .with_context(|| format!("provenance does not name a {repository} source commit"))
 }
 
 #[cfg(test)]
@@ -242,6 +257,27 @@ mod tests {
             format!("{flipped}{}", &signature[1..]).into();
         assert!(verify_bundle(&bundle.to_string(), digest(GH_DIGEST), GH_SIGNER).is_err());
         assert!(decode_bundle(b"\xff\xff not snappy").is_err());
+    }
+
+    #[test]
+    fn source_commit_comes_only_from_the_signer_repository() {
+        let other = "1".repeat(40);
+        let fork = "2".repeat(40);
+        let predicate = serde_json::json!({"buildDefinition": {"resolvedDependencies": [
+            {"uri": "git+https://github.com/someone/else@refs/heads/main", "digest": {"gitCommit": other}},
+            {"uri": "git+https://github.com/Interchouette-ITC/trunk-evil@refs/heads/main", "digest": {"gitCommit": other}},
+            {"uri": "git+https://github.com/Interchouette-ITC/trunk@refs/heads/main", "digest": {"gitCommit": fork}},
+        ]}});
+        assert_eq!(
+            source_commit(&predicate, SIGNER_WORKFLOW).expect("fork commit"),
+            fork
+        );
+
+        let foreign = serde_json::json!({"buildDefinition": {"resolvedDependencies": [
+            {"uri": "git+https://github.com/someone/else@refs/heads/main", "digest": {"gitCommit": other}},
+        ]}});
+        let error = source_commit(&foreign, SIGNER_WORKFLOW).expect_err("no fork commit");
+        assert!(format!("{error:#}").contains("Interchouette-ITC/trunk source commit"));
     }
 
     #[cfg(unix)]

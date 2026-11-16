@@ -30,6 +30,7 @@ const REFRESH_ENV: &str = "SERENADE_TRUNK_REFRESH";
 const CHECKSUM_MARKER: &str = ".serenade-trunk-sha256";
 const VERSION_MARKER: &str = ".serenade-trunk-version";
 const PROVENANCE_MARKER: &str = ".serenade-trunk-provenance";
+const BINARY_MARKER: &str = ".serenade-trunk-bin-sha256";
 const REFRESH_INTERVAL: Duration = Duration::from_hours(24);
 const CHECKSUM_TIMEOUT: Duration = Duration::from_secs(15);
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(300);
@@ -134,12 +135,19 @@ fn trunk_executable(install_dir: &Path) -> PathBuf {
     install_dir.join("bin").join(name)
 }
 
-/// Installed with a recorded checksum and verified provenance. Installs made
-/// before provenance was checked have no provenance record and are replaced.
+/// Installed with a recorded checksum and verified provenance, and the executable
+/// still matches the SHA-256 recorded when it was installed. Installs made before
+/// provenance was checked, or whose executable was corrupted or replaced, are
+/// reinstalled.
 fn is_installed(executable: &Path, marker: &Path) -> bool {
-    executable.is_file()
-        && read_marker(marker).is_some()
-        && marker.parent().and_then(read_provenance_commit).is_some()
+    let Some(install_dir) = marker.parent() else {
+        return false;
+    };
+    read_marker(marker).is_some()
+        && read_provenance_commit(install_dir).is_some()
+        && read_marker(&install_dir.join(BINARY_MARKER)).is_some_and(|recorded| {
+            std::fs::read(executable).is_ok_and(|binary| sha256_hex(&binary) == recorded)
+        })
 }
 
 /// Installed and checked against the release within the refresh interval.
@@ -393,20 +401,56 @@ fn update(release: &Release, tools_dir: &Path, install_dir: &Path) -> anyhow::Re
         )
     })?;
     write_provenance(&staging, &provenance.commit)?;
+    let binary = std::fs::read(&staged_executable)
+        .with_context(|| format!("failed to read {}", staged_executable.display()))?;
+    write_marker(&staging.join(BINARY_MARKER), &sha256_hex(&binary))?;
     write_marker(&staging.join(CHECKSUM_MARKER), &expected)?;
 
-    remove_dir_if_exists(install_dir)?;
-    std::fs::rename(&staging, install_dir).with_context(|| {
-        format!(
-            "failed to move the downloaded Trunk into {}",
-            install_dir.display()
-        )
-    })?;
+    replace_install(&staging, install_dir)?;
     eprintln!(
         "Installed {version} ({TRUNK_CHANNEL}, sha256 {expected}, provenance verified: commit {})",
         provenance.commit
     );
     Ok(())
+}
+
+/// Moves a staged install into place file by file. Each rename atomically replaces
+/// its target, so a concurrent caller never finds the executable missing, and runs
+/// already started keep their binary. The binary checksum follows the executable
+/// and the release checksum goes last, so an interrupted replacement fails the
+/// `is_installed` check and is reinstalled.
+fn replace_install(staging: &Path, install_dir: &Path) -> anyhow::Result<()> {
+    let executable = trunk_executable(install_dir);
+    let bin_dir = executable
+        .parent()
+        .context("Trunk executable has no parent")?;
+    std::fs::create_dir_all(bin_dir)
+        .with_context(|| format!("failed to create {}", bin_dir.display()))?;
+    let files = [
+        (trunk_executable(staging), executable),
+        (staging.join(BINARY_MARKER), install_dir.join(BINARY_MARKER)),
+        (
+            staging.join(VERSION_MARKER),
+            install_dir.join(VERSION_MARKER),
+        ),
+        (
+            staging.join(PROVENANCE_MARKER),
+            install_dir.join(PROVENANCE_MARKER),
+        ),
+        (
+            staging.join(CHECKSUM_MARKER),
+            install_dir.join(CHECKSUM_MARKER),
+        ),
+    ];
+    for (from, to) in files {
+        std::fs::rename(&from, &to).with_context(|| {
+            format!(
+                "failed to move the downloaded Trunk into {} (is Trunk running?)",
+                to.display()
+            )
+        })?;
+    }
+    remove_dir_if_exists(staging)
 }
 
 fn remove_dir_if_exists(directory: &Path) -> anyhow::Result<()> {
@@ -663,7 +707,7 @@ mod tests {
         let temp = tempfile::tempdir().expect("temporary directory");
         let executable = temp.path().join("trunk");
         let marker = temp.path().join(CHECKSUM_MARKER);
-        std::fs::write(&executable, "").expect("executable placeholder");
+        std::fs::write(&executable, "trunk").expect("executable placeholder");
         write_marker(&marker, &"a".repeat(64)).expect("checksum marker");
         assert!(
             !is_installed(&executable, &marker),
@@ -671,8 +715,20 @@ mod tests {
         );
         write_provenance(temp.path(), &"c".repeat(40)).expect("provenance marker");
         assert_eq!(read_provenance_commit(temp.path()), Some("c".repeat(40)));
+        assert!(
+            !is_installed(&executable, &marker),
+            "an install without a binary checksum is replaced"
+        );
+        write_marker(&temp.path().join(BINARY_MARKER), &sha256_hex(b"trunk"))
+            .expect("binary marker");
         assert!(is_installed(&executable, &marker));
         assert!(is_current(&executable, &marker));
+        std::fs::write(&executable, "trunc").expect("corrupt executable");
+        assert!(
+            !is_installed(&executable, &marker),
+            "a modified executable is replaced"
+        );
+        std::fs::write(&executable, "trunk").expect("restore executable");
         std::fs::write(&marker, "v0.22.1-itc.5\n").expect("legacy tag marker");
         assert!(!is_installed(&executable, &marker));
     }
@@ -950,6 +1006,23 @@ mod tests {
                 "trunk 0.22.1+itc.bbbbbbbbbbbb"
             );
 
+            let executable = trunk_executable(&install_dir);
+            let mut corrupted = std::fs::read(&executable).expect("installed executable");
+            corrupted.push(b'\n');
+            std::fs::write(&executable, corrupted).expect("corrupt executable");
+            assert!(!is_installed(&executable, &marker));
+            let error = update(&release, temp.path(), &install_dir)
+                .expect_err("offline with a corrupted install fails");
+            assert!(format!("{error:#}").contains("failed to install"));
+
+            publish(&files, second.clone(), &sha256_hex(&second));
+            update(&release, temp.path(), &install_dir).expect("corrupted install is replaced");
+            assert!(is_installed(&executable, &marker));
+            assert_eq!(
+                installed_version(&install_dir),
+                "trunk 0.22.1+itc.bbbbbbbbbbbb"
+            );
+            files.lock().expect("files").clear();
             let empty = temp.path().join("empty");
             assert!(update(&release, temp.path(), &empty).is_err());
 

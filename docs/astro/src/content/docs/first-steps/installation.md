@@ -40,7 +40,9 @@ use, and cached under
 `~/.serenade/tools`; set `SERENADE_HOME` to use another cache location. This is
 separate from any system-wide Trunk installation. Serenade checks for a newer build at
 most once a day and keeps using the cached one when offline; set
-`SERENADE_TRUNK_REFRESH=1` to check now. To run Trunk directly with
+`SERENADE_TRUNK_REFRESH=1` to check now. Before each reuse, the cached executable's
+SHA-256 is checked again; a modified or truncated binary is reinstalled (which needs
+network access). To run Trunk directly with
 Serenade's managed version, use
 `cargo run -p serenade-cli --bin serenade-trunk -- <trunk arguments>`.
 Fork builds report their source commit, e.g. `trunk 0.22.1+itc.0123456789ab`; Serenade

@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: write
+  # `gh attestation verify` reads the Trunk fork's attestations with GITHUB_TOKEN.
+  attestations: read
 
 concurrency:
   group: release-cli-dev
@@ -70,12 +72,13 @@ jobs:
             --source-ref refs/heads/main \
             --predicate-type https://slsa.dev/provenance/v1 \
             --format json \
-            --jq '[.[].verificationResult.statement.predicate.buildDefinition.resolvedDependencies[]?.digest.gitCommit // empty][0]')"
+            --jq "[.[].verificationResult.statement.predicate.buildDefinition.resolvedDependencies[]? | select((.uri // \"\") | startswith(\"git+https://github.com/${TRUNK_REPO}@\")) | .digest.gitCommit // empty][0]")"
           [[ "$TRUNK_COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "no attested commit for ${ASSET}"; exit 1; }
           INSTALL_DIR="${RUNNER_TEMP}/serenade-tools/trunk-itc-dev"
           mkdir -p "${INSTALL_DIR}/bin"
           tar -xzf "${RUNNER_TEMP}/${ASSET}" -C "${INSTALL_DIR}/bin" trunk
           echo "$TRUNK_SHA256" > "${INSTALL_DIR}/.serenade-trunk-sha256"
+          sha256sum "${INSTALL_DIR}/bin/trunk" | awk '{print $1}' > "${INSTALL_DIR}/.serenade-trunk-bin-sha256"
           TRUNK_VERSION="$("${INSTALL_DIR}/bin/trunk" --version)"
           case "$TRUNK_VERSION" in "trunk "?*"+itc."?*) ;; *) echo "missing fork build revision: $TRUNK_VERSION"; exit 1 ;; esac
           TRUNK_REVISION="${TRUNK_VERSION##*+itc.}"
@@ -131,7 +134,7 @@ jobs:
 
           \`serenade-cli-${TARGET}.tar.gz\` contains \`serenade\`, \`serenade-spa\`, \`serenade-html\`, \`serenade-universal\`, \`serenade-ssg\` and \`serenade-trunk\` (static ${TARGET}).
 
-          \`serenade-trunk-${TARGET}.tar.gz\` contains \`${TRUNK_VERSION}\` from the Trunk fork's \`trunk-itc-dev\` release (sha256 \`${TRUNK_SHA256}\`, build provenance attested for commit \`${TRUNK_COMMIT}\`) in serenade-cli's install layout (\`trunk-itc-dev/bin/trunk\` + checksum, version and provenance markers). It is optional: serenade-cli downloads and verifies the same binary on first use. Extract it into \`\$SERENADE_HOME/tools\` (default \`~/.serenade/tools\`) to skip that download."
+          \`serenade-trunk-${TARGET}.tar.gz\` contains \`${TRUNK_VERSION}\` from the Trunk fork's \`trunk-itc-dev\` release (sha256 \`${TRUNK_SHA256}\`, build provenance attested for commit \`${TRUNK_COMMIT}\`) in serenade-cli's install layout (\`trunk-itc-dev/bin/trunk\` + release checksum, binary checksum, version and provenance markers). It is optional: serenade-cli downloads and verifies the same binary on first use. Extract it into \`\$SERENADE_HOME/tools\` (default \`~/.serenade/tools\`) to skip that download."
 
           git tag -f "$RELEASE_TAG" "$SHA"
           git push -f origin "refs/tags/${RELEASE_TAG}"
