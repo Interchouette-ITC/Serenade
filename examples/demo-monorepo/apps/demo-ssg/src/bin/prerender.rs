@@ -43,8 +43,10 @@ impl Site {
         let [bundle] = manifest.wasm.as_slice() else {
             bail!("the SSG demo needs exactly one Trunk WASM bundle to hydrate");
         };
-        if !bundle.inject_scripts {
-            bail!("the SSG demo requires Trunk WASM script injection for hydration");
+        if bundle.app_type != "main" || !bundle.inject_scripts {
+            bail!(
+                "the SSG demo requires one main Trunk WASM bundle with script injection for hydration"
+            );
         }
         Ok(Self {
             public_url: format!("{}/", manifest.public_url.trim_end_matches('/')),
@@ -122,8 +124,6 @@ fn prerender(output: &Path, manifest: &TrunkAssetManifest) -> anyhow::Result<()>
 mod tests {
     use std::fs;
 
-    use serenade_view::TrunkDocumentAsset;
-
     use super::*;
 
     fn output_with_build(public_url: &str, name: &str) -> (PathBuf, TrunkAssetManifest) {
@@ -136,6 +136,15 @@ mod tests {
         for file in ["index.html", "style-1a.css", "app-2b.js", "app-3c_bg.wasm"] {
             fs::write(output.join(file), "").expect("build file");
         }
+        // Trunk tags every fragment of the main bundle with the bundle's source order.
+        let document_assets = trunk_markup(public_url)
+            .iter()
+            .map(|(location, html)| {
+                let html = html.replace('\\', "\\\\").replace('"', "\\\"");
+                format!(r#"{{"order":1,"location":"{location}","html":"{html}"}}"#)
+            })
+            .collect::<Vec<_>>()
+            .join(",");
         let manifest = TrunkAssetManifest::from_json(
             format!(
                 r#"{{"public_url":"{public_url}","html":"index.html",
@@ -144,20 +153,11 @@ mod tests {
                 "wasm_url":"{public_url}app-3c_bg.wasm","wasm_content_digest":"{empty_digest}",
                 "wasm_size":0,"init_with_object":true,"import_bindings":true,"cross_origin":"anonymous","inject_scripts":true,"pattern_parameters":{{}},
                 "preloads":[{{"rel":"modulepreload","url":"{public_url}app-2b.js","content_digest":"{empty_digest}","cross_origin":"anonymous"}}]}}],
-                "document_assets":[]}}"#
+                "document_assets":[{document_assets}]}}"#
             )
             .as_bytes(),
         )
         .unwrap_or_else(|error| panic!("valid manifest: {error}"));
-        let mut manifest = manifest;
-        manifest.document_assets = trunk_markup(public_url)
-            .into_iter()
-            .map(|(location, html)| TrunkDocumentAsset {
-                order: None,
-                location: location.to_owned(),
-                html,
-            })
-            .collect();
         (output, manifest)
     }
 
@@ -281,7 +281,16 @@ mod tests {
             prerender(&output, &no_injection)
                 .expect_err("hydration needs the loader")
                 .to_string()
-                .contains("requires Trunk WASM script injection")
+                .contains("main Trunk WASM bundle with script injection")
+        );
+
+        let mut worker = manifest.clone();
+        worker.wasm[0].app_type = "worker".to_owned();
+        assert!(
+            prerender(&output, &worker)
+                .expect_err("a worker cannot hydrate the page")
+                .to_string()
+                .contains("main Trunk WASM bundle")
         );
 
         let mut no_bundle = manifest.clone();

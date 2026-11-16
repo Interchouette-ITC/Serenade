@@ -276,6 +276,21 @@ impl TrunkAssetManifest {
                 return Err(ViewError::msg("Trunk document asset has empty markup"));
             }
         }
+        // Trunk tags a main bundle's injected loader with the bundle's own source order.
+        for bundle in &self.wasm {
+            if bundle.app_type == "main"
+                && bundle.inject_scripts
+                && !self
+                    .document_assets
+                    .iter()
+                    .any(|asset| asset.order == bundle.order && asset.html.contains("<script"))
+            {
+                return Err(ViewError::msg(format!(
+                    "Trunk manifest has no generated loader script for WASM bundle `{}`",
+                    bundle.js_url
+                )));
+            }
+        }
         Ok(())
     }
 
@@ -684,11 +699,24 @@ mod tests {
                 ]
             }
         ],
-        "document_assets": []
+        "document_assets": [
+            {
+                "order": 2,
+                "location": "head",
+                "html": "<script type=\"module\">import init from '/app/app-123.js';await init();</script>"
+            }
+        ]
     }"#;
 
     fn manifest_value() -> serde_json::Value {
         serde_json::from_str(MANIFEST).expect("fixture JSON should be valid")
+    }
+
+    fn push_document_asset(json: &mut serde_json::Value, asset: serde_json::Value) {
+        json["document_assets"]
+            .as_array_mut()
+            .expect("document assets array")
+            .push(asset);
     }
 
     fn assert_manifest_error(json: &serde_json::Value, expected: &str) {
@@ -766,6 +794,36 @@ mod tests {
             TrunkAssetManifest::read_from_env().is_ok(),
             TrunkAssetManifest::read_from_environment(configured_path).is_ok()
         );
+    }
+
+    #[test]
+    fn rejects_an_injected_main_bundle_without_its_generated_loader() {
+        let mut json = manifest_value();
+        json["document_assets"] = serde_json::json!([]);
+        assert_manifest_error(
+            &json,
+            "no generated loader script for WASM bundle `/app/app-123.js`",
+        );
+
+        let mut other_order = manifest_value();
+        other_order["document_assets"][0]["order"] = 7.into();
+        assert_manifest_error(&other_order, "no generated loader script");
+
+        let mut not_a_script = manifest_value();
+        not_a_script["document_assets"][0]["html"] =
+            r#"<link rel="modulepreload" href="/app/app-123.js">"#.into();
+        assert_manifest_error(&not_a_script, "no generated loader script");
+
+        for (field, value) in [
+            ("inject_scripts", false.into()),
+            ("app_type", "worker".into()),
+        ] {
+            let mut json = manifest_value();
+            json["document_assets"] = serde_json::json!([]);
+            json["wasm"][0][field] = value;
+            TrunkAssetManifest::from_json(json.to_string().as_bytes())
+                .unwrap_or_else(|error| panic!("{field}: {error}"));
+        }
     }
 
     #[test]
@@ -1513,12 +1571,13 @@ mod tests {
     #[test]
     fn accepts_current_manifest_with_document_assets() {
         let mut json = manifest_value();
-        json["document_assets"] = serde_json::json!([
-            {"order": 0, "location": "head", "html": "<style>body{}</style>"}
-        ]);
+        push_document_asset(
+            &mut json,
+            serde_json::json!({"order": 0, "location": "head", "html": "<style>body{}</style>"}),
+        );
         let manifest =
             TrunkAssetManifest::from_json(json.to_string().as_bytes()).expect("current manifest");
-        assert_eq!(manifest.document_assets.len(), 1);
+        assert_eq!(manifest.document_assets.len(), 2);
 
         json["assets"][0]
             .as_object_mut()
@@ -1559,8 +1618,10 @@ mod tests {
     #[test]
     fn rejects_document_assets_without_markup_or_placement() {
         let mut json = manifest_value();
-        json["document_assets"] =
-            serde_json::json!([{"order": 0, "location": "unknown", "html": "<style></style>"}]);
+        push_document_asset(
+            &mut json,
+            serde_json::json!({"order": 0, "location": "unknown", "html": "<style></style>"}),
+        );
         let unplaced = TrunkAssetManifest::from_json(json.to_string().as_bytes())
             .expect("unknown locations parse");
         assert!(
@@ -1571,12 +1632,19 @@ mod tests {
                 .contains("outside <head> and <body>")
         );
 
-        for invalid in [
-            serde_json::json!([{"order": 0, "location": "footer", "html": "<style></style>"}]),
-            serde_json::json!([{"order": 0, "location": "head", "html": " "}]),
+        for (invalid, expected) in [
+            (
+                serde_json::json!({"order": 0, "location": "footer", "html": "<style></style>"}),
+                "unsupported location `footer`",
+            ),
+            (
+                serde_json::json!({"order": 0, "location": "head", "html": " "}),
+                "empty markup",
+            ),
         ] {
-            json["document_assets"] = invalid;
-            assert!(TrunkAssetManifest::from_json(json.to_string().as_bytes()).is_err());
+            let mut json = manifest_value();
+            push_document_asset(&mut json, invalid);
+            assert_manifest_error(&json, expected);
         }
     }
 

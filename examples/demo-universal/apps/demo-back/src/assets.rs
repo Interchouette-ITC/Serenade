@@ -16,9 +16,9 @@ impl CmsAssets {
                 "the Universal demo needs exactly one Trunk WASM bundle to hydrate",
             ));
         };
-        if !bundle.inject_scripts {
+        if bundle.app_type != "main" || !bundle.inject_scripts {
             return Err(invalid_manifest(
-                "the Universal demo requires Trunk WASM script injection for hydration",
+                "the Universal demo requires one main Trunk WASM bundle with script injection for hydration",
             ));
         }
         Ok(Self {
@@ -103,10 +103,12 @@ mod tests {
         two_bundles.wasm.push(two_bundles.wasm[0].clone());
         let mut no_injection = manifest();
         no_injection.wasm[0].inject_scripts = false;
+        let mut worker = manifest();
+        worker.wasm[0].app_type = "worker".to_owned();
         let mut misplaced = manifest();
         misplaced.document_assets[0].location = "unknown".to_owned();
 
-        for manifest in [no_bundle, two_bundles, no_injection, misplaced] {
+        for manifest in [no_bundle, two_bundles, no_injection, worker, misplaced] {
             let error = CmsAssets::from_manifest(&manifest).expect_err("unusable manifest");
             assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
         }
