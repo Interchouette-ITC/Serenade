@@ -1,4 +1,4 @@
-# Bundles
+# Bundle extensions
 
 Bundles are Serenade’s unit of **reusable composition**, analogous to Symfony bundles.
 
