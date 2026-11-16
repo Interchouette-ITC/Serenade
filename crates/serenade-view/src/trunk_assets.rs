@@ -821,8 +821,8 @@ mod tests {
             let mut json = manifest_value();
             json["document_assets"] = serde_json::json!([]);
             json["wasm"][0][field] = value;
-            TrunkAssetManifest::from_json(json.to_string().as_bytes())
-                .unwrap_or_else(|error| panic!("{field}: {error}"));
+            let result = TrunkAssetManifest::from_json(json.to_string().as_bytes());
+            assert!(result.is_ok(), "{field}: {result:?}");
         }
     }
 
