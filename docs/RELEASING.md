@@ -80,7 +80,8 @@ depends on. Adding a crate therefore means adding it to `DEFAULT_CRATES` in the 
    concurrency group and runs `publish-crates.sh publish`.
 4. `cli-binaries` builds the CLI for each target from the same commit, packages it and attests
    its build provenance.
-5. `release-assets` writes `SHA256SUMS` and uploads everything to the release with `--clobber`.
+5. After both `publish-crates` and all `cli-binaries` jobs succeed, `release-assets` writes
+   `SHA256SUMS` and uploads everything to the release with `--clobber`.
 
 Publication and binaries start only after CI succeeds. They run independently of each other.
 
