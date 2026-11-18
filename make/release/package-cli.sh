@@ -15,7 +15,7 @@
 # published SHA-256 and its build provenance attestation (`gh attestation verify`, needs
 # GH_TOKEN), and the binary must report the attested commit, exactly as serenade-cli
 # checks it before first use. Distinct names keep these assets apart from the rolling
-# `serenade-cli-dev` release.
+# `serenade-cli-pre-release` release.
 set -euo pipefail
 
 VERSION=${1:?usage: $0 <version> <target> <dist dir>}

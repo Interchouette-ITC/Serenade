@@ -3,8 +3,8 @@
 Serenade publishes every `serenade-*` crate and the `serenade-framework` facade to crates.io
 at one shared version, and attaches prebuilt `serenade-cli` binaries to the GitHub Release.
 Both are driven by [`release.yml`](../.github/workflows/release.yml) from an immutable
-`v<version>` tag. The rolling [`release-cli-dev.yml`](../.github/workflows/release-cli-dev.yml)
-pre-release (`serenade-cli-dev`) is separate and unaffected.
+`v<version>` tag. The rolling [`release-cli-pre-release.yml`](../.github/workflows/release-cli-pre-release.yml)
+pre-release (`serenade-cli-pre-release`, built from `dev`) is separate and unaffected.
 
 The repository documentation entry point is [docs/README.md](README.md), and the release
 changelog is [docs/CHANGELOG.md](CHANGELOG.md). Do not add either file at the repository
@@ -156,6 +156,10 @@ already went out stay published. Release the fix as the next patch version.
 Targets: `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `aarch64-apple-darwin`,
 `x86_64-apple-darwin`, and `x86_64-pc-windows-msvc`. The Trunk fork has no Linux ARM64 build, so
 there is no Trunk bundle for that target. Install Trunk yourself there.
+
+The rolling `serenade-cli-pre-release` pre-release (Linux x86_64 only) publishes
+`serenade-cli-<target>.tar.gz` from `dev`. GitHub's latest release is the newest published
+release that is not a prerelease, so the pre-release never replaces it.
 
 Each archive has a GitHub build provenance attestation:
 

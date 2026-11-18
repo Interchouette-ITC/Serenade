@@ -1,9 +1,10 @@
 # Manual dev pre-release of the Serenade CLI binaries.
-# Moves tag/Release `serenade-cli-dev` to the dispatched `dev` commit and replaces its
+# Moves tag/Release `serenade-cli-pre-release` to the dispatched `dev` commit and replaces its
 # assets with static Linux binaries (serenade-cli + Trunk from the fork's rolling
 # `trunk-itc-dev` release), so site deploys can download them instead of compiling.
-# Asset names are stable (not SemVer).
-name: release-cli-dev
+# Asset names are stable (not SemVer). Being a prerelease, it never becomes the repository's latest release.
+# Moving the tag and replacing assets requires immutable releases to stay disabled.
+name: release-cli-pre-release
 
 on:
   workflow_dispatch:
@@ -14,26 +15,26 @@ permissions:
   attestations: read
 
 concurrency:
-  group: release-cli-dev
+  group: release-cli-pre-release
   cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  RELEASE_TAG: serenade-cli-dev
+  RELEASE_TAG: serenade-cli-pre-release
   TARGET: x86_64-unknown-linux-musl
   TRUNK_RELEASE_URL: https://github.com/Interchouette-ITC/trunk/releases/download/trunk-itc-dev
 
 jobs:
   release:
-    name: Build and publish serenade-cli-dev
+    name: Build and publish serenade-cli-pre-release
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - name: Require dev
         if: github.ref != 'refs/heads/dev'
         run: |
-          echo "release-cli-dev only runs on dev (got ${{ github.ref }})"
+          echo "release-cli-pre-release only runs on dev (got ${{ github.ref }})"
           exit 1
 
       - uses: actions/checkout@v7
@@ -113,7 +114,7 @@ jobs:
           (cd dist && sha256sum "$TRUNK_ARCHIVE" > "${TRUNK_ARCHIVE}.sha256")
           ls -la dist
 
-      - name: Point serenade-cli-dev at this commit
+      - name: Point serenade-cli-pre-release at this commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -123,7 +124,7 @@ jobs:
           SHORT="$(git rev-parse --short "$SHA")"
           NOTES="Serenade CLI built from \`dev\` @ \`${SHORT}\` (\`${SHA}\`).
 
-          Rolling dev pre-release, moved on each run of \`release-cli-dev\`. Not versioned.
+          Rolling dev pre-release, moved on each run of \`release-cli-pre-release\`. Not versioned. Stable binaries: https://github.com/${GH_REPO}/releases/latest.
 
           ## Install
 
@@ -143,9 +144,9 @@ jobs:
           git push -f origin "refs/tags/${RELEASE_TAG}"
 
           if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" --prerelease --title "serenade-cli dev" --notes "$NOTES"
+            gh release edit "$RELEASE_TAG" --prerelease --title "serenade-cli pre-release" --notes "$NOTES"
           else
-            gh release create "$RELEASE_TAG" --prerelease --title "serenade-cli dev" --notes "$NOTES" --verify-tag
+            gh release create "$RELEASE_TAG" --prerelease --title "serenade-cli pre-release" --notes "$NOTES" --verify-tag
           fi
 
       - name: Replace release assets
