@@ -1,0 +1,20 @@
+[package]
+name = "serenade-framework-consumer"
+description = "External-style consumer of the serenade-framework facade"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+# Only the public facade: no serenade-* implementation crate is named here.
+[dependencies]
+serenade-framework = { path = "../../crates/serenade-framework", version = "1.0.0", features = [
+    "http",
+    "validation",
+] }
+
+[lints]
+workspace = true

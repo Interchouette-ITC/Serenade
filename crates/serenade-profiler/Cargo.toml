@@ -1,11 +1,15 @@
 [package]
 name = "serenade-profiler"
 description = "Web debug toolbar and per-request profiler for Serenade HTML apps"
+documentation = "https://docs.rs/serenade-profiler"
+keywords = ["serenade", "profiler", "debug-toolbar", "web", "html"]
+categories = ["development-tools::profiling", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

@@ -1,11 +1,15 @@
 [package]
 name = "serenade-config"
 description = "Layered configuration loading and merging"
+documentation = "https://docs.rs/serenade-config"
+keywords = ["serenade", "config", "yaml", "toml", "dotenv"]
+categories = ["config", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

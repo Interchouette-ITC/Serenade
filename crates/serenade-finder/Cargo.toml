@@ -1,11 +1,15 @@
 [package]
 name = "serenade-finder"
 description = "Directory walking with name glob and type filters"
+documentation = "https://docs.rs/serenade-finder"
+keywords = ["serenade", "finder", "glob", "walk", "directory"]
+categories = ["filesystem"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

@@ -37,6 +37,8 @@ pub struct CargoDependency {
     /// Crate name for `cargo add`.
     #[serde(rename = "crate")]
     pub crate_name: String,
+    /// Version requirement (`cargo add <crate>@<version>`).
+    pub version: Option<String>,
     /// Git repository URL.
     pub git: Option<String>,
     /// Git branch.
@@ -203,7 +205,11 @@ fn write_file(dest: &Path, contents: &[u8], force: bool) -> Result<(), CliError>
 fn run_cargo_add(root: &Path, deps: &[CargoDependency]) -> Result<(), CliError> {
     for dep in deps {
         let mut command = Command::new("cargo");
-        command.arg("add").arg(&dep.crate_name).current_dir(root);
+        let spec = dep.version.as_ref().map_or_else(
+            || dep.crate_name.clone(),
+            |version| format!("{}@{version}", dep.crate_name),
+        );
+        command.arg("add").arg(spec).current_dir(root);
         if let Some(git) = &dep.git {
             command.arg("--git").arg(git);
         }
@@ -244,6 +250,22 @@ mod tests {
         assert!(ids.contains(&"framework".to_owned()));
         assert!(ids.contains(&"security".to_owned()));
         assert!(ids.contains(&"admin".to_owned()));
+    }
+
+    #[test]
+    fn shipped_recipes_pin_published_cli_version() {
+        for (id, _) in list_recipes() {
+            let (recipe, _) = load_recipe(&id).expect("recipe");
+            for dep in &recipe.cargo.dependencies {
+                assert_eq!(
+                    dep.version.as_deref(),
+                    Some(env!("CARGO_PKG_VERSION")),
+                    "recipe `{id}` dependency `{}`",
+                    dep.crate_name
+                );
+                assert!(dep.git.is_none() && dep.branch.is_none(), "recipe `{id}`");
+            }
+        }
     }
 
     #[test]

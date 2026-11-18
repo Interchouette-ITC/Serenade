@@ -1,11 +1,15 @@
 [package]
 name = "serenade-observability"
 description = "Structured logging conventions: tracing init, channels, var/log file sinks"
+documentation = "https://docs.rs/serenade-observability"
+keywords = ["serenade", "tracing", "logging", "observability", "opentelemetry"]
+categories = ["development-tools::debugging", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

@@ -50,7 +50,7 @@ description = "Framework package config and registration hints"
 
 [cargo]
 dependencies = [
-  { crate = "serenade-bundle", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-bundle", version = "1.0.0" },
 ]
 
 [[files]]

@@ -1,11 +1,15 @@
 [package]
 name = "serenade-http-actix"
 description = "Actix-web adapter for serenade-http"
+documentation = "https://docs.rs/serenade-http-actix"
+keywords = ["serenade", "http", "actix", "actix-web", "adapter"]
+categories = ["web-programming::http-server"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

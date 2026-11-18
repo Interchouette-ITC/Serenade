@@ -1,11 +1,15 @@
 [package]
 name = "serenade-validator"
 description = "Constraint validation for DTOs and messenger commands"
+documentation = "https://docs.rs/serenade-validator"
+keywords = ["serenade", "validator", "validation", "constraints", "dto"]
+categories = ["web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

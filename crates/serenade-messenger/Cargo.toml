@@ -1,11 +1,15 @@
 [package]
 name = "serenade-messenger"
 description = "Sync message bus, middleware, and async transport adapters"
+documentation = "https://docs.rs/serenade-messenger"
+keywords = ["serenade", "messenger", "message-bus", "queue", "cqrs"]
+categories = ["asynchronous", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

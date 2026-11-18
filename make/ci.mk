@@ -1,7 +1,8 @@
 # CI / quality gates.
 
 .PHONY: check test lint format format-check sweep doc doc-open doc-clean clean ci audit deny \
-	coverage coverage-summary coverage-html tarpaulin machete outdated cargo_update fuzz fuzz-build geiger
+	coverage coverage-summary coverage-html tarpaulin machete outdated cargo_update fuzz fuzz-build geiger \
+	msrv framework-features
 
 # Keep in sync with codecov.yml ignore paths and CI coverage.
 COVERAGE_FEATURES := --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth,serenade-security/ldap,serenade-mailer/esp,serenade-search/http
@@ -12,6 +13,38 @@ check:
 
 test:
 	cd $(ROOT) && $(CARGO_STABLE) test --workspace --locked
+
+## Minimum supported Rust version, read from `[workspace.package] rust-version`.
+MSRV ?= $(shell sed -n 's/^rust-version = "\(.*\)"/\1/p' $(ROOT)/Cargo.toml)
+
+## Requires `rustup toolchain install $(MSRV)`. Checks and tests the locked workspace on the MSRV.
+msrv:
+	cd $(ROOT) && cargo +$(MSRV) check --workspace --all-targets --locked
+	cd $(ROOT) && cargo +$(MSRV) check -p serenade-framework --all-targets --all-features --locked
+	cd $(ROOT) && cargo +$(MSRV) test --workspace --locked
+
+## Checks every `serenade-framework` feature in isolation, then tests all features together.
+framework-features:
+	cd $(ROOT) && set -o pipefail && for package_features in \
+		'serenade-bundle:' \
+		'serenade-framework:bundle' \
+		'serenade-framework:bundle,http' \
+		'serenade-framework:bundle,mailer' \
+		'serenade-framework:bundle,http,mailer'; do \
+		package=$${package_features%%:*}; features=$${package_features#*:}; \
+		echo "$$package --features $$features: no implicit network transports"; \
+		$(CARGO_STABLE) tree -p "$$package" --no-default-features --features "$$features" \
+			--locked --edges normal --prefix none --format '{p}' \
+			| awk '$$1 == "reqwest" || $$1 == "lettre" { print "Unexpected network transport: " $$0 > "/dev/stderr"; failed = 1 } END { exit failed }' || exit 1; \
+	done
+	cd $(ROOT) && $(CARGO_STABLE) test -p serenade-bundle -p serenade-framework --features serenade-framework/bundle --locked
+	cd $(ROOT) && $(CARGO_STABLE) check -p serenade-framework --all-targets --no-default-features --locked
+	cd $(ROOT) && for feature in $$(cargo metadata --no-deps --format-version 1 --locked \
+		| jq -r '.packages[] | select(.name == "serenade-framework") | .features | keys[] | select(. != "default")'); do \
+		echo "serenade-framework --features $$feature"; \
+		$(CARGO_STABLE) check -p serenade-framework --all-targets --no-default-features --features "$$feature" --locked || exit 1; \
+	done
+	cd $(ROOT) && $(CARGO_STABLE) test -p serenade-framework --all-features --locked
 
 ## Requires `cargo install cargo-llvm-cov`. Writes `coverage/lcov.info` (CI / Codecov).
 ## Uses the stable toolchain so llvm-cov finds instrumented objects.
@@ -124,7 +157,7 @@ DOC_OUT ?= $(ROOT)/target/doc
 DOC_CRATE ?= serenade_kernel
 
 doc:
-	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO_STABLE) doc --workspace --no-deps --locked --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth,serenade-security/ldap,serenade-mailer/esp,serenade-search/http
+	cd $(ROOT) && RUSTDOCFLAGS="$(RUSTDOCFLAGS)" $(CARGO_STABLE) doc --workspace --no-deps --locked --features serenade-cache/redis,serenade-lock/redis,serenade-messenger/redis,serenade-rate-limiter/redis,serenade-serializer/toon,serenade-scheduler/messenger,serenade-security/oauth,serenade-security/ldap,serenade-mailer/esp,serenade-search/http,serenade-framework/console,serenade-framework/bundle,serenade-framework/http-actix,serenade-framework/http-axum,serenade-framework/http-client-reqwest,serenade-framework/session,serenade-framework/security-oauth,serenade-framework/security-ldap,serenade-framework/validation,serenade-framework/lock,serenade-framework/rate-limiter,serenade-framework/scheduler-messenger,serenade-framework/mailer-smtp,serenade-framework/mailer-esp,serenade-framework/notifier,serenade-framework/form,serenade-framework/view-leptos-ssr
 	@test -d "$(DOC_OUT)" || (echo "missing $(DOC_OUT)"; exit 1)
 	@rm -rf $(ROOT)/docs/api-rust
 	@mkdir -p $(ROOT)/docs/api-rust

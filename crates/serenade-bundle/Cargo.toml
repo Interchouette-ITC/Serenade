@@ -1,11 +1,15 @@
 [package]
 name = "serenade-bundle"
 description = "Bundle interface and composition helpers"
+documentation = "https://docs.rs/serenade-bundle"
+keywords = ["serenade", "bundle", "framework", "modular", "plugin"]
+categories = ["web-programming", "rust-patterns"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]
@@ -14,12 +18,12 @@ serenade-console = { workspace = true }
 serenade-di = { workspace = true }
 serenade-event = { workspace = true }
 serenade-http = { workspace = true }
-serenade-http-client = { workspace = true }
+serenade-http-client = { workspace = true, default-features = false }
 serenade-kernel = { workspace = true }
 serenade-lock = { workspace = true }
 serenade-rate-limiter = { workspace = true }
 serenade-scheduler = { workspace = true }
-serenade-mailer = { workspace = true }
+serenade-mailer = { workspace = true, default-features = false }
 serenade-notifier = { workspace = true }
 thiserror = { workspace = true }
 

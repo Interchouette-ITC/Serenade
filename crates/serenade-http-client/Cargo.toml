@@ -1,11 +1,15 @@
 [package]
 name = "serenade-http-client"
 description = "Outbound HttpClient contract, MockHttpClient, and optional reqwest adapter"
+documentation = "https://docs.rs/serenade-http-client"
+keywords = ["serenade", "http", "client", "reqwest", "mock"]
+categories = ["web-programming::http-client"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

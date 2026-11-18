@@ -1,11 +1,15 @@
 [package]
 name = "serenade-kernel"
 description = "Kernel boot, lifecycle, and bundle orchestration"
+documentation = "https://docs.rs/serenade-kernel"
+keywords = ["serenade", "kernel", "framework", "lifecycle", "bundle"]
+categories = ["web-programming", "rust-patterns"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

@@ -1,11 +1,15 @@
 [package]
 name = "serenade-string"
 description = "Slug, case transforms, and English Inflector helpers"
+documentation = "https://docs.rs/serenade-string"
+keywords = ["serenade", "slug", "inflector", "case", "string"]
+categories = ["text-processing"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [lints]

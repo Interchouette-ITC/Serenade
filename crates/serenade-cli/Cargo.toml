@@ -1,11 +1,15 @@
 [package]
 name = "serenade-cli"
 description = "Serenade CLI: Flex-like recipes and app scaffolding (Cargo remains the package manager)"
+documentation = "https://docs.rs/serenade-cli"
+keywords = ["serenade", "cli", "scaffolding", "recipes", "framework"]
+categories = ["command-line-utilities", "development-tools", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [[bin]]

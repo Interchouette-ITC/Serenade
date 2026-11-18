@@ -1,11 +1,15 @@
 [package]
 name = "serenade-minify"
 description = "HTML and inline JavaScript minification for Serenade"
+documentation = "https://docs.rs/serenade-minify"
+keywords = ["serenade", "minify", "html", "javascript", "minifier"]
+categories = ["web-programming", "compression"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

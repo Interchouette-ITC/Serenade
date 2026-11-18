@@ -1,11 +1,15 @@
 [package]
 name = "serenade-component-host"
 description = "Wasmtime Component Model host helpers (Engine, load path, empty linker)"
+documentation = "https://docs.rs/serenade-component-host"
+keywords = ["serenade", "wasmtime", "wasm", "component-model", "plugin"]
+categories = ["wasm", "virtualization"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

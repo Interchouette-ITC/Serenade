@@ -1,11 +1,15 @@
 [package]
 name = "serenade-process"
 description = "Child process spawn, timeout, and exit/output capture"
+documentation = "https://docs.rs/serenade-process"
+keywords = ["serenade", "process", "spawn", "timeout", "command"]
+categories = ["os"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

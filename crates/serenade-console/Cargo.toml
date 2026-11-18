@@ -1,11 +1,15 @@
 [package]
 name = "serenade-console"
 description = "Console Application: discoverable commands (bin/console analogue)"
+documentation = "https://docs.rs/serenade-console"
+keywords = ["serenade", "console", "cli", "commands", "framework"]
+categories = ["command-line-interface", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

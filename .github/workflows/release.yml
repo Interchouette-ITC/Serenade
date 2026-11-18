@@ -1,0 +1,177 @@
+# Stable release: crates.io publication + CLI binaries for a `v<version>` tag.
+# Separate from release-cli-dev.yml, which keeps moving the rolling `serenade-cli-dev`
+# tag/release; nothing here touches it, and stable assets carry the version in their names.
+#
+# Triggers
+# - `release: published` fires when a release is published directly or when a draft is
+#   later published (unlike `created`, which never fires for drafts).
+# - `workflow_dispatch` from the tag ("Use workflow from" -> Tags -> v<version>) resumes a
+#   failed run. Every step is idempotent: published crate versions are skipped and assets
+#   are re-uploaded with --clobber. Never move the tag to resume.
+#
+# Every job runs on the tag's commit (github.sha); the full CI workflow must pass on that
+# commit before anything is published.
+name: release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Distinct from ci.yml's `ci-<workflow>-<ref>` group (also evaluated for this run).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  prepare:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Require a tag ref
+        if: github.ref_type != 'tag'
+        run: |
+          echo "release must run on a tag (dispatch it from the v<version> tag), got ${{ github.ref }}"
+          exit 1
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Tag is immutable and matches every version source
+        id: tag
+        env:
+          TAG: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag $TAG is not v<major>.<minor>.<patch>"; exit 1; }
+          # Annotated tags list their peeled commit (`^{}`) last.
+          TAG_COMMIT="$(git ls-remote origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}" | awk 'END{print $1}')"
+          [ "$TAG_COMMIT" = "$SHA" ] || { echo "tag $TAG now points to $TAG_COMMIT, run was started for $SHA; tags must not move"; exit 1; }
+          make/publish/publish-crates.sh versions "$TAG"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: GitHub Release exists and is published
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          DRAFT="$(gh release view "$TAG" --json isDraft --jq .isDraft)" || { echo "no GitHub Release for $TAG; create and publish it first"; exit 1; }
+          [ "$DRAFT" = false ] || { echo "the $TAG release is still a draft"; exit 1; }
+
+  ci:
+    name: CI
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+    permissions:
+      contents: write
+
+  publish-crates:
+    name: Publish crates.io
+    needs: [prepare, ci]
+    runs-on: ubuntu-latest
+    # Rate-limit waits are bounded by RATE_LIMIT_MAX_TOTAL_WAIT (5h) in the publisher.
+    timeout-minutes: 360
+    # Required reviewers / tag rules and the CARGO_REGISTRY_TOKEN secret live here.
+    environment: crates-io
+    # One crates.io publication at a time across all releases.
+    concurrency:
+      group: crates-io-publish
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish in dependency order (skips versions already on crates.io)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: make/publish/publish-crates.sh publish
+
+  cli-binaries:
+    name: CLI ${{ matrix.target }}
+    needs: [prepare, ci]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-24.04-arm }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-apple-darwin, os: macos-15-intel }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install musl tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Build serenade-cli
+        run: cargo build --release --locked -p serenade-cli --target "${{ matrix.target }}"
+      # Same verified Trunk process as release-cli-dev (checksum, provenance, revision).
+      - name: Package binaries and verified Trunk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: make/release/package-cli.sh "${{ needs.prepare.outputs.version }}" "${{ matrix.target }}" dist
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release-assets:
+    name: Upload release assets
+    needs: [prepare, cli-binaries]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: cli-*
+          path: dist
+          merge-multiple: true
+      - name: Upload to the ${{ needs.prepare.outputs.tag }} release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          cd dist
+          cat ./*.sha256 | sort -k2 > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          gh release upload "$TAG" ./* --clobber

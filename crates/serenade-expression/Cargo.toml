@@ -1,11 +1,15 @@
 [package]
 name = "serenade-expression"
 description = "Tiny safe rule expressions for guards and access checks"
+documentation = "https://docs.rs/serenade-expression"
+keywords = ["serenade", "expression", "rules", "guard", "evaluator"]
+categories = ["parser-implementations", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

@@ -1,11 +1,15 @@
 [package]
 name = "serenade-notifier"
 description = "SMS and push notification channels with Null and in-memory transports"
+documentation = "https://docs.rs/serenade-notifier"
+keywords = ["serenade", "notifier", "sms", "push", "notification"]
+categories = ["web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

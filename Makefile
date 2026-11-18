@@ -5,11 +5,13 @@
 #   make/ci.mk      - lint / test / doc / ci
 #   make/cli.mk     - serenade / tui / console aliases
 #   make/docker.mk  - Redis compose and container targets
+#   make/publish/publish.mk - crates.io packaging checks and publisher tests
 
 include make/common.mk
 include make/ci.mk
 include make/cli.mk
 include make/docker.mk
+include make/publish/publish.mk
 
 .DEFAULT_GOAL := help
 
@@ -61,6 +63,11 @@ help:
 	@echo "  make ssg                       build the default SSG app"
 	@echo "  make ssg-all                   build every registered SSG app"
 	@echo "  make universal                 build and run the Universal demo (:8080)"
+	@echo ""
+	@echo "Release (make/publish/publish.mk):"
+	@echo "  make publish-check    cargo package every crate in publish order (no upload)"
+	@echo "  make publish-check PUBLISH_CHECK_ARGS=--allow-dirty   same, uncommitted tree"
+	@echo "  make publish-test     publisher tests (mocked cargo/curl, no network)"
 	@echo ""
 	@echo "Docker (make/docker.mk):"
 	@echo "  make docker-help"

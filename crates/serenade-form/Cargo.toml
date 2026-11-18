@@ -1,11 +1,15 @@
 [package]
 name = "serenade-form"
 description = "HTML forms with CSRF by default and XSS-safe render helpers"
+documentation = "https://docs.rs/serenade-form"
+keywords = ["serenade", "form", "csrf", "html", "xss"]
+categories = ["web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

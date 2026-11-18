@@ -1,11 +1,15 @@
 [package]
 name = "serenade-serializer"
 description = "DTO serialization with JSON codecs, optional TOON, and a normalizer registry"
+documentation = "https://docs.rs/serenade-serializer"
+keywords = ["serenade", "serializer", "json", "toon", "normalizer"]
+categories = ["encoding", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

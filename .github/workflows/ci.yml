@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [dev]
+  # Reused by the stable release workflow; callers pass `secrets: inherit` and grant
+  # `contents: write` (rustdoc job). Pages deploy only runs on pushes to dev.
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -24,10 +27,12 @@ jobs:
     name: detect changes
     runs-on: ubuntu-latest
     outputs:
-      code: ${{ steps.filter.outputs.code }}
+      # Release (workflow_call) runs have no diff base: always run the full gate.
+      code: ${{ steps.filter.outputs.code || 'true' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         id: filter
         with:
           filters: |
@@ -174,6 +179,79 @@ jobs:
       - name: Test serenade-search with http
         if: needs.changes.outputs.code == 'true'
         run: cargo +stable test -p serenade-search --locked --features http
+
+  msrv:
+    name: msrv
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Markdown-only
+        if: needs.changes.outputs.code != 'true'
+        run: echo "markdown-only; skipping msrv"
+      - name: Read MSRV
+        if: needs.changes.outputs.code == 'true'
+        id: msrv
+        run: echo "version=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        if: needs.changes.outputs.code == 'true'
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+      - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.code == 'true'
+        with:
+          key: msrv
+      - name: Check and test on MSRV
+        if: needs.changes.outputs.code == 'true'
+        run: make msrv MSRV=${{ steps.msrv.outputs.version }}
+
+  framework-features:
+    name: serenade-framework features
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Markdown-only
+        if: needs.changes.outputs.code != 'true'
+        run: echo "markdown-only; skipping facade feature matrix"
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
+      - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.code == 'true'
+      - name: Facade feature matrix
+        if: needs.changes.outputs.code == 'true'
+        run: make framework-features
+      - name: Facade consumer example
+        if: needs.changes.outputs.code == 'true'
+        run: cargo +stable run -p serenade-framework-consumer --locked
+
+  publisher:
+    name: crates.io publisher
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Markdown-only
+        if: needs.changes.outputs.code != 'true'
+        run: echo "markdown-only; skipping publisher checks"
+      - name: Shellcheck publisher
+        if: needs.changes.outputs.code == 'true'
+        run: shellcheck make/publish/publish-crates.sh make/publish/tests/publish-crates.test.sh make/release/package-cli.sh
+      - name: Publisher tests (mocked registry)
+        if: needs.changes.outputs.code == 'true'
+        run: make publish-test
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.changes.outputs.code == 'true'
+      - uses: Swatinem/rust-cache@v2
+        if: needs.changes.outputs.code == 'true'
+        with:
+          key: publish-check
+      - name: Package every crate in publish order
+        if: needs.changes.outputs.code == 'true'
+        run: make publish-check CARGO="cargo +stable"
 
   front-mode-demos:
     name: HTML, SPA, SSG and Universal demos

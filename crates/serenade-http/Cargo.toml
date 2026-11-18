@@ -1,11 +1,15 @@
 [package]
 name = "serenade-http"
 description = "Framework-agnostic HTTP foundation types"
+documentation = "https://docs.rs/serenade-http"
+keywords = ["serenade", "http", "request", "response", "framework"]
+categories = ["web-programming", "web-programming::http-server"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

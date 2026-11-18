@@ -1,11 +1,15 @@
 [package]
 name = "serenade-cache"
 description = "PSR-like cache contracts, ArrayAdapter, FilesystemAdapter, optional RedisAdapter"
+documentation = "https://docs.rs/serenade-cache"
+keywords = ["serenade", "cache", "psr6", "redis", "filesystem"]
+categories = ["caching", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

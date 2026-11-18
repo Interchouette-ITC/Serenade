@@ -126,11 +126,6 @@ fn framework_extension_wires_router_config_and_dispatcher() {
     notifier
         .send(&serenade_notifier::Notification::sms("+1", "hi"))
         .expect("null notify");
-    let _http = container
-        .get_as::<serenade_http_client::HttpClientService>(
-            serenade_http_client::DEFAULT_HTTP_CLIENT_SERVICE,
-        )
-        .expect("http_client");
     let _lock = container
         .get_as::<serenade_lock::LockStoreService>(serenade_lock::DEFAULT_LOCK_STORE_SERVICE)
         .expect("lock.store");

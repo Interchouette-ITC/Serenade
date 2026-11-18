@@ -17,7 +17,72 @@ Symfony-oriented application framework for Rust. **Not** Rails-style, **not** Dj
 
 Serenade does **not** impose SQLx, SeaORM, Diesel, or Actix vs Axum for your product HTTP surface. It provides architecture, contracts, and reusable components; the application chooses persistence and UI stacks. Cargo stays the package manager; Serenade owns composition (bundles, recipes, console).
 
+Website: <https://serenade.rs> | Guides: <https://docs.serenade.rs>
+
 **Primary consumer:** [rustashop](https://github.com/Interchouette-ITC/rustashop) - commerce product on Serenade, the way [PrestaShop](https://www.prestashop.com/) builds on [Symfony](https://symfony.com/).
+
+## Use Serenade
+
+Applications depend on the **`serenade-framework`** facade and enable the components they
+need with Cargo features:
+
+```toml
+[dependencies]
+serenade-framework = { version = "1.0.0", features = ["http-actix", "validation"] }
+```
+
+```rust
+use serenade_framework::prelude::*;
+
+let mut app = App::new(Environment::Prod);
+app.boot()?;
+```
+
+The default build is only the foundations (kernel, config, DI, events): no web server,
+database, Leptos, or Rangular. Feature list and module map:
+[docs.rs/serenade-framework](https://docs.rs/serenade-framework). A complete consumer lives
+in [`../examples/framework-consumer`](../examples/framework-consumer).
+
+### Crate organization
+
+| Layer | Packages |
+| --- | --- |
+| Facade | `serenade-framework`: curated re-exports behind features |
+| Foundations | `serenade-kernel`, `serenade-config`, `serenade-di`, `serenade-event`, `serenade-bundle`, `serenade-contracts` |
+| Components | `serenade-http`, `serenade-session`, `serenade-security`, `serenade-validator`, `serenade-messenger`, `serenade-mailer`, `serenade-view`, `serenade-form`, … |
+| Adapters | `serenade-http-actix`, `serenade-http-axum`, reqwest (`http-client-reqwest`), SMTP / ESP mail, Redis stores, Leptos SSR / hydration |
+| Tooling | `serenade-cli` (the `serenade` executable), `serenade-testing`, `serenade-profiler` |
+
+Every `serenade-*` crate is published independently on crates.io and can be used directly;
+crates outside the facade surface (for example `serenade-cache`, `serenade-workflow`,
+`serenade-translation`) are added as their own dependencies. All crates share one version.
+
+### CLI
+
+The `serenade` executable comes from the **`serenade-cli`** package (the crates.io package
+named `serenade` is unrelated):
+
+```bash
+cargo install serenade-cli --locked --bin serenade
+serenade new demo
+```
+
+Prebuilt archives with SHA-256 checksums and build provenance attestations are attached to
+each [GitHub release](https://github.com/Interchouette-ITC/Serenade/releases).
+
+### Templates with Rangular
+
+Serenade views are engine neutral. To author templates with
+[Rangular](https://crates.io/crates/rangular), add `rangular = "1.1"` and
+`rangular-build = "1.1"` (build dependency) to the application; Serenade crates never depend
+on it. See [`../docs-dev/VIEW.md`](../docs-dev/VIEW.md) and
+[`../examples/demo-universal`](../examples/demo-universal).
+
+### Supported Rust
+
+The minimum supported Rust version is **1.100** (`rust-version` in the root `Cargo.toml`),
+checked in CI. Raising it is a minor-version change and is noted in the
+[changelog](CHANGELOG.md).
 
 ## What you get today
 
@@ -28,7 +93,7 @@ Serenade does **not** impose SQLx, SeaORM, Diesel, or Actix vs Axum for your pro
 | Config | TOML-first packages (`config/packages/*.toml`); YAML still loadable |
 | Contracts | Repository / `UnitOfWork` traits (no DB driver in core) |
 | HTTP + routing | Framework-agnostic request path + matcher |
-| Actix adapter | `from_actix` / `to_actix` / `dispatch` / `dispatch_async` + **`listen(addr, AsyncHttpKernel)`** |
+| HTTP adapters | Actix (`from_actix` / `to_actix` / `dispatch` / **`listen(addr, AsyncHttpKernel)`**) and Axum |
 | Console | `bin/console` analogue (`serenade:about`, `debug:container`, `--interactive`) |
 | Scaffolding CLI | `serenade new` / `recipe` / **`serenade tui`** (ratatui recipe picker) |
 | Make aliases | `make serenade`, `make tui`, `make console`, `make ci`, … |
@@ -37,7 +102,7 @@ Serenade does **not** impose SQLx, SeaORM, Diesel, or Actix vs Axum for your pro
 App (domain + adapters)
   → Serenade kernel / DI / events / HTTP / console
       → your ORM choice (SQLx, SeaORM, …) implementing contracts
-      → your HTTP choice (Actix today; Axum-shaped adapters welcome)
+      → your HTTP choice (Actix or Axum adapters)
 ```
 
 Business rules run in the **domain / use case before** `Repository::save`. Technical fields (`updated_at`, …) stay in the app adapter or ORM hooks. See [`../docs-dev/PERSISTENCE.md`](../docs-dev/PERSISTENCE.md).
@@ -101,6 +166,8 @@ See [`../docs-dev/KERNEL.md`](../docs-dev/KERNEL.md).
 | [`../docs-dev/WASM.md`](../docs-dev/WASM.md) | Wasm host plumbing (wasmtime CM + Wasmer WASIX) |
 | [`../docs-dev/PERSISTENCE.md`](../docs-dev/PERSISTENCE.md) | Contracts, adapters, domain vs hooks |
 | [`../docs-dev/RUSTASHOP.md`](../docs-dev/RUSTASHOP.md) | Illustrative application layout |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release notes per version |
+| [`RELEASING.md`](RELEASING.md) | crates.io publication, stable release workflow, resuming |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Lint bar, Make layout, PR habits |
 | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Community standards |
 | [`SECURITY.md`](SECURITY.md) | Vulnerability reporting |

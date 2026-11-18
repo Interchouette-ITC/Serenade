@@ -41,8 +41,10 @@ members = [
     "crates/serenade-translation",
     "crates/serenade-profiler",
     "crates/serenade-view",
+    "crates/serenade-framework",
     "examples/demo-app",
     "examples/demo-html",
+    "examples/framework-consumer",
 ]
 exclude = ["fuzz"]
 resolver = "3"
@@ -50,42 +52,44 @@ resolver = "3"
 [workspace.package]
 edition = "2024"
 license = "Apache-2.0"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Interchouette"]
 repository = "https://github.com/Interchouette-ITC/Serenade"
-rust-version = "1.99.0"
+homepage = "https://serenade.rs"
+rust-version = "1.100"
 
 [workspace.dependencies]
-serenade-kernel = { path = "crates/serenade-kernel", version = "0.1.0" }
-serenade-di = { path = "crates/serenade-di", version = "0.1.0" }
-serenade-event = { path = "crates/serenade-event", version = "0.1.0" }
-serenade-http = { path = "crates/serenade-http", version = "0.1.0" }
-serenade-http-actix = { path = "crates/serenade-http-actix", version = "0.1.0" }
-serenade-http-client = { path = "crates/serenade-http-client", version = "0.1.0" }
-serenade-lock = { path = "crates/serenade-lock", version = "0.1.0" }
-serenade-rate-limiter = { path = "crates/serenade-rate-limiter", version = "0.1.0" }
-serenade-scheduler = { path = "crates/serenade-scheduler", version = "0.1.0" }
-serenade-config = { path = "crates/serenade-config", version = "0.1.0" }
-serenade-bundle = { path = "crates/serenade-bundle", version = "0.1.0" }
-serenade-console = { path = "crates/serenade-console", version = "0.1.0" }
-serenade-messenger = { path = "crates/serenade-messenger", version = "0.1.0" }
-serenade-validator = { path = "crates/serenade-validator", version = "0.1.0" }
-serenade-security = { path = "crates/serenade-security", version = "0.1.0" }
-serenade-form = { path = "crates/serenade-form", version = "0.1.0" }
-serenade-admin = { path = "crates/serenade-admin", version = "0.1.0" }
-serenade-search = { path = "crates/serenade-search", version = "0.1.0" }
-serenade-mailer = { path = "crates/serenade-mailer", version = "0.1.0" }
-serenade-notifier = { path = "crates/serenade-notifier", version = "0.1.0" }
-serenade-string = { path = "crates/serenade-string", version = "0.1.0" }
-serenade-expression = { path = "crates/serenade-expression", version = "0.1.0" }
-serenade-workflow = { path = "crates/serenade-workflow", version = "0.1.0" }
-serenade-filesystem = { path = "crates/serenade-filesystem", version = "0.1.0" }
-serenade-finder = { path = "crates/serenade-finder", version = "0.1.0" }
-serenade-session = { path = "crates/serenade-session", version = "0.1.0" }
-serenade-observability = { path = "crates/serenade-observability", version = "0.1.0" }
-serenade-translation = { path = "crates/serenade-translation", version = "0.1.0" }
-serenade-profiler = { path = "crates/serenade-profiler", version = "0.1.0" }
-serenade-view = { path = "crates/serenade-view", version = "0.1.0" }
+serenade-kernel = { path = "crates/serenade-kernel", version = "1.0.0" }
+serenade-di = { path = "crates/serenade-di", version = "1.0.0" }
+serenade-event = { path = "crates/serenade-event", version = "1.0.0" }
+serenade-http = { path = "crates/serenade-http", version = "1.0.0" }
+serenade-http-actix = { path = "crates/serenade-http-actix", version = "1.0.0" }
+serenade-http-axum = { path = "crates/serenade-http-axum", version = "1.0.0" }
+serenade-http-client = { path = "crates/serenade-http-client", version = "1.0.0", default-features = false }
+serenade-lock = { path = "crates/serenade-lock", version = "1.0.0" }
+serenade-rate-limiter = { path = "crates/serenade-rate-limiter", version = "1.0.0" }
+serenade-scheduler = { path = "crates/serenade-scheduler", version = "1.0.0" }
+serenade-config = { path = "crates/serenade-config", version = "1.0.0" }
+serenade-bundle = { path = "crates/serenade-bundle", version = "1.0.0" }
+serenade-console = { path = "crates/serenade-console", version = "1.0.0" }
+serenade-messenger = { path = "crates/serenade-messenger", version = "1.0.0" }
+serenade-validator = { path = "crates/serenade-validator", version = "1.0.0" }
+serenade-security = { path = "crates/serenade-security", version = "1.0.0" }
+serenade-form = { path = "crates/serenade-form", version = "1.0.0" }
+serenade-admin = { path = "crates/serenade-admin", version = "1.0.0" }
+serenade-search = { path = "crates/serenade-search", version = "1.0.0" }
+serenade-mailer = { path = "crates/serenade-mailer", version = "1.0.0", default-features = false }
+serenade-notifier = { path = "crates/serenade-notifier", version = "1.0.0" }
+serenade-string = { path = "crates/serenade-string", version = "1.0.0" }
+serenade-expression = { path = "crates/serenade-expression", version = "1.0.0" }
+serenade-workflow = { path = "crates/serenade-workflow", version = "1.0.0" }
+serenade-filesystem = { path = "crates/serenade-filesystem", version = "1.0.0" }
+serenade-finder = { path = "crates/serenade-finder", version = "1.0.0" }
+serenade-session = { path = "crates/serenade-session", version = "1.0.0" }
+serenade-observability = { path = "crates/serenade-observability", version = "1.0.0" }
+serenade-translation = { path = "crates/serenade-translation", version = "1.0.0" }
+serenade-profiler = { path = "crates/serenade-profiler", version = "1.0.0" }
+serenade-view = { path = "crates/serenade-view", version = "1.0.0" }
 actix-web = "4"
 axum = { version = "0.8", default-features = false, features = [
     "http1",
@@ -104,13 +108,13 @@ getrandom = "0.4"
 hmac = "0.13"
 include_dir = "0.7"
 simple-minify-html = "0.17.2"
-oxc_allocator = "0.158.0"
-oxc_codegen = { version = "0.158.0", default-features = false }
-oxc_mangler = "0.158.0"
-oxc_minifier = "0.158.0"
-oxc_parser = "0.158.0"
-oxc_span = "0.158.0"
-serenade-minify = { path = "crates/serenade-minify" }
+oxc_allocator = "0.159.0"
+oxc_codegen = { version = "0.159.0", default-features = false }
+oxc_mangler = "0.159.0"
+oxc_minifier = "0.159.0"
+oxc_parser = "0.159.0"
+oxc_span = "0.159.0"
+serenade-minify = { path = "crates/serenade-minify", version = "1.0.0" }
 ratatui = "0.30"
 rustyline = { version = "19", features = ["with-file-history"] }
 serde = { version = "1", features = ["derive"] }
