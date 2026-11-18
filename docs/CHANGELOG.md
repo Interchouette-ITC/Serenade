@@ -9,12 +9,6 @@ supported Rust version is treated as a minor change.
 
 ## [Unreleased]
 
-### Fixed
-
-- `serenade-bundle` no longer enables the HTTP-client and mailer default features.
-  The facade's `bundle` feature now leaves reqwest and SMTP opt-in through
-  `http-client-reqwest` and `mailer-smtp`.
-
 ## [1.0.0]
 
 First release on crates.io.
@@ -23,7 +17,8 @@ First release on crates.io.
 
 - `serenade-framework`: public facade re-exporting a curated surface of the `serenade-*`
   crates behind Cargo features; the default build contains only kernel, config, DI, and
-  events.
+  events. Network transports are never implied: `bundle` leaves reqwest and SMTP opt-in
+  through `http-client-reqwest` and `mailer-smtp`.
 - Foundations: `serenade-kernel` (boot, environments, bundle lifecycle), `serenade-di`,
   `serenade-config` (TOML-first layered packages, dotenv), `serenade-event`,
   `serenade-bundle`, `serenade-contracts`.
