@@ -70,8 +70,10 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          DRAFT="$(gh release view "$TAG" --json isDraft --jq .isDraft)" || { echo "no GitHub Release for $TAG; create and publish it first"; exit 1; }
+          STATE="$(gh release view "$TAG" --json isDraft,isPrerelease --jq '"\(.isDraft) \(.isPrerelease)"')" || { echo "no GitHub Release for $TAG; create and publish it first"; exit 1; }
+          read -r DRAFT PRERELEASE <<<"$STATE"
           [ "$DRAFT" = false ] || { echo "the $TAG release is still a draft"; exit 1; }
+          [ "$PRERELEASE" = false ] || { echo "the $TAG release is marked as a prerelease; the stable pipeline publishes only full releases"; exit 1; }
 
   ci:
     name: CI

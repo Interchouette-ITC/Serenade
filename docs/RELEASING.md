@@ -69,15 +69,15 @@ depends on. Adding a crate therefore means adding it to `DEFAULT_CRATES` in the 
    ```
 
 3. Merge, tag the release commit `v<version>`, and push the tag.
-4. Create a GitHub Release for the tag, as a draft if you like, and **publish** it. Publishing
-   the release (directly or from a draft) triggers `release.yml`. Creating a draft alone does
-   not.
+4. Create a GitHub Release for the tag, as a draft if you like, and **publish** it as a full
+   release, not a prerelease. Publishing the release (directly or from a draft) triggers
+   `release.yml`. Creating a draft alone does not.
 
 `release.yml` then:
 
 1. `prepare` checks that the run is for a tag and that the tag still points to the commit the
-   run started on. It runs `publish-crates.sh versions <tag>` and requires a published (non-draft)
-   GitHub Release.
+   run started on. It runs `publish-crates.sh versions <tag>` and requires a published GitHub
+   Release that is neither a draft nor a prerelease.
 2. `ci` runs the complete [`ci.yml`](../.github/workflows/ci.yml) on that commit. This includes
    the MSRV check, the facade feature matrix, the publisher tests and `make publish-check`.
 3. `publish-crates` waits for environment approval. It is serialized by the `crates-io-publish`
