@@ -1,11 +1,15 @@
 [package]
 name = "serenade-contracts"
 description = "Stable traits for persistence, clock, and cross-cutting ports"
+documentation = "https://docs.rs/serenade-contracts"
+keywords = ["serenade", "contracts", "traits", "ports", "clock"]
+categories = ["rust-patterns", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

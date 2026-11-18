@@ -1,11 +1,15 @@
 [package]
 name = "serenade-scheduler"
 description = "Symfony-shaped schedule definitions and a testable tick runner"
+documentation = "https://docs.rs/serenade-scheduler"
+keywords = ["serenade", "scheduler", "cron", "schedule", "tasks"]
+categories = ["date-and-time", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

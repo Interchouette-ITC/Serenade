@@ -1,11 +1,15 @@
 [package]
 name = "serenade-openapi"
 description = "OpenAPI helpers and feature-gated explorer UIs (Swagger, Redoc, RapiDoc, Scalar)"
+documentation = "https://docs.rs/serenade-openapi"
+keywords = ["serenade", "openapi", "swagger", "redoc", "scalar"]
+categories = ["web-programming", "api-bindings"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [features]

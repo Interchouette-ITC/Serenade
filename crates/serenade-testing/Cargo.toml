@@ -1,11 +1,15 @@
 [package]
 name = "serenade-testing"
 description = "Test harness helpers for Serenade kernel, HTTP, and events"
+documentation = "https://docs.rs/serenade-testing"
+keywords = ["serenade", "testing", "harness", "test", "framework"]
+categories = ["development-tools::testing"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

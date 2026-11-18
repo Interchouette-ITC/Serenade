@@ -3,7 +3,7 @@ description = "Optional Admin CRUD package config (AdminBundle / AdminExtension)
 
 [cargo]
 dependencies = [
-  { crate = "serenade-admin", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-admin", version = "1.0.0" },
 ]
 
 [[files]]

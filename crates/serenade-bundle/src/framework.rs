@@ -49,8 +49,10 @@ impl BundleInterface for FrameworkBundle {
 /// [`RegisterDefaultHttpClientPass`] /
 /// [`RegisterDefaultLockPass`] / [`RegisterDefaultRateLimiterPass`] /
 /// [`RegisterDefaultSchedulerPass`] so apps resolve `mailer`, `notifier`,
-/// `http_client`, `lock.store`, `rate_limiter.storage`, and `scheduler` unless
-/// they replace them. The root config, event dispatcher, and console
+/// `lock.store`, `rate_limiter.storage`, and `scheduler` unless they replace
+/// them. The mailer uses a null transport; `http_client` is only registered
+/// when `serenade-http-client/reqwest` is explicitly enabled. The root config,
+/// event dispatcher, and console
 /// application are registered by [`crate::build_container`].
 ///
 /// # Panics

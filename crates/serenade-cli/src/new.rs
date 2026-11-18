@@ -8,6 +8,11 @@ use crate::error::CliError;
 
 static TEMPLATES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/templates");
 
+/// Suffix stripped from template file names when writing. Lets the template ship
+/// `Cargo.toml.tmpl`: a literal `Cargo.toml` would make Cargo treat the template as a
+/// nested package and leave it out of the published `serenade-cli` crate.
+const TEMPLATE_SUFFIX: &str = ".tmpl";
+
 /// Options for [`scaffold_app`].
 #[derive(Debug, Clone)]
 pub struct NewOptions {
@@ -84,6 +89,10 @@ fn write_dir_recursive(
             .strip_prefix("app")
             .unwrap_or_else(|_| file.path());
         let dest = dest_root.join(relative);
+        let dest = dest
+            .to_str()
+            .and_then(|path| path.strip_suffix(TEMPLATE_SUFFIX))
+            .map_or_else(|| dest.clone(), PathBuf::from);
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -123,6 +132,23 @@ mod tests {
         let cargo = std::fs::read_to_string(root.join("Cargo.toml")).expect("read");
         assert!(cargo.contains("name = \"hello_app\""));
         assert!(!cargo.contains("__PACKAGE_NAME__"));
+        assert!(!root.join("Cargo.toml.tmpl").exists());
+    }
+
+    #[test]
+    fn template_pins_published_cli_version() {
+        let manifest = TEMPLATES
+            .get_file("app/Cargo.toml.tmpl")
+            .and_then(|file| file.contents_utf8())
+            .expect("template manifest");
+        let pinned = format!("= \"{}\"", env!("CARGO_PKG_VERSION"));
+        for line in manifest
+            .lines()
+            .filter(|line| line.starts_with("serenade-"))
+        {
+            assert!(line.ends_with(&pinned), "{line}");
+        }
+        assert!(!manifest.contains("git ="));
     }
 
     #[test]

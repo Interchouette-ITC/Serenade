@@ -1,0 +1,100 @@
+[package]
+name = "serenade-framework"
+description = "Serenade: Symfony-oriented Rust application framework (public facade over the serenade-* crates)"
+documentation = "https://docs.rs/serenade-framework"
+keywords = ["serenade", "framework", "web", "symfony", "di"]
+categories = ["web-programming", "web-programming::http-server"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = []
+
+## Console application (`bin/console` analogue).
+console = ["dep:serenade-console"]
+## Bundle composition (`FrameworkBundle`, extensions, container assembly).
+bundle = ["dep:serenade-bundle"]
+
+## Framework-agnostic HTTP foundation and outbound HTTP client contract.
+http = ["dep:serenade-http", "dep:serenade-http-client"]
+## Actix-web bridge.
+http-actix = ["http", "dep:serenade-http-actix"]
+## Axum bridge.
+http-axum = ["http", "dep:serenade-http-axum"]
+## Reqwest-backed outbound HTTP client.
+http-client-reqwest = ["http", "serenade-http-client/reqwest"]
+
+## Session bag, stores, and middleware.
+session = ["dep:serenade-session"]
+## Authentication, authorization, CSRF, password hashing.
+security = ["dep:serenade-security"]
+## OAuth 2.0 / OIDC relying-party helpers.
+security-oauth = ["security", "serenade-security/oauth"]
+## LDAP bind helpers.
+security-ldap = ["security", "serenade-security/ldap"]
+## Constraint validation.
+validation = ["dep:serenade-validator"]
+
+## Named locks.
+lock = ["dep:serenade-lock"]
+## Rate limiting.
+rate-limiter = ["dep:serenade-rate-limiter"]
+## Scheduling.
+scheduler = ["dep:serenade-scheduler"]
+## Dispatch due scheduler jobs through the message bus.
+scheduler-messenger = ["scheduler", "messenger", "serenade-scheduler/messenger"]
+
+## Command and event message bus.
+messenger = ["dep:serenade-messenger"]
+## Email messages and transports.
+mailer = ["dep:serenade-mailer"]
+## SMTP mail transport.
+mailer-smtp = ["mailer", "serenade-mailer/smtp"]
+## ESP (HTTP API) mail transport.
+mailer-esp = ["mailer", "serenade-mailer/esp"]
+## SMS and push notifications.
+notifier = ["dep:serenade-notifier"]
+
+## HTML view helpers and document composition (engine neutral).
+view = ["dep:serenade-view"]
+## Leptos SSR support in the view layer.
+view-leptos-ssr = ["view", "serenade-view/leptos-ssr"]
+## Leptos client (hydrate) support in the view layer.
+view-leptos-client = ["view", "serenade-view/leptos-client"]
+## HTML forms.
+form = ["view", "dep:serenade-form"]
+
+[dependencies]
+serenade-kernel = { workspace = true }
+serenade-config = { workspace = true }
+serenade-di = { workspace = true }
+serenade-event = { workspace = true }
+
+serenade-console = { workspace = true, optional = true }
+serenade-bundle = { workspace = true, optional = true }
+serenade-http = { workspace = true, optional = true }
+serenade-http-client = { workspace = true, optional = true, default-features = false }
+serenade-http-actix = { workspace = true, optional = true }
+serenade-http-axum = { workspace = true, optional = true }
+serenade-session = { workspace = true, optional = true }
+serenade-security = { workspace = true, optional = true }
+serenade-validator = { workspace = true, optional = true }
+serenade-lock = { workspace = true, optional = true }
+serenade-rate-limiter = { workspace = true, optional = true }
+serenade-scheduler = { workspace = true, optional = true }
+serenade-messenger = { workspace = true, optional = true }
+serenade-mailer = { workspace = true, optional = true, default-features = false }
+serenade-notifier = { workspace = true, optional = true }
+serenade-view = { workspace = true, optional = true }
+serenade-form = { workspace = true, optional = true }
+
+[lints]
+workspace = true

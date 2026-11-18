@@ -4,7 +4,7 @@ use super::{Config, load_dotenv, load_packages, load_packages_for_env, version};
 
 #[test]
 fn version_matches_workspace() {
-    assert_eq!(version(), "0.1.0");
+    assert_eq!(version(), env!("CARGO_PKG_VERSION"));
 }
 
 #[test]

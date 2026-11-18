@@ -1,11 +1,15 @@
 [package]
 name = "serenade-event"
 description = "Sync event dispatcher and subscriber registration"
+documentation = "https://docs.rs/serenade-event"
+keywords = ["serenade", "event", "dispatcher", "subscriber", "observer"]
+categories = ["rust-patterns", "web-programming"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]

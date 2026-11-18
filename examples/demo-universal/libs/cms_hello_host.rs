@@ -1,5 +1,5 @@
 use leptos::prelude::{Get, RwSignal, Set, Update};
-use rangular_host::{Host, HostError, Value};
+use rangular::host::{Host, HostError, Value};
 
 pub struct CmsHelloHost {
     route_specific: RwSignal<bool>,

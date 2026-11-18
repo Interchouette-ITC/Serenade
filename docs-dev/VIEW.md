@@ -97,11 +97,12 @@ be replaced. Leptos claims the existing title node through its title lifecycle.
 
 ### Minimal Rangular head and body
 
-Keep the templates in the app and compile them during the build. Use the head-specific
-compiler for the document head; compile the page body with the ordinary Rangular AOT
-compiler.
+Keep the templates in the app and compile them during the build with Rangular 1.1
+(`rangular = "1.1"` at runtime, `rangular-build = "1.1"` under `[build-dependencies]`).
+Register the head and body templates with `rangular_build::Config`; the head template uses
+Rangular's head-specific compiler and the body the ordinary AOT compiler.
 
-`src/page-head.html`:
+`src/page/head.html`:
 
 ```html
 <title>{{ title }}</title>
@@ -110,19 +111,30 @@ compiler.
 <script type="application/ld+json">{{ json_ld }}</script>
 ```
 
-In `build.rs`, compile the head template and write `result.code` to `OUT_DIR`, failing the
-build when `result.ok()` is false:
+In `build.rs`, register the templates; `build` writes `head_view.rs` and `body_view.rs` to
+`OUT_DIR/rangular/` and fails the build on template diagnostics:
 
 ```rust
-let result = rangular_aot::compile_head_named(
-    include_str!("src/page-head.html"),
-    "src/page-head.html",
-    "page_head_view",
-);
-assert!(result.ok(), "{:?}", result.issues);
+use rangular_build::{Config, HeadComponentAdapter, build};
+
+fn main() {
+    build(
+        Config::new("src/page", "style/page.css")
+            .head("src/page/head.html")
+            .body("src/page/body.html")
+            .head_adapter(HeadComponentAdapter::new(
+                "serenade_view::ManagedTitle",
+                "serenade_view::ManagedMeta",
+                "serenade_view::ManagedLink",
+            )),
+    );
+}
 ```
 
-The normal body template can use the same host-backed data:
+The adapter is optional; it routes `<title>`, `<meta>`, and `<link>` through Serenade's
+managed head components. `.document("src/page/document.html")` additionally compiles a
+custom document shell. The normal body template (`src/page/body.html`) can use the same
+host-backed data:
 
 ```html
 <main>
@@ -136,22 +148,30 @@ the current page data. Initialize the SSR executor once during process startup, 
 per request. Then build one document per request:
 
 ```rust
-use rangular_aot::HostCell;
+use rangular::aot::HostCell;
 use serenade_view::{Document, initialize_leptos_ssr};
+
+mod page {
+    use leptos::prelude::*;
+
+    include!(concat!(env!("OUT_DIR"), "/rangular/head_view.rs"));
+    include!(concat!(env!("OUT_DIR"), "/rangular/body_view.rs"));
+}
 
 initialize_leptos_ssr()?;
 
 let host = HostCell::new(PageHost::from(page_data));
 let head_host = host.clone();
 let rendered = Document::new(
-    move || page_head_view(head_host),
-    move || page_body_view(host),
+    move || page::head_view(head_host),
+    move || page::body_view(host),
 )
 .render()?;
 let response = rendered.into_response();
 ```
 
-`PageHost`, `page_head_view`, and `page_body_view` are application/generated names.
+`PageHost` is an application type implementing `rangular::host::Host`; `head_view` and
+`body_view` are generated from the template file stems.
 Rangular compiles these templates to Leptos views; no runtime template interpreter or
 second HTML-string concatenation step is involved.
 
@@ -198,8 +218,8 @@ use serenade_view::{Document, DocumentSlot};
 
 let head_host = host.clone();
 let rendered = Document::new(
-    move || page_head_view(head_host),
-    move || page_body_view(host),
+    move || page::head_view(head_host),
+    move || page::body_view(host),
 )
 .render_with(|head: DocumentSlot, body: DocumentSlot| {
     view! {
@@ -325,8 +345,8 @@ Keep the application parts that are already correct: route enumeration, page dat
 the Rangular head/body templates. Replace the consumer code that locates
 `head_marker`/`content_marker`, calls `split_once`, or substitutes strings:
 
-1. Compile the head template with `compile_head_named` and the body with the normal
-   Rangular AOT compiler. Keep both in the app's build inputs.
+1. Register the head and body templates with `rangular_build::Config` (`.head(...)` and
+   `.body(...)`) in `build.rs`. Keep both in the app's build inputs.
 2. Create the page-data `HostCell` and pass the generated head/body views to
    `Document::new(...).render()`; use `render_with(template)` when the document shell
    is custom.

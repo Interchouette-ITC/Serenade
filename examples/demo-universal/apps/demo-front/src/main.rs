@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use rangular_aot::HostCell;
+use rangular::aot::HostCell;
 use serenade_view::ManagedHead;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{Element, Event, HtmlElement, Window};
@@ -11,13 +11,15 @@ mod cms_hello_host;
 mod cms_hello {
     use leptos::prelude::*;
 
-    include!(concat!(env!("OUT_DIR"), "/cms_hello.rs"));
+    include!(concat!(env!("OUT_DIR"), "/rangular/document_view.rs"));
+    include!(concat!(env!("OUT_DIR"), "/rangular/head_view.rs"));
+    include!(concat!(env!("OUT_DIR"), "/rangular/body_view.rs"));
 }
 
 use cms_hello_host::CmsHelloHost;
 
 fn cms_head_view(host: HostCell<CmsHelloHost>) -> impl IntoView {
-    view! { <ManagedHead>{cms_hello::cms_head(host)}</ManagedHead> }
+    view! { <ManagedHead>{cms_hello::head_view(host)}</ManagedHead> }
 }
 
 fn clear_server_rendered_head(document: &web_sys::Document) {
@@ -182,7 +184,7 @@ fn main() {
         clear_server_rendered_head(&document);
         let head_host = host.clone();
         leptos::mount::mount_to(head, move || cms_head_view(head_host)).forget();
-        leptos::mount::hydrate_body(move || cms_hello::cms_body(host));
+        leptos::mount::hydrate_body(move || cms_hello::body_view(host));
     } else {
         leptos::mount::mount_to_body(App);
     }
@@ -337,7 +339,7 @@ mod browser_tests {
         }
         let head_host = host.clone();
         let head_mount = mount_to(head.clone(), move || cms_head_view(head_host));
-        let body_hydration = hydrate_from(body.clone(), move || cms_hello::cms_body(host));
+        let body_hydration = hydrate_from(body.clone(), move || cms_hello::body_view(host));
         next_browser_task().await;
         assert!(
             server_title.is_same_node(

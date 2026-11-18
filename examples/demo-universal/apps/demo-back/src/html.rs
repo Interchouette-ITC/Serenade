@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use rangular_aot::HostCell;
+use rangular::aot::HostCell;
 use serenade_view::{Document, DocumentSlot, ViewError};
 
 use crate::{assets::CmsAssets, cms_hello_host::CmsHelloHost};
@@ -7,7 +7,9 @@ use crate::{assets::CmsAssets, cms_hello_host::CmsHelloHost};
 mod cms_hello {
     use leptos::prelude::*;
 
-    include!(concat!(env!("OUT_DIR"), "/cms_hello.rs"));
+    include!(concat!(env!("OUT_DIR"), "/rangular/document_view.rs"));
+    include!(concat!(env!("OUT_DIR"), "/rangular/head_view.rs"));
+    include!(concat!(env!("OUT_DIR"), "/rangular/body_view.rs"));
 }
 
 pub fn cms_hello_page(route_specific: bool, assets: &CmsAssets) -> Result<String, ViewError> {
@@ -15,15 +17,15 @@ pub fn cms_hello_page(route_specific: bool, assets: &CmsAssets) -> Result<String
     let head_host = host.clone();
     let document_host = host.clone();
     let document = Document::new(
-        move || cms_hello::cms_head(head_host),
-        move || cms_hello::cms_body(host),
+        move || cms_hello::head_view(head_host),
+        move || cms_hello::body_view(host),
     );
     let rendered = document
         .with_assets(&assets.document)
         .render_with(move |head: DocumentSlot, body: DocumentSlot| {
             view! {
                 <!DOCTYPE html>
-                {cms_hello::cms_document(document_host, head, body)}
+                {cms_hello::document_view(document_host, head, body)}
             }
         })?
         .into_static_output();

@@ -3,13 +3,13 @@ description = "Framework package config and registration hints"
 
 [cargo]
 dependencies = [
-  { crate = "serenade-bundle", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
-  { crate = "serenade-kernel", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
-  { crate = "serenade-config", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
-  { crate = "serenade-console", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
-  { crate = "serenade-di", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
-  { crate = "serenade-event", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
-  { crate = "serenade-http", git = "https://github.com/Interchouette-ITC/Serenade.git", branch = "dev" },
+  { crate = "serenade-bundle", version = "1.0.0" },
+  { crate = "serenade-kernel", version = "1.0.0" },
+  { crate = "serenade-config", version = "1.0.0" },
+  { crate = "serenade-console", version = "1.0.0" },
+  { crate = "serenade-di", version = "1.0.0" },
+  { crate = "serenade-event", version = "1.0.0" },
+  { crate = "serenade-http", version = "1.0.0" },
 ]
 
 [[files]]

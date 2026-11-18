@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
-use serenade_di::{CompilePass, ContainerBuilder, DiError, ServiceDefinition};
+#[cfg(feature = "reqwest")]
+use serenade_di::ServiceDefinition;
+use serenade_di::{CompilePass, ContainerBuilder, DiError};
 
 use crate::DynHttpClient;
 

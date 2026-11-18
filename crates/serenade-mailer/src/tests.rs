@@ -339,7 +339,7 @@ fn smtp_reply(stream: &mut std::net::TcpStream, code: u16, text: &str) -> std::i
 
 #[cfg(feature = "smtp")]
 fn smtp_session(mut stream: std::net::TcpStream) -> std::io::Result<()> {
-    use std::io::Read;
+    use std::io::{Read, Write};
 
     let mut pending = String::new();
     let mut buf = [0u8; 1024];
@@ -368,7 +368,7 @@ fn smtp_session(mut stream: std::net::TcpStream) -> std::io::Result<()> {
             }
             let upper = line.to_uppercase();
             if upper.starts_with("EHLO") || upper.starts_with("HELO") {
-                smtp_reply(&mut stream, 250, "localhost")?;
+                stream.write_all(b"250-localhost\r\n")?;
                 smtp_reply(&mut stream, 250, "PIPELINING")?;
             } else if upper.starts_with("STARTTLS") {
                 smtp_reply(&mut stream, 502, "Command not implemented")?;
