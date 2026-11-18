@@ -10,8 +10,9 @@ rust-version.workspace = true
 publish = false
 
 # Only the public facade: no serenade-* implementation crate is named here.
+# Imported as `serenade` through Cargo's `package` rename.
 [dependencies]
-serenade-framework = { path = "../../crates/serenade-framework", version = "1.0.0", features = [
+serenade = { package = "serenade-framework", path = "../../crates/serenade-framework", version = "1.0.0", features = [
     "http",
     "validation",
 ] }

@@ -11,8 +11,11 @@ crates behind Cargo features.
 
 ```toml
 [dependencies]
-serenade-framework = { version = "1.0.0", features = ["http", "validation"] }
+serenade = { package = "serenade-framework", version = "1.0.0", features = ["http", "validation"] }
 ```
+
+The `package` rename imports the crate as `serenade` instead of
+`serenade_framework` (`cargo add serenade-framework --rename serenade`).
 
 The default build contains only the foundations (`kernel`, `config`, `di`,
 `event`) and needs no web server, database, Leptos, or Rangular.
@@ -37,7 +40,7 @@ The default build contains only the foundations (`kernel`, `config`, `di`,
 or `mailer`. Enable `http-client-reqwest` or `mailer-smtp` explicitly.
 
 ```rust
-use serenade_framework::prelude::*;
+use serenade::prelude::*;
 
 struct Shop;
 

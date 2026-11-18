@@ -2,10 +2,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use serenade_framework::event::EventError;
-use serenade_framework::http::{Method, Request, Response};
-use serenade_framework::prelude::*;
-use serenade_framework::validator::{Constraint, ConstraintViolationList, NotBlank};
+use serenade::event::EventError;
+use serenade::http::{Method, Request, Response};
+use serenade::prelude::*;
+use serenade::validator::{Constraint, ConstraintViolationList, NotBlank};
 
 type AppResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -86,7 +86,7 @@ fn run(path: &str) -> AppResult<(u16, String, Vec<String>)> {
 
 fn main() -> AppResult<()> {
     let (status, body, events) = run("/")?;
-    println!("serenade-framework {}", serenade_framework::version());
+    println!("serenade-framework {}", serenade::version());
     println!("{status} {body}");
     println!("events: {}", events.join(", "));
     Ok(())

@@ -28,11 +28,14 @@ need with Cargo features:
 
 ```toml
 [dependencies]
-serenade-framework = { version = "1.0.0", features = ["http-actix", "validation"] }
+serenade = { package = "serenade-framework", version = "1.0.0", features = ["http-actix", "validation"] }
 ```
 
+The package is published as `serenade-framework`; the `package` rename lets code import it
+as `serenade` (`cargo add serenade-framework --rename serenade`).
+
 ```rust
-use serenade_framework::prelude::*;
+use serenade::prelude::*;
 
 let mut app = App::new(Environment::Prod);
 app.boot()?;

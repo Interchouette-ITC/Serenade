@@ -14,8 +14,11 @@
 //!
 //! ```toml
 //! [dependencies]
-//! serenade-framework = "1.0.0"
+//! serenade = { package = "serenade-framework", version = "1.0.0" }
 //! ```
+//!
+//! The `package` rename imports the crate as `serenade` instead of
+//! `serenade_framework` (`cargo add serenade-framework --rename serenade`).
 //!
 //! The executable named `serenade` is shipped by the separate `serenade-cli`
 //! package. The crates.io package `serenade` is unrelated to this project.
@@ -62,7 +65,8 @@
 //! ## Example
 //!
 //! ```
-//! use serenade_framework::prelude::*;
+//! # extern crate serenade_framework as serenade;
+//! use serenade::prelude::*;
 //!
 //! struct Shop;
 //!
