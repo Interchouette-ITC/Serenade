@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Environment","KernelPhase"],"struct":["App","Config","Container","ContainerBuilder","EventDispatcher","Kernel","ServiceDefinition"],"trait":["Application","BundleInterface","Event","EventSubscriber"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DispatchKind","MessengerError"],"struct":["DispatchContext","Envelope","InMemoryTransport","LoggingMiddleware","MessageBus","ValidationMiddleware","WireEnvelope"],"trait":["Command","CommandHandler","Event","EventHandler","LogSink","Message","Middleware","Transport","ValidateHook"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_HTTP_CLIENT_SERVICE","HTTP_CLIENT_TAG"],"enum":["ClientMethod","HttpClientError"],"struct":["ClientRequest","ClientResponse","HttpClientService","MockHttpClient","RegisterDefaultHttpClientPass","ReqwestHttpClient"],"trait":["DynHttpClient","HttpClient"]};

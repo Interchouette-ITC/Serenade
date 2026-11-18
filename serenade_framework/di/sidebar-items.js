@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DiError","Scope"],"struct":["Container","ContainerBuilder","ParameterBag","Reference","ServiceDefinition"],"trait":["CompilePass"],"type":["ServiceFactory"]};

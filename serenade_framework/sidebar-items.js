@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["version"],"mod":["bundle","config","console","di","event","form","http","kernel","lock","mailer","messenger","notifier","prelude","rate_limiter","scheduler","security","session","validator","view"]};
