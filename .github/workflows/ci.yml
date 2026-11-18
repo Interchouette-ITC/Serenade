@@ -273,6 +273,10 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Authenticates the managed Trunk's provenance lookup; anonymous calls to the
+      # attestations API hit the shared-runner rate limit (HTTP 403).
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
