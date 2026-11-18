@@ -8,7 +8,7 @@ crates. Start from the repository so the examples and local crate versions match
 
 ## Prerequisites
 
-- Rust **1.99.0 or newer**, as specified by the workspace manifest.
+- Rust **1.100 or newer**, as specified by the workspace manifest.
 - Git.
 - GNU Make for the documented workspace commands.
 

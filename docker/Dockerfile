@@ -1,7 +1,7 @@
 # Build from the repository root:
 #   docker build -f docker/Dockerfile -t interchouette/serenade-myfeed:latest .
 
-ARG RUST_IMAGE=rust:1.99.1-bookworm
+ARG RUST_IMAGE=rust:1.100.0-bookworm
 ARG RUNTIME_IMAGE=debian:bookworm-slim
 
 FROM ${RUST_IMAGE} AS builder
