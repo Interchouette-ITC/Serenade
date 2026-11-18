@@ -37,6 +37,10 @@ SH
   cat >"$T/bin/cargo" <<'SH'
 #!/usr/bin/env bash
 T=${MOCK_DIR:?}
+if [[ ${1:-} == +* ]]; then
+  echo "toolchain $1" >>"$T/calls"
+  shift
+fi
 case "$1" in
   metadata)
     if [[ " $* " == *" --manifest-path "* ]]; then
@@ -314,6 +318,48 @@ test_check_mode_packages_without_uploading() {
   expect_calls "" lookup
 }
 
+test_check_mode_preserves_cargo_toolchain_prefix() {
+  MODE=check TOKEN='' run CARGO="$T/bin/cargo +stable"
+  expect_status 0 || return
+  expect_calls "toolchain +stable toolchain +stable" toolchain || return
+  expect_calls "package --locked -p alpha -p beta" package || return
+  expect_calls "" || return
+  expect_calls "" lookup
+}
+
+test_command_prefix_arguments_are_not_glob_expanded() {
+  cat >"$T/bin/command-prefix" <<'SH'
+#!/usr/bin/env bash
+if [ "$1" != 'literal*' ]; then
+  echo "unexpected command prefix argument: $1" >&2
+  exit 99
+fi
+shift
+exec "$@"
+SH
+  chmod +x "$T/bin/command-prefix"
+  touch "$T/ws/literal-expanded"
+  echo '429:Too Many Requests' >"$T/publish.alpha"
+  echo miss >"$T/index.alpha"
+  run CARGO="$T/bin/command-prefix literal* $T/bin/cargo" \
+    CURL="$T/bin/command-prefix literal* $T/bin/curl" \
+    SLEEP="$T/bin/command-prefix literal* $T/bin/sleep"
+  expect_status 0 || return
+  expect_calls "publish alpha publish alpha publish beta" || return
+  expect_sleeps "7 3"
+}
+
+test_empty_command_prefixes_are_rejected() {
+  local command
+  for command in CARGO CURL SLEEP; do
+    run "$command= "
+    expect_status 1 || return
+    expect_output "$command must contain a command" || return
+    expect_calls "" || return
+    expect_calls "" lookup || return
+  done
+}
+
 release_sources() {
   mkdir -p "$T/ws/examples/demo" "$T/ws/crates/serenade-cli/templates/app" \
     "$T/ws/crates/serenade-cli/recipes/framework" "$T/ws/docs"
@@ -328,9 +374,10 @@ release_sources() {
 
 test_versions_mode_accepts_matching_release() {
   release_sources 1.0.0
-  MODE=versions TAG=v1.0.0 TOKEN='' run
+  MODE=versions TAG=v1.0.0 TOKEN='' run CARGO="$T/bin/cargo +stable"
   expect_status 0
   expect_output "Release v1.0.0: 2 packages and all version sources are at 1.0.0"
+  expect_calls "toolchain +stable toolchain +stable" toolchain || return
   expect_calls "metadata examples/demo/Cargo.toml" metadata
   expect_calls ""
   expect_calls "" lookup
@@ -358,7 +405,12 @@ test_versions_mode_rejects_stale_example_lockfile() {
   expect_output "examples/demo/Cargo.lock is out of date"
 }
 
-for test in $(declare -F | awk '{print $3}' | grep '^test_'); do
+mapfile -t tests < <(declare -F | awk '$3 ~ /^test_/ {print $3}')
+if [ "${#tests[@]}" -eq 0 ]; then
+  echo "publish-crates tests: no test_ functions discovered" >&2
+  exit 1
+fi
+for test in "${tests[@]}"; do
   setup
   if (set -e; "$test"); then
     echo "ok   $test"

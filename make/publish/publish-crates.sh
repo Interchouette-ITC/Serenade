@@ -14,9 +14,10 @@
 # --no-verify.
 set -euo pipefail
 
-CARGO=${CARGO:-cargo}
-CURL=${CURL:-curl}
-SLEEP=${SLEEP:-sleep}
+# Split command prefixes once, without glob expansion (e.g. CARGO="cargo +stable").
+read -r -a CARGO_CMD <<<"${CARGO:-cargo}"
+read -r -a CURL_CMD <<<"${CURL:-curl}"
+read -r -a SLEEP_CMD <<<"${SLEEP:-sleep}"
 INDEX_ATTEMPTS=${INDEX_ATTEMPTS:-60}
 INDEX_INTERVAL=${INDEX_INTERVAL:-10}
 # Upload attempts per package (rate-limited lookups and uploads both count).
@@ -64,6 +65,9 @@ die() {
 }
 
 validate_config() {
+  ((${#CARGO_CMD[@]} > 0)) || die "CARGO must contain a command"
+  ((${#CURL_CMD[@]} > 0)) || die "CURL must contain a command"
+  ((${#SLEEP_CMD[@]} > 0)) || die "SLEEP must contain a command"
   local name value
   for name in INDEX_ATTEMPTS INDEX_INTERVAL PUBLISH_MAX_ATTEMPTS RATE_LIMIT_FALLBACK_DELAY \
     RATE_LIMIT_SAFETY_MARGIN RATE_LIMIT_MAX_TOTAL_WAIT; do
@@ -92,7 +96,7 @@ workspace_version() {
 # dependency that crates.io must already serve when it is uploaded.
 check_members() {
   local version=$1
-  $CARGO metadata --no-deps --format-version 1 --locked |
+  "${CARGO_CMD[@]}" metadata --no-deps --format-version 1 --locked |
     python3 -c '
 import json, sys
 version, order = sys.argv[1], sys.argv[2:]
@@ -158,7 +162,7 @@ if errors:
   local manifest
   for manifest in examples/*/Cargo.toml; do
     [ -f "$(dirname "$manifest")/Cargo.lock" ] || continue
-    $CARGO metadata --locked --format-version 1 --manifest-path "$manifest" >/dev/null ||
+    "${CARGO_CMD[@]}" metadata --locked --format-version 1 --manifest-path "$manifest" >/dev/null ||
       die "$(dirname "$manifest")/Cargo.lock is out of date (run cargo update -w there)"
   done
 }
@@ -205,7 +209,7 @@ rate_limit_wait() {
     die "$context: rate-limit wait of ${delay}s would exceed RATE_LIMIT_MAX_TOTAL_WAIT=${RATE_LIMIT_MAX_TOTAL_WAIT}s (already waited ${TOTAL_WAITED}s); rerun the publication later to resume"
   fi
   TOTAL_WAITED=$((TOTAL_WAITED + delay))
-  $SLEEP "$delay"
+  "${SLEEP_CMD[@]}" "$delay"
 }
 
 # Sets REGISTRY_STATUS to 200 (version published) or 404 (not published). Waits out 429s
@@ -215,7 +219,7 @@ registry_lookup() {
   headers=$(mktemp)
   body=$(mktemp)
   while true; do
-    REGISTRY_STATUS=$($CURL "${CURL_TIMEOUTS[@]}" -sS -o "$body" -D "$headers" -w '%{http_code}' \
+    REGISTRY_STATUS=$("${CURL_CMD[@]}" "${CURL_TIMEOUTS[@]}" -sS -o "$body" -D "$headers" -w '%{http_code}' \
       -A "$USER_AGENT" "$API_URL/$name/$version") || REGISTRY_STATUS=000
     case "$REGISTRY_STATUS" in
       200 | 404) break ;;
@@ -249,12 +253,12 @@ wait_for_index() {
   for ((attempt = 1; attempt <= INDEX_ATTEMPTS; attempt++)); do
     # Read the whole entry first: piping into `grep -q` under pipefail can fail
     # with SIGPIPE even when the version is present.
-    body=$($CURL "${CURL_TIMEOUTS[@]}" -fsS -A "$USER_AGENT" "$INDEX_URL/$path" 2>/dev/null) || body=''
+    body=$("${CURL_CMD[@]}" "${CURL_TIMEOUTS[@]}" -fsS -A "$USER_AGENT" "$INDEX_URL/$path" 2>/dev/null) || body=''
     if [[ $body == *"\"vers\":\"${version}\""* ]]; then
       echo "$name $version is available in the index"
       return 0
     fi
-    $SLEEP "$INDEX_INTERVAL"
+    "${SLEEP_CMD[@]}" "$INDEX_INTERVAL"
   done
   die "$name $version not in the crates.io index after $((INDEX_ATTEMPTS * INDEX_INTERVAL))s"
 }
@@ -278,7 +282,7 @@ publish_one() {
     fi
     echo "Publishing $name $version (attempt $ATTEMPTS/$PUBLISH_MAX_ATTEMPTS)"
     set +e
-    $CARGO publish -p "$name" --locked 2>&1 | tee "$log"
+    "${CARGO_CMD[@]}" publish -p "$name" --locked 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
     set -e
     if [ "$status" -eq 0 ]; then
@@ -332,7 +336,7 @@ main() {
       for name in "${CRATES[@]}"; do
         args+=(-p "$name")
       done
-      $CARGO package --locked "${args[@]}" "${@:2}"
+      "${CARGO_CMD[@]}" package --locked "${args[@]}" "${@:2}"
       echo "Packaged and verified ${#CRATES[@]} packages at $version"
       ;;
     publish) publish "$version" ;;

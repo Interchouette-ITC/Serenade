@@ -46,6 +46,7 @@ jobs:
           exit 1
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Tag is immutable and matches every version source
@@ -97,6 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - name: Publish in dependency order (skips versions already on crates.io)
@@ -128,6 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Install musl tools
         if: contains(matrix.target, 'musl')

@@ -6,6 +6,10 @@ Both are driven by [`release.yml`](../.github/workflows/release.yml) from an imm
 `v<version>` tag. The rolling [`release-cli-dev.yml`](../.github/workflows/release-cli-dev.yml)
 pre-release (`serenade-cli-dev`) is separate and unaffected.
 
+The repository documentation entry point is [docs/README.md](README.md), and the release
+changelog is [docs/CHANGELOG.md](CHANGELOG.md). Do not add either file at the repository
+root; package-level READMEs remain in their crate directories.
+
 ## Pieces
 
 | Piece | Role |
@@ -83,6 +87,9 @@ depends on. Adding a crate therefore means adding it to `DEFAULT_CRATES` in the 
 5. After both `publish-crates` and all `cli-binaries` jobs succeed, `release-assets` writes
    `SHA256SUMS` and uploads everything to the release with `--clobber`.
 
+Every checkout in the release and reusable CI workflows uses the run's `github.sha`, so
+they use the same validated commit even if the tag moves after validation.
+
 Publication and binaries start only after CI succeeds. They run independently of each other.
 
 ## How the publisher behaves
@@ -119,6 +126,10 @@ landed.
 Invalid values (not a non-negative integer, or zero where at least one is required) are
 rejected before anything runs. `make publish-test` exercises all of this against mocked
 `cargo`, `curl` and `sleep`.
+
+The `CARGO`, `CURL`, and `SLEEP` overrides accept whitespace-separated command prefixes,
+such as `CARGO="cargo +stable"`. Prefixes are split into arrays without interpreting shell
+quoting or expanding wildcards.
 
 ## Resuming a failed release
 
