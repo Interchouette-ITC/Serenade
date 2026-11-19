@@ -1,6 +1,6 @@
 # Stable release: crates.io publication + CLI binaries for a `v<version>` tag.
-# Separate from release-cli-dev.yml, which keeps moving the rolling `serenade-cli-dev`
-# tag/release; nothing here touches it, and stable assets carry the version in their names.
+# Separate from release-cli-pre-release.yml, which keeps moving the rolling `serenade-cli-pre-release`
+# tag/release; nothing here touches it. Stable assets carry the version in their names.
 #
 # Triggers
 # - `release: published` fires when a release is published directly or when a draft is
@@ -142,7 +142,7 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Build serenade-cli
         run: cargo build --release --locked -p serenade-cli --target "${{ matrix.target }}"
-      # Same verified Trunk process as release-cli-dev (checksum, provenance, revision).
+      # Same verified Trunk process as release-cli-pre-release (checksum, provenance, revision).
       - name: Package binaries and verified Trunk
         env:
           GH_TOKEN: ${{ github.token }}

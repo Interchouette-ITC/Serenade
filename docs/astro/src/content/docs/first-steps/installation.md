@@ -3,14 +3,20 @@ title: Installation
 description: Check the Rust toolchain and prepare a local Serenade workspace.
 ---
 
-Serenade is currently developed as a Rust workspace rather than a published, versioned set of
-crates. Start from the repository so the examples and local crate versions match.
+Serenade's crates are published on crates.io. To run the examples, start from the repository so the
+examples and local crate versions match.
 
 ## Prerequisites
 
 - Rust **1.100 or newer**, as specified by the workspace manifest.
 - Git.
 - GNU Make for the documented workspace commands.
+
+## Install the CLI
+
+```sh
+cargo install serenade-cli --locked
+```
 
 To build the browser examples, Serenade needs Git, Cargo, and the
 `wasm32-unknown-unknown` target. Serenade installs and caches its managed Trunk
