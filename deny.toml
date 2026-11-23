@@ -17,6 +17,7 @@ ignore = [
     { id = "RUSTSEC-2026-0441", reason = "Unmaintained pin-utils crate, transitively required by [DEPENDENCY]. No compatible upstream replacement currently available." },
     # chrono stays private to serenade-scheduler (cron's schedule API) and comes in via wasmer-config (saffron).
     { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; required by cron 0.17 and wasmer-config (saffron); no chrono-free cron yet" },
+    { id = "RUSTSEC-2026-0594", reason = "RUSTSEC-2026-0594: actix-web 4.20.0 pins cookie 0.16.2; no compatible upstream fix yet" },
 
 ]
 

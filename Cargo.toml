@@ -108,12 +108,12 @@ getrandom = "0.4"
 hmac = "0.13"
 include_dir = "0.7"
 simple-minify-html = "0.17.2"
-oxc_allocator = "0.159.0"
-oxc_codegen = { version = "0.159.0", default-features = false }
-oxc_mangler = "0.159.0"
-oxc_minifier = "0.159.0"
-oxc_parser = "0.159.0"
-oxc_span = "0.159.0"
+oxc_allocator = "0.160.0"
+oxc_codegen = { version = "0.160.0", default-features = false }
+oxc_mangler = "0.160.0"
+oxc_minifier = "0.160.0"
+oxc_parser = "0.160.0"
+oxc_span = "0.160.0"
 serenade-minify = { path = "crates/serenade-minify", version = "1.0.0" }
 ratatui = "0.30"
 rustyline = { version = "19", features = ["with-file-history"] }
@@ -127,7 +127,7 @@ tempfile = "3"
 thiserror = "2"
 toml = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-rstest = "0.28"
+rstest = "0.29"
 mockall = "0.15"
 insta = { version = "1", features = ["yaml"] }
 tracing = "0.1"
