@@ -8,6 +8,7 @@
     "start": "astro dev",
     "prebuild": "node scripts/import-guides.mjs",
     "build": "astro build",
+    "postbuild": "node scripts/publish-markdown.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
