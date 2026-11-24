@@ -111,38 +111,27 @@ Other server apps can opt in by adding the same middleware to their kernel.
 The current HTML and Universal examples both default to `127.0.0.1:8080`; running both at once
 requires changing one app's bind address.
 
-## Multi-app selection and future hosting
+## Multi-app selection and hosting
+
+**Universal** is the multi-package product shape: `demo-front` + `demo-back` + `demo-contract`
+under one mode, driven by `serenade-universal`. That is the supported multi-app composition.
 
 The per-mode `--all` flag selects every registered app of that mode for that mode CLI's normal
-action. It does not create one combined site or production host.
-
-The planned workspace selector has this contract:
-
-```text
-serenade run-many -t build --apps demo-spa,demo-ssg
-serenade run-many -t test --apps demo-html,demo-spa
-serenade run-many -t build --mode spa
-serenade run-many -t build --all-modes
-```
-
-`--apps` names a comma-separated set of registered apps. `--mode` selects all apps of one mode;
-`--all-modes` selects every app. `--apps` may be combined with `--mode` as an intersection
-filter. A selector is required, conflicting selectors are errors, unknown names and mode
-mismatches fail explicitly, and empty selections are errors. **This `run-many` command is not
-implemented yet**; use the existing per-mode commands and `--all` meanwhile.
+action. It does not create one combined site or production host. There is no cross-mode
+`serenade run-many` command and none is planned; use the four mode CLIs and `--all`.
 
 For hosting, keep build orchestration separate from runtime routing. SPA and SSG outputs are
 static artifacts and can share an origin when assigned distinct URL prefixes (or use separate
 domains). HTML and Universal apps are server processes; each needs its own configured bind
 address, or a reverse proxy must route distinct hostnames/path prefixes to their processes.
 Their current demo defaults may both use port 8080, so starting multiple server demos together
-without changing binds will conflict. No production process supervisor, deployment manifest,
-or multi-app HTTP host is provided by these examples.
+without changing binds will conflict. No production process supervisor or deployment manifest
+is provided by these examples.
 
 When hosting several apps is in scope, add an explicit deployment configuration mapping each
 app to its mode, public hostname or path prefix, artifact/process, bind address, and health
-check. Do not infer production routing from Cargo package names or make `run-many` silently
-choose ports. Until then, build and deploy each app as its own unit.
+check. Do not infer production routing from Cargo package names. Until then, build and deploy
+each app as its own unit.
 
 ## Make targets (simple, per-app)
 
@@ -168,4 +157,4 @@ choose ports. Until then, build and deploy each app as its own unit.
 | C | demo-monorepo · demo-spa · demo-ui · `serenade-spa` | ✅ done |
 | D | demo-universal · demo-front · demo-back · demo-contract · `serenade-universal` | ✅ done |
 | E | rangular SSR/hydration guidance · demo-ssg · `serenade-ssg` | ✅ done |
-| F | All four modes green in CI · hosting boundary and `run-many` contract documented · handoff current | ✅ docs updated; `run-many` implementation remains future work |
+| F | All four modes green in CI · hosting boundary documented · handoff current | ✅ done (Universal + per-mode `--all`; no `run-many`) |
