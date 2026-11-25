@@ -11,10 +11,10 @@ documentation from this website.
 
 ## Local stdio
 
-Install the binary from a local checkout, then configure the agent to start it:
+Install the binary, then configure the agent to start it:
 
 ```sh
-cargo install --locked --path /path/to/serenade-rangular-mcps --bin serenade-rangular-mcp
+cargo install --locked serenade-rangular-mcp
 ```
 
 ```json
@@ -31,9 +31,12 @@ cargo install --locked --path /path/to/serenade-rangular-mcps --bin serenade-ran
 
 Profiles are `serenade`, `rangular`, and `all`. The MCP supports listing,
 searching and reading documents and exposes them as resources. Rangular
-template validation reports parser diagnostics; it is not an AOT compilation
-or an application build. The agent runs `serenade`, `serenade-trunk`, Cargo,
-and other project commands locally, subject to its normal permissions.
+template validation uses the released parser, which can differ from the
+development documentation; it is not an AOT compilation or an application
+build. Local stdio also exposes tools to scaffold a Serenade application and
+run Cargo check, build or test. These can write files and execute build scripts
+or tests; use a client that requests approval. The agent can also run
+`serenade`, `serenade-trunk`, Cargo, and other commands locally.
 
 ## Streamable HTTP
 
@@ -51,7 +54,8 @@ Public HTTP is read-only and does not access the caller's project.
 ## Markdown without MCP
 
 The static documentation build publishes original Markdown separately from
-the MCP. For example:
+the MCP. Use the explicit `.md` URLs; requesting the HTML page with
+`Accept: text/markdown` does not select Markdown. For example:
 
 - [Serenade recipes](/markdown/serenade/docs-dev/RECIPES.md)
 - [Serenade front modes](/markdown/serenade/docs-dev/FRONT-MODES.md)
