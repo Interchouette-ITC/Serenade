@@ -14,7 +14,7 @@ async function pages(directory, prefix = '') {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const name = path.posix.join(prefix, entry.name);
     if (entry.isDirectory()) {
-      result.push(...await pages(path.join(directory, entry.name), name));
+      result.push(...(await pages(path.join(directory, entry.name), name)));
     } else if (entry.isFile() && /\.mdx?$/.test(name)) {
       result.push(`serenade/guides/${name.replace(/\.mdx$/, '.md')}`);
     }
@@ -23,7 +23,9 @@ async function pages(directory, prefix = '') {
 }
 
 test('Markdown index covers every website page and hashes the published files', async () => {
-  const index = JSON.parse(await readFile(path.join(destination, 'index.json'), 'utf8'));
+  const index = JSON.parse(
+    await readFile(path.join(destination, 'index.json'), 'utf8'),
+  );
   const indexed = new Set(index.files);
   assert.equal(indexed.size, index.files.length, 'duplicate index entries');
   for (const page of await pages(source)) {
@@ -31,9 +33,39 @@ test('Markdown index covers every website page and hashes the published files', 
   }
   for (const file of index.files) {
     const data = await readFile(path.join(destination, file));
-    assert.equal(createHash('sha256').update(data).digest('hex'), index.sha256[file], file);
+    assert.equal(
+      createHash('sha256').update(data).digest('hex'),
+      index.sha256[file],
+      file,
+    );
   }
-  const home = await readFile(path.join(destination, 'serenade/guides/index.md'), 'utf8');
+  const home = await readFile(
+    path.join(destination, 'serenade/guides/index.md'),
+    'utf8',
+  );
   assert.match(home, /^### Start here$/m);
   assert.doesNotMatch(home, /<\/?Card(?:Grid)?\b|^import\s/m);
 });
+
+test(
+  'optional Rangular pages match their source',
+  { skip: !process.env.RANGULAR_DOCS_DIR },
+  async () => {
+    const index = JSON.parse(
+      await readFile(path.join(destination, 'index.json'), 'utf8'),
+    );
+    for (const name of [
+      'README.md',
+      'SPEC.md',
+      'OVERVIEW.md',
+      'CHANGELOG.md',
+    ]) {
+      const relative = `rangular/docs/${name}`;
+      assert.ok(index.files.includes(relative), `missing ${relative}`);
+      assert.deepEqual(
+        await readFile(path.join(destination, relative)),
+        await readFile(path.join(process.env.RANGULAR_DOCS_DIR, name)),
+      );
+    }
+  },
+);
