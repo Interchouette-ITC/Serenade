@@ -13,8 +13,10 @@ npm run build
 npm run preview
 ```
 
-The build publishes source Markdown under `dist/markdown/` independently of
-the MCP. No Rangular checkout is required. To additionally publish Rangular
+The build publishes every site page and the original developer guides as
+Markdown under `dist/markdown/` independently of the MCP. The homepage's MDX
+cards are converted to Markdown headings. A build test checks page coverage
+and file hashes. No Rangular checkout is required. To additionally publish Rangular
 documentation, explicitly set `RANGULAR_DOCS_DIR` to a Rangular `docs`
 directory; missing inputs then fail the build. The generated
 `markdown/index.json` lists each file and its SHA-256 hash.
