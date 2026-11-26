@@ -52,6 +52,29 @@ make html
 # http://127.0.0.1:8080/
 ```
 
+## Editing browser code
+
+Clitorine's entry point is `assets/clitorine.js`; the small modules in
+`assets/clitorine/` separate the composer, interactions, feed window, navigation,
+updates, and card/media handling. Edit those sources, not the generated
+`assets/clitorine.min.js`.
+
+From `examples/demo-html`, install the editing tool once and rebuild:
+
+```bash
+npm ci
+npm run build
+```
+
+`npm run watch` rebuilds automatically while editing. `npm run check` verifies
+that the generated file matches the sources without writing files.
+
+The generated bundle is kept alongside the sources, so ordinary Cargo and
+Docker builds do not require Node/npm. The existing `/assets/clitorine.js` URL
+serves that single minified bundle; no modules are fetched separately by the
+browser. After rebuilding JavaScript, restart through `cargo run` or `make html`
+so the Rust binary embeds the updated asset. No Trunk or TypeScript is involved.
+
 ## Continuous scrolling and resource limits
 
 Clitorine progressively enhances the server-rendered feed. The first page and

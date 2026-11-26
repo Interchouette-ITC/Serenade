@@ -170,7 +170,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         )),
         "asset_js" => Ok(asset_response(
             "text/javascript; charset=utf-8",
-            include_bytes!("../assets/clitorine.js"),
+            include_bytes!("../assets/clitorine.min.js"),
         )),
         "asset_favicon" => Ok(asset_response(
             "image/png",

@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 **/target
+**/node_modules
 coverage
 fuzz/corpus
 fuzz/artifacts

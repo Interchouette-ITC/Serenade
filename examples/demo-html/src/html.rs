@@ -22,7 +22,7 @@ const QUILL_JS: &str = "https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js";
 pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> String {
     let open_flag = if composer_open { "1" } else { "0" };
     let css = asset("myfeed.css?v=8").unwrap_or_else(|_| "/assets/myfeed.css?v=8".into());
-    let js = asset("clitorine.js?v=6").unwrap_or_else(|_| "/assets/clitorine.js?v=6".into());
+    let js = asset("clitorine.js?v=7").unwrap_or_else(|_| "/assets/clitorine.js?v=7".into());
     format!(
         r#"<!DOCTYPE html>
 <html lang="{lang}">
