@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["ajax_text","feed_with_flash","handle_comment_create","handle_like","wants_ajax"]};
+window.SIDEBAR_ITEMS = {"fn":["ajax_text","feed_with_flash","handle_comment_create","handle_latest","handle_like","handle_post_get","id_param","render_card","store_error","wants_ajax"],"struct":["FeedParams"]};

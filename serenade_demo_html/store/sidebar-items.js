@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["DEFAULT_CATEGORIES"],"enum":["CommentStatus"],"fn":["ensure_created_at_column","map_comment","map_post","rust_id","sql_id"],"struct":["Comment","FeedStore","NewPost","Post"]};
+window.SIDEBAR_ITEMS = {"constant":["COMMENT_PAGE_SIZE","DEFAULT_CATEGORIES","FEED_PAGE_SIZE","POST_SUMMARY"],"enum":["CommentStatus"],"fn":["ensure_created_at_column","map_comment","map_post","map_summary","rust_id","sql_id"],"struct":["Comment","CommentBatch","FeedBatch","FeedStore","NewPost","Post"]};
