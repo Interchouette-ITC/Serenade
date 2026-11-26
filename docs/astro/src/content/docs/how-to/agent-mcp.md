@@ -40,16 +40,20 @@ or tests; use a client that requests approval. The agent can also run
 
 ## Streamable HTTP
 
+Connect an MCP client to the free hosted endpoint at
+[`https://mcp.serenade.rs/`](https://mcp.serenade.rs/). It is an MCP protocol
+endpoint, not a browser page. The service can have a cold start, so allow
+enough time for it to wake and reconnect after a restart if needed. Hosted HTTP
+is read-only and cannot access your project or run local commands.
+
 For local HTTP:
 
 ```sh
 serenade-rangular-mcp --transport http --profile all
 ```
 
-Connect to `http://127.0.0.1:8765/mcp`. Public hosting is not deployed by
-this project. A future service at `mcp.serenade.rs` may take roughly 15 seconds
-to wake up; configure client timeouts and retry/reconnect where supported.
-Public HTTP is read-only and does not access the caller's project.
+Connect to `http://127.0.0.1:8765/`. Public HTTP is read-only and does not
+access the caller's project.
 
 ## Markdown without MCP
 
