@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use serenade_http::{Request, Response, UrlMatcher};
 use serenade_notifier::NullTransport;
@@ -31,6 +31,10 @@ pub struct AppState {
     pub profiler: Arc<ProfileStore>,
     /// Wave 29 notifier dogfood (Null discards after validate).
     pub notifier: NullTransport,
+    pub theme_css: Option<PathBuf>,
+    pub footer_html: Option<String>,
+    pub show_admin_link: bool,
+    pub favicon_file: Option<PathBuf>,
 }
 
 fn cookie_value(request: &Request, name: &str) -> Option<String> {

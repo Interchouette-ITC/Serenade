@@ -26,6 +26,7 @@ struct FeedParams {
 
 fn id_param(query: Option<&str>, name: &str) -> Result<Option<u64>, HttpError> {
     let mut result = None;
+    let mut seen = false;
     for pair in query.unwrap_or("").split('&') {
         let Some((key, value)) = pair.split_once('=') else {
             if pair == name {
@@ -34,8 +35,12 @@ fn id_param(query: Option<&str>, name: &str) -> Result<Option<u64>, HttpError> {
             continue;
         };
         if key == name {
-            if result.is_some() {
+            if seen {
                 return Err(HttpError::bad_request("duplicate cursor"));
+            }
+            seen = true;
+            if name == "around" && value.is_empty() {
+                continue;
             }
             let id = value
                 .parse::<u64>()
@@ -167,14 +172,17 @@ pub fn feed_with_flash(
         feed_html: &feed_html,
         post_form_html: &post_form,
         admin,
-        flash: flash.or(if missing_anchor {
-            Some(&missing_message)
-        } else {
-            None
-        }),
-        flash_err: is_err,
+        flash: flash
+            .or(if missing_anchor {
+                Some(&missing_message)
+            } else {
+                None
+            })
+            .map(|message| (message, is_err)),
         composer_open,
         routes: state.matcher.collection(),
+        footer_html: state.footer_html.as_deref(),
+        show_admin_link: state.show_admin_link,
     });
     if let Some(token) = request.attributes().get::<String>(PROFILER_TOKEN_ATTRIBUTE) {
         record_view(

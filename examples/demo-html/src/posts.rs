@@ -2,6 +2,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use serenade_form::{Form, FormStatus, UploadedFile};
 use serenade_http::{HttpError, Request, Response};
+use serenade_view::path;
 
 use crate::embed::is_allowed_embed;
 use crate::feed::feed_with_flash;
@@ -272,7 +273,11 @@ pub fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Resp
                 }
             }
         }
-        _ => Ok(redirect(&format!("/admin/posts/{id}/edit"))),
+        _ => Ok(redirect(&path(
+            state.matcher.collection(),
+            "admin_post_edit_get",
+            &[("id", &id.to_string())],
+        )?)),
     }
 }
 

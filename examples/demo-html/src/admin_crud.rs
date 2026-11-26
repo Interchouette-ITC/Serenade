@@ -21,8 +21,8 @@ pub const CATEGORY_RESOURCE: &str = "category";
 
 /// Builds the categories admin resource descriptor.
 #[must_use]
-pub fn category_resource() -> AdminResource {
-    AdminResource::new(CATEGORY_RESOURCE, "/admin/categories")
+pub fn category_resource(admin_path: &str) -> AdminResource {
+    AdminResource::new(CATEGORY_RESOURCE, format!("{admin_path}/categories"))
         .list_fields([AdminField::named("name")])
         .show_fields([AdminField::named("name")])
         .form_fields([AdminField::named("name")])
@@ -33,10 +33,13 @@ pub fn category_resource() -> AdminResource {
 /// # Errors
 ///
 /// Propagates route name collisions.
-pub fn register_category_admin_routes(collection: &mut RouteCollection) -> Result<(), HttpError> {
+pub fn register_category_admin_routes(
+    collection: &mut RouteCollection,
+    admin_path: &str,
+) -> Result<(), HttpError> {
     let mut registry = AdminRegistry::new();
     registry
-        .register(category_resource())
+        .register(category_resource(admin_path))
         .map_err(|err| HttpError::failed(err.to_string()))?;
     register_admin_routes(collection, &registry)
 }
@@ -116,7 +119,7 @@ pub fn categories_panel_html(
     store: &FeedStore,
     routes: &RouteCollection,
 ) -> Result<String, HttpError> {
-    let resource = category_resource();
+    let resource = category_resource(&path(routes, "admin", &[])?);
     let handler = CategoryHandler::new(store.clone());
     let rows = handler
         .list()
@@ -156,7 +159,7 @@ pub fn try_handle(
     ctx: &CategoryAdminCtx<'_>,
     build_login: impl FnOnce(&HmacCsrfTokenManager, &RouteCollection) -> Result<String, HttpError>,
 ) -> Result<Option<Response>, HttpError> {
-    let resource = category_resource();
+    let resource = category_resource(&path(ctx.routes, "admin", &[])?);
     let names = [
         resource.list_route_name(),
         resource.show_route_name(),
@@ -479,7 +482,7 @@ mod tests {
 
     #[test]
     fn category_resource_route_names() {
-        let resource = category_resource();
+        let resource = category_resource("/admin");
         assert_eq!(resource.list_route_name(), "admin_category_list");
         assert_eq!(resource.new_path(), "/admin/categories/new");
     }

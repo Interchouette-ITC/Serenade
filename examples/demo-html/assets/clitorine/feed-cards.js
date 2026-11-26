@@ -19,13 +19,20 @@ export function retainedInteraction(card) {
     }) ||
     Array.from(card.querySelectorAll("video")).some(function (video) {
       return !video.paused;
-    }) ||
-    card.dataset.mediaPinned === "1"
+    })
   );
 }
 
 export function protectedCard(card) {
-  return card.contains(document.activeElement) || retainedInteraction(card);
+  const active = document.activeElement;
+  const rect = card.getBoundingClientRect();
+  const offscreenPlayer =
+    active &&
+    active.matches("iframe") &&
+    (rect.bottom <= 0 || rect.top >= window.innerHeight);
+  return (
+    (card.contains(active) && !offscreenPlayer) || retainedInteraction(card)
+  );
 }
 
 export function protectedGroup(group) {
@@ -62,28 +69,5 @@ export function evict(group, resizeObserver) {
       iframe.src = "about:blank";
     });
     card.remove();
-  });
-}
-
-export function bindMedia(wall, onRelease) {
-  // Cross-origin players do not expose their playback state; focus pins them.
-  wall.addEventListener("focusin", function (event) {
-    if (event.target.matches("iframe")) {
-      event.target.closest("article").dataset.mediaPinned = "1";
-    }
-  });
-  window.addEventListener("blur", function () {
-    const focused = document.activeElement;
-    if (focused && focused.matches("#wall iframe")) {
-      focused.closest("article").dataset.mediaPinned = "1";
-    }
-  });
-  wall.addEventListener("click", function (event) {
-    const release = event.target.closest("[data-release-media]");
-    if (release) {
-      delete release.closest("article").dataset.mediaPinned;
-      release.blur();
-      onRelease();
-    }
   });
 }

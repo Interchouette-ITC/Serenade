@@ -48,6 +48,20 @@ database. To preview the starter post in a fresh database without replacing your
 MYFEED_DB=/tmp/demo-html-preview.sqlite make html
 ```
 
+To customize the appearance without changing the shared app, set
+`MYFEED_THEME_CSS` to a readable CSS file. It is appended after the built-in
+theme; changes are served on refresh without restarting the server. An invalid
+path is reported at startup, and a file that becomes unreadable returns an
+explicit error instead of silently using the default theme. If a `favicon.ico`
+file exists alongside the configured stylesheet at startup, MyFeed serves it
+instead of the default icon.
+
+Theme assets placed alongside the stylesheet can be referenced as
+`/assets/theme/filename.webp` or `/assets/theme/filename.js` (PNG, JPEG, WebP,
+GIF and JavaScript are supported). These files are public and are served without
+caching; filenames use letters, digits, hyphens or underscores before the
+extension. Symbolic links are not served. Only use JavaScript from trusted sources.
+
 ### Optional performance profiling
 
 Default builds (and CI) do **not** enable hotpath. For a local function-timing report:
@@ -63,7 +77,10 @@ See [`docs-dev/PERF.md`](../../docs-dev/PERF.md) and [hotpath.rs](https://hotpat
 | `MYFEED_BIND`        | `127.0.0.1:8080`   | Listen address                       |
 | `MYFEED_CSRF_SECRET` | (dev secret)       | HMAC CSRF key                        |
 | `MYFEED_ADMIN_TOKEN` | `myfeed-dev-admin` | Admin sign-in token                  |
+| `MYFEED_ADMIN_PATH`  | `admin`            | Admin URL segment; hides public admin links when changed |
 | `MYFEED_DB`          | `.myfeed.sqlite`   | SQLite file (posts survive restarts) |
+| `MYFEED_THEME_CSS`   | (unset)            | Optional CSS file appended to MyFeed |
+| `MYFEED_FOOTER_FILE` | (unset)            | Optional trusted HTML file for the feed footer |
 
 ## What you get
 
@@ -80,6 +97,9 @@ See [`docs-dev/PERF.md`](../../docs-dev/PERF.md) and [hotpath.rs](https://hotpat
 ## Admin
 
 Open `/admin`, enter the token (default `myfeed-dev-admin`). Approve comments, manage categories under `/admin/categories` (list / new / edit / delete with CSRF), edit or delete posts. Bearer still works for scripts.
+When `MYFEED_ADMIN_PATH` is set to a different segment, use that segment instead
+of `admin` for the whole admin area. The URL is not authentication; set a strong
+admin token.
 
 ## Stack
 

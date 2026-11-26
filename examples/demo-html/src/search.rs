@@ -141,6 +141,12 @@ pub fn handle_search(state: &AppState, request: &Request) -> Response {
         .collect();
     html_response(
         200,
-        search_page(&ui, state.matcher.collection(), &q, &hit_views),
+        search_page(
+            &ui,
+            state.matcher.collection(),
+            &q,
+            &hit_views,
+            state.show_admin_link,
+        ),
     )
 }
