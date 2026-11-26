@@ -79,6 +79,17 @@ fn locale_switcher(ui: &Ui<'_>, routes: &RouteCollection) -> String {
     })
 }
 
+fn public_admin_link(ui: &Ui<'_>, href: &str, show: bool) -> String {
+    if !show {
+        return String::new();
+    }
+    format!(
+        r#"<a class="admin-link btn btn-outline-primary btn-sm" href="{}">{}</a>"#,
+        escape_attr(href),
+        escape_html(&ui.t("nav_admin")),
+    )
+}
+
 /// Inputs for the public feed page.
 pub struct FeedView<'a> {
     /// Translated chrome.
@@ -96,6 +107,8 @@ pub struct FeedView<'a> {
     pub composer_open: bool,
     /// Named routes for `path()` helpers.
     pub routes: &'a RouteCollection,
+    pub footer_html: Option<&'a str>,
+    pub show_admin_link: bool,
 }
 
 /// Public feed page.
@@ -113,22 +126,20 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
             msg = escape_html(msg)
         )
     });
-    let feed_href = path(view.routes, "feed", &[]).unwrap_or_else(|_| "/".into());
     let search_href = path(view.routes, "search", &[]).unwrap_or_else(|_| "/search".into());
     let admin_href = path(view.routes, "admin", &[]).unwrap_or_else(|_| "/admin".into());
     let body = format!(
         r##"
 <div class="myfeed-shell">
-  <header class="d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
+  <header class="myfeed-public-header d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
     <div class="me-auto">
       <h1 class="myfeed-brand">MyFeed</h1>
       <p class="myfeed-tag">{tagline}</p>
     </div>
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
       {langs}
-      <a class="link-secondary" href="{feed_href}">{nav_feed}</a>
       <a class="link-secondary" href="{search_href}">{nav_search}</a>
-      <a class="admin-link btn btn-outline-primary btn-sm" href="{admin_href}">{nav_admin}</a>
+      {admin_link}
     </nav>
   </header>
   <main>
@@ -144,11 +155,6 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         </div>
       </div>
     </section>
-    <form action="/" method="get" class="d-flex gap-2 mb-3">
-      <label for="feed-jump" class="visually-hidden">{jump}</label>
-      <input id="feed-jump" name="around" type="number" min="1" class="form-control" placeholder="{jump}" />
-      <button class="btn btn-outline-secondary" type="submit">{jump}</button>
-    </form>
     <div id="feed-controller" data-loading="{loading}" data-error="{load_error}"
       data-blocked="{blocked}" data-missing="{missing}">
       <a href="/" id="feed-new-posts" class="btn btn-primary mb-3" hidden>{new_posts}</a>
@@ -158,11 +164,7 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
   </main>
   <footer class="border-top pt-3 mt-4">
     <p class="mb-0 text-center text-secondary small">
-      <a href="#about-myfeed" class="text-secondary" data-bs-toggle="modal" data-bs-target="#about-myfeed">{footer_about}</a>
-      <span class="mx-1">·</span>
-      {footer_stack}
-      <span class="mx-1">·</span>
-      {footer_scroll}
+      {footer}
     </p>
   </footer>
 </div>
@@ -171,33 +173,44 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
 "##,
         tagline = escape_html(&ui.t("tagline")),
         langs = locale_switcher(ui, view.routes),
-        feed_href = escape_attr(&feed_href),
         search_href = escape_attr(&search_href),
-        admin_href = escape_attr(&admin_href),
-        nav_feed = escape_html(&ui.t("nav_feed")),
+        admin_link = public_admin_link(ui, &admin_href, view.show_admin_link),
         nav_search = escape_html(&ui.t("nav_search")),
-        nav_admin = escape_html(&ui.t("nav_admin")),
         composer_title = escape_html(&ui.t("composer_title")),
         composer_help = escape_html(&ui.t("composer_help")),
         composer_trigger = escape_html(&ui.t("composer_trigger")),
         composer_placeholder = escape_attr(&ui.t("composer_placeholder")),
         post_form_html = view.post_form_html,
-        footer_about = escape_html(&ui.t("footer_about")),
-        footer_stack = escape_html(&ui.t("footer_stack")),
-        footer_scroll = escape_html(&ui.t("footer_scroll")),
+        footer = if let Some(footer_html) = view.footer_html {
+            footer_html.to_owned()
+        } else {
+            format!(
+                r##"<a href="#about-myfeed" class="text-secondary" data-bs-toggle="modal" data-bs-target="#about-myfeed">{}</a>
+      <span class="mx-1">·</span>
+      {}
+      <span class="mx-1">·</span>
+      {}"##,
+                escape_html(&ui.t("footer_about")),
+                escape_html(&ui.t("footer_stack")),
+                escape_html(&ui.t("footer_scroll")),
+            )
+        },
         delete_modal = if view.admin {
             delete_post_modal(ui)
         } else {
             String::new()
         },
         feed_html = view.feed_html,
-        jump = escape_attr(&ui.t("feed_jump")),
         loading = escape_attr(&ui.t("feed_loading")),
         load_error = escape_attr(&ui.t("feed_error")),
         blocked = escape_attr(&ui.t("feed_blocked")),
         missing = escape_attr(&ui.t("feed_missing")),
         new_posts = escape_html(&ui.t("feed_new_posts")),
-        about = about_modal(ui),
+        about = if view.footer_html.is_some() {
+            String::new()
+        } else {
+            about_modal(ui)
+        },
     );
     document("MyFeed", &body, view.composer_open, ui.locale().language())
 }
@@ -219,6 +232,7 @@ pub fn search_page(
     routes: &RouteCollection,
     query: &str,
     hits: &[SearchHitView<'_>],
+    show_admin_link: bool,
 ) -> String {
     let feed_href = path(routes, "feed", &[]).unwrap_or_else(|_| "/".into());
     let search_href = path(routes, "search", &[]).unwrap_or_else(|_| "/search".into());
@@ -259,7 +273,7 @@ pub fn search_page(
     let body = format!(
         r#"
 <div class="myfeed-shell">
-  <header class="d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
+  <header class="myfeed-public-header d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
     <div class="me-auto">
       <h1 class="myfeed-brand">MyFeed</h1>
       <p class="myfeed-tag">{tagline}</p>
@@ -267,8 +281,7 @@ pub fn search_page(
     <nav class="myfeed-nav d-flex align-items-center gap-3 pt-2">
       {langs}
       <a class="link-secondary" href="{feed_href}">{nav_feed}</a>
-      <a class="link-secondary" href="{search_href}">{nav_search}</a>
-      <a class="admin-link btn btn-outline-primary btn-sm" href="{admin_href}">{nav_admin}</a>
+      {admin_link}
     </nav>
   </header>
   <main>
@@ -296,11 +309,8 @@ pub fn search_page(
         tagline = escape_html(&ui.t("tagline")),
         langs = locale_switcher(ui, routes),
         feed_href = escape_attr(&feed_href),
-        search_href = escape_attr(&search_href),
-        admin_href = escape_attr(&admin_href),
+        admin_link = public_admin_link(ui, &admin_href, show_admin_link),
         nav_feed = escape_html(&ui.t("nav_feed")),
-        nav_search = escape_html(&ui.t("nav_search")),
-        nav_admin = escape_html(&ui.t("nav_admin")),
         search_title = escape_html(&ui.t("search_title")),
         search_help = escape_html(&ui.t("search_help")),
         search_action = escape_attr(&search_href),
@@ -457,7 +467,6 @@ pub fn post_card(
     <div class="post-body mb-2">{body}</div>
     {image}
     {embed}
-    {release_media}
     <div class="border-top pt-3 mt-3">
       <h3 class="h6">{comments_title}</h3>
       <div data-comment-status role="status" aria-live="polite"></div>
@@ -472,14 +481,6 @@ pub fn post_card(
         likes = escape_html(&ui.tn("likes", i64::try_from(post.likes).unwrap_or(0))),
         comments_title = escape_html(&ui.t("comments")),
         body = post.body,
-        release_media = if embed.contains("<iframe") {
-            format!(
-                r#"<button type="button" data-release-media class="btn btn-sm btn-outline-secondary mb-2">{}</button>"#,
-                escape_html(&ui.t("feed_release_media"))
-            )
-        } else {
-            String::new()
-        },
     )
 }
 

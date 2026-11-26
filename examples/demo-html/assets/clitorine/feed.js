@@ -1,6 +1,5 @@
 import { byId } from "./dom.js";
 import {
-  bindMedia,
   evict,
   groupHeight,
   protectedGroup,
@@ -34,6 +33,7 @@ function createFeedWindow() {
   const pageSize = 20;
   const maxCards = 60;
   let failedDirection = null;
+  let blockedGroup = null;
   let direction = "older";
   let raf = null;
 
@@ -160,11 +160,13 @@ function createFeedWindow() {
     if (trim && protectedGroup(trim)) {
       status.textContent = controller.dataset.blocked;
       failedDirection = which;
+      blockedGroup = trim;
       retry.hidden = false;
       feed.suspended = true;
       return;
     }
     feed.suspended = false;
+    blockedGroup = null;
     retry.hidden = true;
     feed.request = new AbortController();
     const activeRequest = feed.request;
@@ -187,6 +189,7 @@ function createFeedWindow() {
         status.textContent = controller.dataset.blocked;
         feed.suspended = true;
         failedDirection = which;
+        blockedGroup = trim;
         retry.hidden = false;
         return;
       }
@@ -306,10 +309,6 @@ function createFeedWindow() {
             feed.anchor = feed.visibleAnchor();
           }
         });
-  bindMedia(wall, function () {
-    feed.suspended = false;
-    feed.considerLoading();
-  });
   frame.addEventListener("click", function (event) {
     const link = event.target.closest("[data-feed-load]");
     if (link) {
@@ -336,6 +335,11 @@ function createFeedWindow() {
           feed.lastScroll = window.scrollY;
         }
         feed.anchor = feed.visibleAnchor();
+        if (blockedGroup && !protectedGroup(blockedGroup)) {
+          blockedGroup = null;
+          feed.suspended = false;
+          retry.hidden = true;
+        }
         feed.considerLoading();
       });
     },

@@ -52,7 +52,10 @@ pub fn handle_admin_login(state: &AppState, request: &Request) -> Result<Respons
             }
             let cookie =
                 format!("{ADMIN_COOKIE}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400");
-            Ok(redirect_with_cookie("/admin", &cookie))
+            Ok(redirect_with_cookie(
+                &path(state.matcher.collection(), "admin", &[])?,
+                &cookie,
+            ))
         }
         _ => {
             let login = build_login_form(&state.csrf, state.matcher.collection())?;
@@ -157,7 +160,7 @@ pub fn handle_admin_moderation(
     };
     let mut form = Form::builder(form_name).build();
     if form.handle_request(request, &state.csrf).is_err() {
-        return Ok(redirect("/admin"));
+        return Ok(redirect(&path(state.matcher.collection(), "admin", &[])?));
     }
     if approve {
         try_approve_comment_workflow(&format!("comment-{id}"))
@@ -170,7 +173,7 @@ pub fn handle_admin_moderation(
     } else {
         let _ = state.store.remove_comment(id);
     }
-    Ok(redirect("/admin"))
+    Ok(redirect(&path(state.matcher.collection(), "admin", &[])?))
 }
 
 /// Dogfood: pending→approved via [`ExpressionGuard`] (blocks subject `guest`).

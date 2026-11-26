@@ -10,7 +10,6 @@
   --bs-primary-rgb: 107, 63, 160;
   --bs-link-color: #5a3388;
   --bs-link-hover-color: #45266a;
-  margin-top: 0.35rem;
 }
 
 .composer-textarea textarea {
@@ -59,6 +58,7 @@ body.myfeed {
   font-weight: 800;
   letter-spacing: -0.045em;
   line-height: 1.05;
+  padding-bottom: 0.25em;
   background: linear-gradient(115deg, #3b1d63 0%, #6b3fa0 45%, #8b5cf6 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -70,6 +70,45 @@ body.myfeed {
   font-size: 1.02rem;
   margin: 0.4rem 0 0;
   max-width: 36rem;
+}
+
+.myfeed-public-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 1rem !important;
+}
+
+.myfeed-public-header > .me-auto {
+  display: contents;
+}
+
+.myfeed-public-header .myfeed-brand {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.myfeed-public-header .myfeed-tag {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.myfeed-public-header .myfeed-nav {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  padding-top: 0 !important;
+}
+
+@media (max-width: 430px) {
+  .myfeed-public-header .myfeed-brand {
+    font-size: clamp(1.35rem, 7vw, 2rem);
+  }
+
+  .myfeed-public-header:has(.admin-link) .myfeed-nav {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-top: 1rem;
+  }
 }
 
 .myfeed-nav a.admin-link {

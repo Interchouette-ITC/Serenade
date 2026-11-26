@@ -39,7 +39,7 @@ use crate::state::{
 };
 use crate::store::{FeedStore, NewPost};
 
-fn routes() -> Result<RouteCollection, HttpError> {
+fn routes(admin_path: &str) -> Result<RouteCollection, HttpError> {
     let mut collection = RouteCollection::new();
     collection.add(Route::with_method("feed", "/", Method::Get))?;
     collection.add(Route::with_method(
@@ -70,46 +70,51 @@ fn routes() -> Result<RouteCollection, HttpError> {
         "/posts/{id}/like",
         Method::Post,
     ))?;
-    collection.add(Route::with_method("admin", "/admin", Method::Get))?;
+    collection.add(Route::with_method("admin", admin_path, Method::Get))?;
     collection.add(Route::with_method(
         "admin_login",
-        "/admin/login",
+        format!("{admin_path}/login"),
         Method::Post,
     ))?;
     collection.add(Route::with_method(
         "admin_logout",
-        "/admin/logout",
+        format!("{admin_path}/logout"),
         Method::Post,
     ))?;
     collection.add(Route::with_method(
         "admin_approve",
-        "/admin/comments/{id}/approve",
+        format!("{admin_path}/comments/{{id}}/approve"),
         Method::Post,
     ))?;
     collection.add(Route::with_method(
         "admin_reject",
-        "/admin/comments/{id}/reject",
+        format!("{admin_path}/comments/{{id}}/reject"),
         Method::Post,
     ))?;
-    admin_crud::register_category_admin_routes(&mut collection)?;
+    admin_crud::register_category_admin_routes(&mut collection, admin_path)?;
     collection.add(Route::with_method(
         "admin_post_edit_get",
-        "/admin/posts/{id}/edit",
+        format!("{admin_path}/posts/{{id}}/edit"),
         Method::Get,
     ))?;
     collection.add(Route::with_method(
         "admin_post_edit_post",
-        "/admin/posts/{id}/edit",
+        format!("{admin_path}/posts/{{id}}/edit"),
         Method::Post,
     ))?;
     collection.add(Route::with_method(
         "admin_post_delete",
-        "/admin/posts/{id}/delete",
+        format!("{admin_path}/posts/{{id}}/delete"),
         Method::Post,
     ))?;
     collection.add(Route::with_method(
         "asset_css",
         "/assets/myfeed.css",
+        Method::Get,
+    ))?;
+    collection.add(Route::with_method(
+        "asset_theme",
+        "/assets/theme/{name}",
         Method::Get,
     ))?;
     collection.add(Route::with_method(
@@ -133,6 +138,19 @@ fn routes() -> Result<RouteCollection, HttpError> {
         Method::Get,
     ))?;
     Ok(collection)
+}
+
+fn admin_path(value: &str) -> Result<String, String> {
+    let segment = value.strip_prefix('/').unwrap_or(value);
+    if segment.is_empty()
+        || !segment
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+        || ["feed", "posts", "search", "assets", "locale", "_profiler"].contains(&segment)
+    {
+        return Err("MYFEED_ADMIN_PATH must be a non-reserved single URL segment containing only letters, digits, '-' or '_'".into());
+    }
+    Ok(format!("/{segment}"))
 }
 
 fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError> {
@@ -164,10 +182,8 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         "admin_post_edit_get" => handle_post_edit_get(state, request),
         "admin_post_edit_post" => handle_post_edit_post(state, request),
         "admin_post_delete" => handle_post_delete(state, request),
-        "asset_css" => Ok(asset_response(
-            "text/css; charset=utf-8",
-            include_bytes!("../assets/myfeed.css"),
-        )),
+        "asset_css" => Ok(theme_css_response(state)),
+        "asset_theme" => theme_asset_response(state, request),
         "asset_js" => Ok(asset_response(
             "text/javascript; charset=utf-8",
             include_bytes!("../assets/clitorine.min.js"),
@@ -176,10 +192,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
             "image/png",
             include_bytes!("../assets/favicon.png"),
         )),
-        "asset_favicon_ico" => Ok(asset_response(
-            "image/x-icon",
-            include_bytes!("../assets/favicon.ico"),
-        )),
+        "asset_favicon_ico" => Ok(favicon_response(state)),
         "locale_set" => Ok(handle_locale_set(state, request)),
         _ => {
             let ui = ui_for(state, request);
@@ -198,6 +211,99 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
             .map_or_else(|| Err(HttpError::not_found("no handler")), Ok)
         }
     }
+}
+
+fn favicon_response(state: &AppState) -> Response {
+    let Some(path) = &state.favicon_file else {
+        return asset_response("image/x-icon", include_bytes!("../assets/favicon.ico"));
+    };
+    match std::fs::read(path) {
+        Ok(bytes) => Response::new(200)
+            .with_header("content-type", "image/x-icon")
+            .with_header("cache-control", "no-store")
+            .with_body(bytes),
+        Err(error) => {
+            tracing::error!(path = %path.display(), %error, "MyFeed favicon could not be read");
+            Response::text(500, "MyFeed favicon could not be read.")
+                .with_header("cache-control", "no-store")
+        }
+    }
+}
+
+fn theme_asset_response(state: &AppState, request: &Request) -> Result<Response, HttpError> {
+    let not_found = || HttpError::not_found("theme asset not found");
+    let name = request
+        .attributes()
+        .get::<String>("name")
+        .ok_or_else(not_found)?;
+    let (stem, extension) = name.rsplit_once('.').ok_or_else(not_found)?;
+    if stem.is_empty()
+        || !stem
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+    {
+        return Err(not_found());
+    }
+    let content_type = match extension {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "js" => "text/javascript; charset=utf-8",
+        _ => return Err(not_found()),
+    };
+    let path = state
+        .theme_css
+        .as_ref()
+        .ok_or_else(not_found)?
+        .with_file_name(name);
+    match std::fs::symlink_metadata(&path) {
+        Ok(metadata) if metadata.file_type().is_file() => {}
+        Ok(_) => return Err(not_found()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Err(not_found()),
+        Err(error) => {
+            tracing::error!(path = %path.display(), %error, "theme asset could not be inspected");
+            return Ok(Response::text(500, "Theme asset could not be read.")
+                .with_header("cache-control", "no-store"));
+        }
+    }
+    match std::fs::read(&path) {
+        Ok(bytes) => Ok(Response::new(200)
+            .with_header("content-type", content_type)
+            .with_header("cache-control", "no-store")
+            .with_body(bytes)),
+        Err(error) => {
+            tracing::error!(path = %path.display(), %error, "theme asset could not be read");
+            Ok(Response::text(500, "Theme asset could not be read.")
+                .with_header("cache-control", "no-store"))
+        }
+    }
+}
+
+fn theme_css_response(state: &AppState) -> Response {
+    let mut css = include_bytes!("../assets/myfeed.css").to_vec();
+    if let Some(path) = &state.theme_css {
+        match std::fs::read(path) {
+            Ok(theme) => {
+                css.push(b'\n');
+                css.extend_from_slice(&theme);
+            }
+            Err(error) => {
+                tracing::error!(
+                    path = %path.display(),
+                    error = %error,
+                    "configured MyFeed theme CSS could not be read"
+                );
+                return Response::text(500, "Configured MyFeed theme CSS could not be read.")
+                    .with_header("cache-control", "no-store");
+            }
+        }
+    }
+
+    Response::new(200)
+        .with_header("content-type", "text/css; charset=utf-8")
+        .with_header("cache-control", "no-store")
+        .with_body(css)
 }
 
 fn seed_if_empty(store: &FeedStore) {
@@ -227,6 +333,46 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         std::env::var("MYFEED_CSRF_SECRET").unwrap_or_else(|_| DEFAULT_CSRF.to_owned());
     let admin_token =
         std::env::var("MYFEED_ADMIN_TOKEN").unwrap_or_else(|_| DEFAULT_ADMIN.to_owned());
+    let admin_path = match std::env::var("MYFEED_ADMIN_PATH") {
+        Ok(value) => admin_path(&value)?,
+        Err(std::env::VarError::NotPresent) => "/admin".to_owned(),
+        Err(error) => return Err(format!("invalid MYFEED_ADMIN_PATH: {error}").into()),
+    };
+    let theme_css = std::env::var_os("MYFEED_THEME_CSS").map(PathBuf::from);
+    let footer_html = std::env::var_os("MYFEED_FOOTER_FILE")
+        .map(PathBuf::from)
+        .map(|path| {
+            std::fs::read_to_string(&path).map_err(|error| {
+                format!(
+                    "MYFEED_FOOTER_FILE={} could not be read: {error}",
+                    path.display()
+                )
+            })
+        })
+        .transpose()?;
+    if let Some(path) = &theme_css {
+        std::fs::read(path).map_err(|error| {
+            format!(
+                "MYFEED_THEME_CSS={} could not be read: {error}",
+                path.display()
+            )
+        })?;
+    }
+    let favicon_file = if let Some(theme) = &theme_css {
+        let path = theme.with_file_name("favicon.ico");
+        if path
+            .try_exists()
+            .map_err(|error| format!("check favicon {}: {error}", path.display()))?
+        {
+            std::fs::read(&path)
+                .map_err(|error| format!("read favicon {}: {error}", path.display()))?;
+            Some(path)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     let db_path = std::env::var("MYFEED_DB").unwrap_or_else(|_| ".myfeed.sqlite".to_owned());
     let store = FeedStore::open(db_path);
@@ -271,12 +417,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         store,
         index,
         csrf: HmacCsrfTokenManager::new(csrf_secret.as_bytes()),
-        matcher: UrlMatcher::new(routes()?),
+        matcher: UrlMatcher::new(routes(&admin_path)?),
         admin_token: admin_token.clone(),
         translator,
         negotiator,
         profiler: Arc::clone(&profiler_store),
         notifier: NullTransport::new(),
+        theme_css,
+        footer_html,
+        show_admin_link: admin_path == "/admin",
+        favicon_file,
     });
 
     let state_for_handler = Arc::clone(&state);
@@ -292,7 +442,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("demo-html listening on http://{bind}/");
-    println!("Admin: open /admin and sign in with token `{admin_token}`");
+    println!("Admin: open {admin_path} and sign in with token `{admin_token}`");
     if profiler_enabled {
         println!("Profiler: http://{bind}/_profiler (disable with MYFEED_PROFILER=0)");
     }
@@ -335,7 +485,7 @@ mod tests {
             store: FeedStore::open_memory(),
             index: MemorySearchAdapter::new(),
             csrf: HmacCsrfTokenManager::new(DEFAULT_CSRF.as_bytes()),
-            matcher: UrlMatcher::new(routes().expect("routes")),
+            matcher: UrlMatcher::new(routes("/admin").expect("routes")),
             admin_token: DEFAULT_ADMIN.into(),
             translator,
             negotiator: LocaleNegotiator::new(locale.clone())
@@ -343,6 +493,10 @@ mod tests {
                 .with_cookie_name(LOCALE_COOKIE),
             profiler: Arc::new(ProfileStore::new(50)),
             notifier: NullTransport::new(),
+            theme_css: None,
+            footer_html: None,
+            show_admin_link: true,
+            favicon_file: None,
         }
     }
 
@@ -352,6 +506,276 @@ mod tests {
             request = request.with_header("x-myfeed-ajax", "1");
         }
         handle(state, &mut request)
+    }
+
+    #[test]
+    fn public_navigation_omits_the_current_page() {
+        let state = state();
+        for locale in ["en", "fr"] {
+            for (page, present, absent) in [
+                ("/", "href=\"/search\"", "href=\"/\""),
+                ("/search", "href=\"/\"", "href=\"/search\""),
+            ] {
+                let mut request = Request::new(Method::Get, page)
+                    .with_header("cookie", format!("_locale={locale}"));
+                let response = handle(&state, &mut request).expect("page");
+                let html = response.body_str().expect("page HTML");
+                let nav = html
+                    .split("<nav ")
+                    .nth(1)
+                    .expect("navigation")
+                    .split("</nav>")
+                    .next()
+                    .expect("navigation end");
+                assert!(nav.contains(present), "{page} {locale}");
+                assert!(!nav.contains(absent), "{page} {locale}");
+                assert!(nav.contains("href=\"/admin\""), "{page} {locale}");
+            }
+        }
+    }
+
+    #[test]
+    fn custom_admin_path_moves_routes_and_hides_public_links() {
+        let mut state = state();
+        let prefix = "/private-test";
+        state.matcher = UrlMatcher::new(routes(prefix).expect("custom routes"));
+        state.show_admin_link = false;
+        seed_if_empty(&state.store);
+
+        for page in ["/", "/search"] {
+            let response = get(&state, page, "", false).expect("public page");
+            let html = response.body_str().expect("public HTML");
+            assert!(!html.contains("class=\"admin-link"));
+            assert!(!html.contains(prefix));
+        }
+        assert_eq!(
+            get(&state, "/admin", "", false)
+                .expect_err("old admin path")
+                .status_code(),
+            404
+        );
+        let login = get(&state, prefix, "", false).expect("custom login");
+        let html = login.body_str().expect("login HTML");
+        assert!(html.contains("action=\"/private-test/login\""));
+        let token = html
+            .split("name=\"_token\"")
+            .nth(1)
+            .expect("CSRF field")
+            .split("value=\"")
+            .nth(1)
+            .expect("CSRF value")
+            .split('"')
+            .next()
+            .expect("CSRF token");
+        let mut request = Request::new(Method::Post, "/private-test/login")
+            .with_header("content-type", "application/x-www-form-urlencoded")
+            .with_body(format!("_token={token}&token={DEFAULT_ADMIN}"));
+        let response = handle(&state, &mut request).expect("login");
+        assert_eq!(response.status(), 303);
+        assert_eq!(response.headers().get("location"), Some(prefix));
+        let cookie = response.headers().get("set-cookie").expect("login cookie");
+
+        let mut request = Request::new(Method::Get, prefix).with_header("cookie", cookie);
+        let dashboard = handle(&state, &mut request).expect("dashboard");
+        let html = dashboard.body_str().expect("dashboard HTML");
+        assert!(html.contains("/private-test/categories"));
+        assert!(html.contains("/private-test/logout"));
+
+        for page in [
+            "/private-test/categories",
+            "/private-test/categories/new",
+            "/private-test/posts/2/edit",
+        ] {
+            let mut request = Request::new(Method::Get, page).with_header("cookie", cookie);
+            let response = handle(&state, &mut request).expect("admin page");
+            assert_eq!(response.status(), 200);
+            assert!(
+                response
+                    .body_str()
+                    .expect("HTML")
+                    .contains("/private-test/")
+            );
+            assert!(!response.body_str().expect("HTML").contains("/admin/"));
+        }
+        let mut edit = Request::new(Method::Post, "/private-test/posts/2/edit")
+            .with_header("cookie", cookie)
+            .with_header("content-type", "application/x-www-form-urlencoded")
+            .with_body("_token=invalid");
+        assert_eq!(
+            handle(&state, &mut edit)
+                .expect("invalid edit")
+                .headers()
+                .get("location"),
+            Some("/private-test/posts/2/edit")
+        );
+    }
+
+    #[test]
+    fn admin_path_rejects_reserved_and_invalid_segments() {
+        assert_eq!(admin_path("custom-123").expect("valid"), "/custom-123");
+        assert_eq!(admin_path("/custom_123").expect("valid"), "/custom_123");
+        for value in [
+            "",
+            "/",
+            "posts",
+            "search",
+            "_profiler",
+            "x/y",
+            "//x",
+            "{id}",
+            "a?b",
+            "..",
+        ] {
+            assert!(admin_path(value).is_err(), "{value}");
+        }
+    }
+
+    #[test]
+    fn configured_favicon_serves_the_site_icon() {
+        let mut state = state();
+        let default = get(&state, "/favicon.ico", "", false).expect("default icon");
+        assert_eq!(default.status(), 200);
+        assert_eq!(default.body(), include_bytes!("../assets/favicon.ico"));
+
+        let path = std::env::temp_dir().join(format!(
+            "serenade-myfeed-favicon-test-{}.ico",
+            std::process::id()
+        ));
+        std::fs::write(&path, b"example icon").expect("write icon");
+        state.favicon_file = Some(path.clone());
+        let response = get(&state, "/favicon.ico", "", false).expect("custom icon");
+        assert_eq!(response.status(), 200);
+        assert_eq!(response.body(), b"example icon");
+        assert_eq!(response.headers().get("content-type"), Some("image/x-icon"));
+        assert_eq!(response.headers().get("cache-control"), Some("no-store"));
+        std::fs::remove_file(path).expect("remove icon");
+        assert_eq!(
+            get(&state, "/favicon.ico", "", false)
+                .expect("missing icon response")
+                .status(),
+            500
+        );
+    }
+
+    #[test]
+    fn custom_footer_preserves_default_and_removes_about() {
+        let mut state = state();
+        let default = get(&state, "/", "", false).expect("default feed");
+        let html = default.body_str().expect("default HTML");
+        assert!(html.contains("href=\"#about-myfeed\""));
+        assert!(html.contains("id=\"about-myfeed\""));
+
+        state.footer_html =
+            Some(r#"Built with <a href="https://serenade.rs/">Serenade</a>"#.into());
+        let customized = get(&state, "/", "", false).expect("customized feed");
+        let html = customized.body_str().expect("customized HTML");
+        assert!(html.contains(r#"Built with <a href="https://serenade.rs/">Serenade</a>"#));
+        assert!(!html.contains("about-myfeed"));
+        assert!(!html.contains("Bootstrap + Quill"));
+    }
+
+    #[test]
+    fn configured_theme_css_is_live_and_not_cached() {
+        let directory =
+            std::env::temp_dir().join(format!("serenade-myfeed-theme-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).expect("create theme test directory");
+        let path = directory.join("theme.css");
+        std::fs::write(&path, "body.myfeed { color: teal; }").expect("write theme");
+
+        let mut state = state();
+        state.theme_css = Some(path.clone());
+        let response = get(&state, "/assets/myfeed.css", "", false).expect("theme response");
+        let body = response.body_str().expect("CSS body");
+        assert!(body.starts_with("/* MyFeed: Bootstrap purple theme */"));
+        assert!(body.ends_with("body.myfeed { color: teal; }"));
+        assert_eq!(
+            response.headers().get("content-type"),
+            Some("text/css; charset=utf-8")
+        );
+        assert_eq!(response.headers().get("cache-control"), Some("no-store"));
+
+        std::fs::write(&path, "body.myfeed { color: olive; }").expect("update theme");
+        let refreshed = get(&state, "/assets/myfeed.css", "", false).expect("refreshed theme");
+        assert!(
+            refreshed
+                .body_str()
+                .expect("refreshed CSS body")
+                .ends_with("body.myfeed { color: olive; }")
+        );
+
+        std::fs::remove_file(path).expect("remove theme file");
+        std::fs::remove_dir(directory).expect("remove theme test directory");
+    }
+
+    #[test]
+    fn theme_assets_are_served_only_from_the_configured_theme() {
+        let directory = std::env::temp_dir().join(format!(
+            "serenade-myfeed-theme-images-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).expect("create theme directory");
+        let image = directory.join("header.webp");
+        std::fs::write(&image, b"example image").expect("write image");
+        let mut state = state();
+        assert_eq!(
+            get(&state, "/assets/theme/header.webp", "", false)
+                .expect_err("no theme")
+                .status_code(),
+            404
+        );
+        state.theme_css = Some(directory.join("theme.css"));
+        let response = get(&state, "/assets/theme/header.webp", "", false).expect("image");
+        assert_eq!(response.body(), b"example image");
+        assert_eq!(response.headers().get("content-type"), Some("image/webp"));
+        assert_eq!(response.headers().get("cache-control"), Some("no-store"));
+
+        let script = directory.join("decor.js");
+        std::fs::write(&script, b"example script").expect("write script");
+        let response = get(&state, "/assets/theme/decor.js", "", false).expect("script");
+        assert_eq!(response.body(), b"example script");
+        assert_eq!(
+            response.headers().get("content-type"),
+            Some("text/javascript; charset=utf-8")
+        );
+
+        for path in [
+            "/assets/theme/missing.png",
+            "/assets/theme/theme.css",
+            "/assets/theme/..%2Fheader.webp",
+            "/assets/theme/.header.webp",
+        ] {
+            assert_eq!(
+                get(&state, path, "", false)
+                    .expect_err("invalid or missing image")
+                    .status_code(),
+                404,
+                "{path}"
+            );
+        }
+        std::fs::remove_file(script).expect("remove script");
+        std::fs::remove_file(image).expect("remove image");
+        std::fs::remove_dir(directory).expect("remove theme directory");
+    }
+
+    #[test]
+    fn missing_configured_theme_returns_an_explicit_error() {
+        let mut state = state();
+        state.theme_css = Some(
+            std::env::temp_dir()
+                .join(format!(
+                    "serenade-myfeed-theme-missing-{}",
+                    std::process::id()
+                ))
+                .join("missing.css"),
+        );
+
+        let response = get(&state, "/assets/myfeed.css", "", false).expect("error response");
+        assert_eq!(response.status(), 500);
+        assert_eq!(
+            response.body_str(),
+            Some("Configured MyFeed theme CSS could not be read.")
+        );
+        assert_eq!(response.headers().get("cache-control"), Some("no-store"));
     }
 
     #[test]
@@ -528,7 +952,12 @@ mod tests {
             "before=0",
             "before=-1",
             "before=abc",
+            "before=",
             "before=1&before=2",
+            "around=&around=1",
+            "around=1&around=",
+            "around=0",
+            "around=abc",
             "before=2&after=3",
             "around=3&ceiling=2",
             "before",
@@ -588,6 +1017,26 @@ mod tests {
             Some("1")
         );
     }
+
+    #[test]
+    fn empty_jump_opens_feed() {
+        let state = state();
+        seed_if_empty(&state.store);
+        let response = get(&state, "/", "around=", false).expect("empty jump");
+        assert_eq!(response.status(), 200);
+        let html = response.body_str().expect("feed HTML");
+        assert!(html.contains("Hello World"));
+        assert!(html.contains("Meet Serenade"));
+        assert!(html.contains("<iframe"));
+        assert!(!html.contains("data-release-media"));
+        assert!(!html.contains("id=\"feed-jump\""));
+
+        let fragment = get(&state, "/", "around=", true).expect("empty jump fragment");
+        assert_eq!(fragment.status(), 200);
+        assert_eq!(fragment.headers().get("x-myfeed-missing"), Some("0"));
+        assert!(fragment.body_str().expect("fragment").contains("post-2"));
+    }
+
     #[test]
     fn seed_preserves_complete_meet_serenade_post() {
         let store = FeedStore::open_memory();

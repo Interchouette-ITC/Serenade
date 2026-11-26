@@ -84,11 +84,11 @@ Accessible Load more/Load newer links also work without JavaScript.
 
 The browser keeps at most **60 post cards** mounted. Far-away cards and their
 media are removed; bounded window metadata and spacer heights preserve the
-reading position without retaining the whole archive. Focused cards, unsent
+reading position without retaining the whole archive. Focused controls, unsent
 comments, active requests, and playing local videos block eviction rather than
-lose work or exceed the limit. A focused embedded player is pinned until its
-unload control is used. External players and browser-managed caches do not have
-an application-enforceable exact memory cap.
+lose work or exceed the limit. Off-screen embedded players may be unloaded
+automatically, stopping playback. External players and browser-managed caches
+do not have an application-enforceable exact memory cap.
 
 Approved comments display **10 at a time**, with next/previous controls. Each
 comment request replaces that bounded window instead of indefinitely appending
