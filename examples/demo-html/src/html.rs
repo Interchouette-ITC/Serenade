@@ -90,6 +90,11 @@ fn public_admin_link(ui: &Ui<'_>, href: &str, show: bool) -> String {
     )
 }
 
+fn public_tagline(ui: &Ui<'_>) -> String {
+    escape_html(&ui.t("tagline"))
+        .replace("Serenade", r#"<a href="https://serenade.rs/">Serenade</a>"#)
+}
+
 /// Inputs for the public feed page.
 pub struct FeedView<'a> {
     /// Translated chrome.
@@ -99,10 +104,8 @@ pub struct FeedView<'a> {
     /// Composer HTML.
     pub post_form_html: &'a str,
     pub admin: bool,
-    /// Optional flash message.
-    pub flash: Option<&'a str>,
-    /// Flash is an error.
-    pub flash_err: bool,
+    /// Optional flash message and whether it is an error.
+    pub flash: Option<(&'a str, bool)>,
     /// Open the composer collapse.
     pub composer_open: bool,
     /// Named routes for `path()` helpers.
@@ -115,8 +118,8 @@ pub struct FeedView<'a> {
 #[must_use]
 pub fn feed_page(view: &FeedView<'_>) -> String {
     let ui = view.ui;
-    let flash_html = view.flash.map_or(String::new(), |msg| {
-        let class = if view.flash_err {
+    let flash_html = view.flash.map_or(String::new(), |(msg, is_err)| {
+        let class = if is_err {
             "alert alert-danger"
         } else {
             "alert alert-success"
@@ -129,7 +132,7 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
     let search_href = path(view.routes, "search", &[]).unwrap_or_else(|_| "/search".into());
     let admin_href = path(view.routes, "admin", &[]).unwrap_or_else(|_| "/admin".into());
     let body = format!(
-        r##"
+        r#"
 <div class="myfeed-shell">
   <header class="myfeed-public-header d-flex flex-wrap align-items-start gap-3 mb-4 pb-3 border-bottom">
     <div class="me-auto">
@@ -170,8 +173,8 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
 </div>
 {delete_modal}
 {about}
-"##,
-        tagline = escape_html(&ui.t("tagline")),
+"#,
+        tagline = public_tagline(ui),
         langs = locale_switcher(ui, view.routes),
         search_href = escape_attr(&search_href),
         admin_link = public_admin_link(ui, &admin_href, view.show_admin_link),
@@ -181,10 +184,8 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         composer_trigger = escape_html(&ui.t("composer_trigger")),
         composer_placeholder = escape_attr(&ui.t("composer_placeholder")),
         post_form_html = view.post_form_html,
-        footer = if let Some(footer_html) = view.footer_html {
-            footer_html.to_owned()
-        } else {
-            format!(
+        footer = view.footer_html.map_or_else(
+            || format!(
                 r##"<a href="#about-myfeed" class="text-secondary" data-bs-toggle="modal" data-bs-target="#about-myfeed">{}</a>
       <span class="mx-1">·</span>
       {}
@@ -193,8 +194,9 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
                 escape_html(&ui.t("footer_about")),
                 escape_html(&ui.t("footer_stack")),
                 escape_html(&ui.t("footer_scroll")),
-            )
-        },
+            ),
+            str::to_owned,
+        ),
         delete_modal = if view.admin {
             delete_post_modal(ui)
         } else {
@@ -306,7 +308,7 @@ pub fn search_page(
   </main>
 </div>
 "#,
-        tagline = escape_html(&ui.t("tagline")),
+        tagline = public_tagline(ui),
         langs = locale_switcher(ui, routes),
         feed_href = escape_attr(&feed_href),
         admin_link = public_admin_link(ui, &admin_href, show_admin_link),

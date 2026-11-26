@@ -172,12 +172,13 @@ pub fn feed_with_flash(
         feed_html: &feed_html,
         post_form_html: &post_form,
         admin,
-        flash: flash.or(if missing_anchor {
-            Some(&missing_message)
-        } else {
-            None
-        }),
-        flash_err: is_err,
+        flash: flash
+            .or(if missing_anchor {
+                Some(&missing_message)
+            } else {
+                None
+            })
+            .map(|message| (message, is_err)),
         composer_open,
         routes: state.matcher.collection(),
         footer_html: state.footer_html.as_deref(),

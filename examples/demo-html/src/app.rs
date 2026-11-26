@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use base64::Engine;
@@ -327,6 +327,31 @@ fn seed_if_empty(store: &FeedStore) {
     });
 }
 
+fn validate_theme_files(
+    theme: Option<&Path>,
+) -> Result<Option<PathBuf>, Box<dyn std::error::Error>> {
+    let Some(theme) = theme else {
+        return Ok(None);
+    };
+    std::fs::read(theme).map_err(|error| {
+        format!(
+            "MYFEED_THEME_CSS={} could not be read: {error}",
+            theme.display()
+        )
+    })?;
+    let path = theme.with_file_name("favicon.ico");
+    if path
+        .try_exists()
+        .map_err(|error| format!("check favicon {}: {error}", path.display()))?
+    {
+        std::fs::read(&path)
+            .map_err(|error| format!("read favicon {}: {error}", path.display()))?;
+        Ok(Some(path))
+    } else {
+        Ok(None)
+    }
+}
+
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let bind = std::env::var("MYFEED_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_owned());
     let csrf_secret =
@@ -350,29 +375,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             })
         })
         .transpose()?;
-    if let Some(path) = &theme_css {
-        std::fs::read(path).map_err(|error| {
-            format!(
-                "MYFEED_THEME_CSS={} could not be read: {error}",
-                path.display()
-            )
-        })?;
-    }
-    let favicon_file = if let Some(theme) = &theme_css {
-        let path = theme.with_file_name("favicon.ico");
-        if path
-            .try_exists()
-            .map_err(|error| format!("check favicon {}: {error}", path.display()))?
-        {
-            std::fs::read(&path)
-                .map_err(|error| format!("read favicon {}: {error}", path.display()))?;
-            Some(path)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
+    let favicon_file = validate_theme_files(theme_css.as_deref())?;
 
     let db_path = std::env::var("MYFEED_DB").unwrap_or_else(|_| ".myfeed.sqlite".to_owned());
     let store = FeedStore::open(db_path);
@@ -530,6 +533,28 @@ mod tests {
                 assert!(nav.contains(present), "{page} {locale}");
                 assert!(!nav.contains(absent), "{page} {locale}");
                 assert!(nav.contains("href=\"/admin\""), "{page} {locale}");
+            }
+        }
+    }
+
+    #[test]
+    fn public_tagline_links_to_serenade_in_both_languages() {
+        let state = state();
+        for (locale, expected) in [
+            ("en", "Open public wall · self-hosted with "),
+            ("fr", "Mur public ouvert · auto-hébergé avec "),
+        ] {
+            for page in ["/", "/search"] {
+                let mut request = Request::new(Method::Get, page)
+                    .with_header("cookie", format!("_locale={locale}"));
+                let response = handle(&state, &mut request).expect("page");
+                let html = response.body_str().expect("page HTML");
+                assert!(
+                    html.contains(&format!(
+                        r#"{expected}<a href="https://serenade.rs/">Serenade</a>"#
+                    )),
+                    "{page} {locale}"
+                );
             }
         }
     }
