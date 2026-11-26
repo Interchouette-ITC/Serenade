@@ -48,7 +48,7 @@ pub fn build_edit_form(
     let name = format!("edit-{}", post.id);
     let id = post.id.to_string();
     let action = path(routes, "admin_post_edit_post", &[("id", id.as_str())])?;
-    let cancel = path(routes, "feed", &[])?;
+    let cancel = format!("/posts/{}", post.id);
     build_composer_form(
         csrf,
         categories,
@@ -154,11 +154,11 @@ fn build_composer_form(
     let emojis = emoji_picker();
     let embed_value = post.and_then(|p| p.embed_url.as_deref()).unwrap_or("");
     let existing_preview =
-        post.and_then(|p| p.image_data.as_deref())
-            .map_or(String::new(), |data| {
+        post.filter(|p| p.has_image)
+            .map_or(String::new(), |post| {
                 format!(
-                    r#"<img class="img-fluid rounded border" alt="current media" src="{src}" />"#,
-                    src = escape_attr(data)
+                    r#"<img class="img-fluid rounded border" alt="current media" src="/posts/{id}/image" />"#,
+                    id = post.id,
                 )
             });
     let initial_attr = post.map_or(String::new(), |p| {
@@ -278,11 +278,13 @@ pub fn build_comment_form(
         .iter()
         .find(|field| field.name() == "body")
         .ok_or_else(|| HttpError::failed("missing body field"))?;
-    let body_widget = form_widget(body_field).map_err(|err| HttpError::failed(err.to_string()))?;
+    let body_widget = form_widget(body_field)
+        .map_err(|err| HttpError::failed(err.to_string()))?
+        .replace("id=\"body\"", &format!("id=\"comment-body-{post_id}\""));
     Ok(format!(
         r#"<form method="POST" action="{action}" class="mt-2" data-clitorine-ajax="comment">
 {csrf_field}
-<label class="form-label" for="body">Add a comment (needs approval)</label>
+<label class="form-label" for="comment-body-{post_id}">Add a comment (needs approval)</label>
 <div class="composer-textarea">{body_widget}</div>
 <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Submit comment</button>
 </form>"#,

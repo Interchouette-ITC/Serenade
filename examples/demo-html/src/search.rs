@@ -20,10 +20,23 @@ pub fn index_delete(state: &AppState, id: u64) {
     let _ = state.index.delete(&id.to_string());
 }
 
-pub fn rebuild_search_index(store: &FeedStore, index: &MemorySearchAdapter) {
-    let _ = index.clear();
-    for post in store.posts() {
-        let _ = index.upsert(post_search_document(&post));
+pub fn rebuild_search_index(store: &FeedStore, index: &MemorySearchAdapter) -> Result<(), String> {
+    index.clear().map_err(|err| err.to_string())?;
+    let ceiling = store.latest_id().map_err(|err| err.to_string())?;
+    let mut before = None;
+    loop {
+        let batch = store
+            .feed_batch(ceiling, before, None, None)
+            .map_err(|err| err.to_string())?;
+        for post in &batch.posts {
+            index
+                .upsert(post_search_document(post))
+                .map_err(|err| err.to_string())?;
+        }
+        if !batch.has_older {
+            return Ok(());
+        }
+        before = batch.posts.last().map(|post| post.id);
     }
 }
 
@@ -103,11 +116,16 @@ pub fn handle_search(state: &AppState, request: &Request) -> Response {
             let Ok(id) = hit.id().parse::<u64>() else {
                 continue;
             };
-            let Some(post) = state.store.get_post(id) else {
-                continue;
+            let post = match state.store.get_summary(id) {
+                Ok(Some(post)) => post,
+                Ok(None) => continue,
+                Err(err) => {
+                    tracing::error!(%err, "load search post");
+                    return html_response(500, "Could not load search results.".into());
+                }
             };
             owned.push((
-                format!("/#post-{id}"),
+                format!("/posts/{id}"),
                 snippet_for(&post),
                 post.category.clone(),
             ));
