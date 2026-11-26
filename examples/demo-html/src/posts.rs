@@ -11,6 +11,62 @@ use crate::sanitize::{plain_len, sanitize_post_html};
 use crate::search::{index_delete, index_upsert};
 use crate::state::{AppState, MAX_BODY_CHARS, MAX_IMAGE_BYTES, MAX_IMAGE_DATA, is_admin, ui_for};
 use crate::store::NewPost;
+use std::hash::{Hash, Hasher};
+
+pub fn handle_post_image(state: &AppState, request: &Request) -> Result<Response, HttpError> {
+    let id = route_post_id(request)?;
+    let data = state
+        .store
+        .image_data(id)
+        .map_err(|err| {
+            tracing::error!(%err, "read post image");
+            HttpError::failed("Could not load image.")
+        })?
+        .ok_or_else(|| HttpError::not_found("image missing"))?;
+    let (mime, bytes) = decode_image(&data)?;
+    let mut hash = std::collections::hash_map::DefaultHasher::new();
+    bytes.hash(&mut hash);
+    mime.hash(&mut hash);
+    let etag = format!("\"{:x}\"", hash.finish());
+    let response = if request
+        .headers()
+        .get("if-none-match")
+        .is_some_and(|value| value == etag)
+    {
+        Response::new(304)
+    } else {
+        Response::new(200)
+            .with_header("content-type", mime)
+            .with_body(bytes)
+    };
+    Ok(response
+        .with_header("etag", etag)
+        .with_header("cache-control", "no-cache")
+        .with_header("x-content-type-options", "nosniff"))
+}
+
+fn decode_image(data: &str) -> Result<(&str, Vec<u8>), HttpError> {
+    let fail = || {
+        tracing::error!("Invalid stored MyFeed image");
+        HttpError::failed("Invalid stored image.")
+    };
+    if data.len() > MAX_IMAGE_DATA {
+        return Err(fail());
+    }
+    let (prefix, encoded) = data.split_once(";base64,").ok_or_else(fail)?;
+    let mime = prefix.strip_prefix("data:").ok_or_else(fail)?;
+    if !matches!(
+        mime,
+        "image/png" | "image/jpeg" | "image/jpg" | "image/webp" | "image/gif"
+    ) {
+        return Err(fail());
+    }
+    let bytes = BASE64.decode(encoded).map_err(|_| fail())?;
+    if bytes.is_empty() || bytes.len() > MAX_IMAGE_BYTES {
+        return Err(fail());
+    }
+    Ok((mime, bytes))
+}
 
 fn sanitize_image_data(raw: &str) -> Option<String> {
     let raw = raw.trim();
@@ -124,11 +180,12 @@ pub fn handle_post_create(state: &AppState, request: &Request) -> Result<Respons
     }
 }
 
-fn route_post_id(request: &Request) -> Result<u64, HttpError> {
+pub fn route_post_id(request: &Request) -> Result<u64, HttpError> {
     request
         .attributes()
         .get::<String>("id")
         .and_then(|s| s.parse::<u64>().ok())
+        .filter(|id| *id > 0 && i64::try_from(*id).is_ok())
         .ok_or_else(|| HttpError::bad_request("bad post id"))
 }
 
@@ -192,7 +249,7 @@ pub fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Resp
                     if let Some(post) = state.store.get_post(id) {
                         index_upsert(state, &post);
                     }
-                    Ok(redirect(&format!("/#post-{id}")))
+                    Ok(redirect(&format!("/posts/{id}")))
                 }
                 Err(msg) => {
                     let categories = state.store.categories();

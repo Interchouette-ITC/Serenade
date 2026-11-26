@@ -23,11 +23,14 @@ use crate::admin::{
     handle_admin_get, handle_admin_login, handle_admin_logout, handle_admin_moderation,
 };
 use crate::admin_crud;
-use crate::feed::{feed_with_flash, handle_comment_create, handle_like};
+use crate::feed::{
+    feed_with_flash, handle_comment_create, handle_latest, handle_like, handle_post_get,
+};
 use crate::forms::build_login_form;
 use crate::html::asset_response;
 use crate::posts::{
     handle_post_create, handle_post_delete, handle_post_edit_get, handle_post_edit_post,
+    handle_post_image,
 };
 use crate::search::{handle_search, rebuild_search_index};
 use crate::state::{
@@ -39,6 +42,22 @@ use crate::store::{FeedStore, NewPost};
 fn routes() -> Result<RouteCollection, HttpError> {
     let mut collection = RouteCollection::new();
     collection.add(Route::with_method("feed", "/", Method::Get))?;
+    collection.add(Route::with_method(
+        "feed_latest",
+        "/feed/latest",
+        Method::Get,
+    ))?;
+    collection.add(Route::with_method("post_show", "/posts/{id}", Method::Get))?;
+    collection.add(Route::with_method(
+        "post_image",
+        "/posts/{id}/image",
+        Method::Get,
+    ))?;
+    collection.add(Route::with_method(
+        "comments_show",
+        "/posts/{id}/comments",
+        Method::Get,
+    ))?;
     collection.add(Route::with_method("search", "/search", Method::Get))?;
     collection.add(Route::with_method("post_create", "/posts", Method::Post))?;
     collection.add(Route::with_method(
@@ -130,6 +149,9 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
 
     match route {
         "feed" => feed_with_flash(state, request, None, false, false),
+        "feed_latest" => handle_latest(state),
+        "post_show" | "comments_show" => handle_post_get(state, request),
+        "post_image" => handle_post_image(state, request),
         "search" => Ok(handle_search(state, request)),
         "post_create" => handle_post_create(state, request),
         "comment_create" => handle_comment_create(state, request),
@@ -148,7 +170,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         )),
         "asset_js" => Ok(asset_response(
             "text/javascript; charset=utf-8",
-            include_bytes!("../assets/clitorine.js"),
+            include_bytes!("../assets/clitorine.min.js"),
         )),
         "asset_favicon" => Ok(asset_response(
             "image/png",
@@ -179,7 +201,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
 }
 
 fn seed_if_empty(store: &FeedStore) {
-    if !store.posts().is_empty() {
+    if store.latest_id().expect("check seed posts") != 0 {
         return;
     }
     let _ = store.add_post(NewPost {
@@ -210,7 +232,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let store = FeedStore::open(db_path);
     seed_if_empty(&store);
     let index = MemorySearchAdapter::new();
-    rebuild_search_index(&store, &index);
+    rebuild_search_index(&store, &index)?;
     let translations = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations");
     if !is_dir(&translations) {
         return Err(format!("translations dir missing: {}", translations.display()).into());
@@ -281,8 +303,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(test)]
-mod seed_tests {
-    use super::{BASE64, FeedStore, seed_if_empty};
+mod tests {
+    use super::*;
+    use crate::state::MAX_IMAGE_BYTES;
 
     #[test]
     fn fresh_demo_includes_meet_serenade_without_duplicates() {
@@ -302,6 +325,269 @@ mod seed_tests {
         assert_eq!(store.posts().len(), 2);
     }
 
+    fn state() -> AppState {
+        let locale = Locale::new("en").expect("locale");
+        let mut translator = Translator::new(locale.clone());
+        translator
+            .load_path(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations"))
+            .expect("translations");
+        AppState {
+            store: FeedStore::open_memory(),
+            index: MemorySearchAdapter::new(),
+            csrf: HmacCsrfTokenManager::new(DEFAULT_CSRF.as_bytes()),
+            matcher: UrlMatcher::new(routes().expect("routes")),
+            admin_token: DEFAULT_ADMIN.into(),
+            translator,
+            negotiator: LocaleNegotiator::new(locale.clone())
+                .with_allowed(vec![locale, Locale::new("fr").expect("fr")])
+                .with_cookie_name(LOCALE_COOKIE),
+            profiler: Arc::new(ProfileStore::new(50)),
+            notifier: NullTransport::new(),
+        }
+    }
+
+    fn get(state: &AppState, path: &str, query: &str, ajax: bool) -> Result<Response, HttpError> {
+        let mut request = Request::new(Method::Get, path).with_query(query);
+        if ajax {
+            request = request.with_header("x-myfeed-ajax", "1");
+        }
+        handle(state, &mut request)
+    }
+
+    #[test]
+    fn initial_html_and_fragments_have_bounded_media_free_cards() {
+        let state = state();
+        let data = format!(
+            "data:image/png;base64,{}",
+            BASE64.encode(vec![1; MAX_IMAGE_BYTES])
+        );
+        for _ in 0..25 {
+            state.store.add_post(NewPost {
+                body: "<p>image fixture</p>".into(),
+                image_data: Some(data.clone()),
+                embed_url: None,
+                category: "life".into(),
+            });
+        }
+        let response = get(&state, "/", "", false).expect("initial page");
+        let html = response.body_str().expect("html");
+        assert_eq!(html.matches("<article ").count(), 20);
+        assert!(!html.contains("data:image/"));
+        assert!(html.contains("/posts/25/image"));
+        assert!(html.len() < 150_000, "initial HTML: {} bytes", html.len());
+        let fragment = get(&state, "/", "before=6&ceiling=25", true).expect("fragment");
+        let html = fragment.body_str().expect("fragment html");
+        assert_eq!(html.matches("<article ").count(), 5);
+        assert!(!html.contains("<html"));
+        assert!(!html.contains("<script"));
+        assert!(!html.contains("data:image/"));
+        assert!(html.contains("data-has-older=\"false\""));
+        let old = get(&state, "/posts/1", "", false).expect("old post");
+        assert_eq!(
+            old.body_str()
+                .expect("post html")
+                .matches("<article ")
+                .count(),
+            1
+        );
+        let legacy = get(&state, "/", "around=1", true).expect("legacy anchor");
+        assert!(
+            legacy
+                .body_str()
+                .expect("legacy html")
+                .contains("id=\"post-1\"")
+        );
+    }
+
+    #[test]
+    fn image_routes_preserve_bytes_and_revalidate_after_editing() {
+        let state = state();
+        seed_if_empty(&state.store);
+        let first = get(&state, "/posts/2/image", "", false).expect("image");
+        assert_eq!(first.body(), include_bytes!("../assets/meet-serenade.png"));
+        assert_eq!(first.headers().get("content-type"), Some("image/png"));
+        let etag = first.headers().get("etag").expect("etag");
+        let mut request =
+            Request::new(Method::Get, "/posts/2/image").with_header("if-none-match", etag);
+        assert_eq!(handle(&state, &mut request).expect("cached").status(), 304);
+        state.store.update_post(
+            2,
+            &NewPost {
+                body: "edited".into(),
+                category: "life".into(),
+                embed_url: None,
+                image_data: Some("data:image/png;base64,aGVsbG8=".into()),
+            },
+        );
+        let changed = handle(&state, &mut request).expect("edited image");
+        assert_eq!(changed.status(), 200);
+        assert_eq!(changed.body(), b"hello");
+        assert_ne!(changed.headers().get("etag"), Some(etag));
+        assert_eq!(
+            get(&state, "/posts/1/image", "", false)
+                .expect_err("no image")
+                .status_code(),
+            404
+        );
+        assert!(state.store.delete_post(2));
+        assert_eq!(
+            get(&state, "/posts/2/image", "", false)
+                .expect_err("deleted")
+                .status_code(),
+            404
+        );
+        let bad = state.store.add_post(NewPost {
+            body: "bad image fixture".into(),
+            category: "life".into(),
+            embed_url: None,
+            image_data: Some("data:image/png;base64,!!!!".into()),
+        });
+        assert_eq!(
+            get(&state, &format!("/posts/{}/image", bad.id), "", false)
+                .expect_err("invalid image")
+                .status_code(),
+            500
+        );
+    }
+
+    #[test]
+    fn appended_admin_cards_keep_csrf_actions_and_translations() {
+        let state = state();
+        for _ in 0..25 {
+            state.store.add_post(NewPost {
+                body: "<p>admin fixture</p>".into(),
+                category: "life".into(),
+                embed_url: None,
+                image_data: None,
+            });
+        }
+        let mut request = Request::new(Method::Get, "/")
+            .with_query("before=6&ceiling=25")
+            .with_header("x-myfeed-ajax", "1")
+            .with_header("authorization", format!("Bearer {DEFAULT_ADMIN}"))
+            .with_header("cookie", "_locale=fr");
+        let fragment = handle(&state, &mut request).expect("admin fragment");
+        let html = fragment.body_str().expect("html");
+        assert_eq!(html.matches("data-clitorine-delete ").count(), 5);
+        assert!(html.contains("Commentaires"));
+        assert!(html.contains("/admin/posts/5/edit"));
+        let token = html
+            .split("data-delete-token=\"")
+            .nth(1)
+            .expect("delete token")
+            .split('"')
+            .next()
+            .expect("token");
+        let mut delete = Request::new(Method::Post, "/admin/posts/5/delete")
+            .with_header("authorization", format!("Bearer {DEFAULT_ADMIN}"))
+            .with_header("content-type", "application/x-www-form-urlencoded")
+            .with_body(format!("_token={token}"));
+        assert_eq!(handle(&state, &mut delete).expect("delete").status(), 303);
+        assert!(
+            state
+                .store
+                .get_summary(5)
+                .expect("deleted lookup")
+                .is_none()
+        );
+        let mut invalid = Request::new(Method::Post, "/admin/posts/4/delete")
+            .with_header("authorization", format!("Bearer {DEFAULT_ADMIN}"))
+            .with_header("content-type", "application/x-www-form-urlencoded")
+            .with_body("_token=invalid");
+        handle(&state, &mut invalid).expect("invalid CSRF redirect");
+        assert!(
+            state
+                .store
+                .get_summary(4)
+                .expect("protected post")
+                .is_some()
+        );
+        let mut edit = Request::new(Method::Get, "/admin/posts/4/edit")
+            .with_header("authorization", format!("Bearer {DEFAULT_ADMIN}"));
+        let response = handle(&state, &mut edit).expect("edit page");
+        assert!(
+            response
+                .body_str()
+                .expect("html")
+                .contains("href=\"/posts/4\"")
+        );
+        assert_eq!(response.status(), 200);
+    }
+
+    #[test]
+    fn cursors_and_comment_routes_have_explicit_contracts() {
+        let state = state();
+        assert!(
+            get(&state, "/", "", false)
+                .expect("empty")
+                .body_str()
+                .expect("html")
+                .contains("No posts yet")
+        );
+        for query in [
+            "before=0",
+            "before=-1",
+            "before=abc",
+            "before=1&before=2",
+            "before=2&after=3",
+            "around=3&ceiling=2",
+            "before",
+            "before=18446744073709551615",
+        ] {
+            assert_eq!(
+                get(&state, "/", query, true)
+                    .expect_err(query)
+                    .status_code(),
+                400
+            );
+        }
+
+        let post = state.store.add_post(NewPost {
+            body: "comments".into(),
+            category: "life".into(),
+            embed_url: None,
+            image_data: None,
+        });
+        for i in 0..12 {
+            let comment = state
+                .store
+                .add_comment(post.id, format!("approved {i}"))
+                .expect("comment");
+            assert!(state.store.approve_comment(comment.id));
+        }
+        state
+            .store
+            .add_comment(post.id, "PRIVATE PENDING FIXTURE".into())
+            .expect("pending");
+        let path = format!("/posts/{}/comments", post.id);
+        let preview = get(&state, &path, "", true).expect("comments");
+        let html = preview.body_str().expect("comments html");
+        assert_eq!(html.matches("data-comment-id=").count(), 10);
+        assert!(!html.contains("PRIVATE PENDING"));
+        let next = get(&state, &path, "after=10", true).expect("next comments");
+        assert_eq!(
+            next.body_str()
+                .expect("html")
+                .matches("data-comment-id=")
+                .count(),
+            2
+        );
+        assert!(
+            get(&state, &path, "after=10", false)
+                .expect("no-JS comments")
+                .body_str()
+                .expect("document")
+                .contains("<html")
+        );
+        let missing = get(&state, "/", "around=100", true).expect("deleted anchor");
+        assert_eq!(missing.headers().get("x-myfeed-missing"), Some("1"));
+        assert_eq!(
+            get(&state, "/feed/latest", "", false)
+                .expect("latest")
+                .body_str(),
+            Some("1")
+        );
+    }
     #[test]
     fn seed_preserves_complete_meet_serenade_post() {
         let store = FeedStore::open_memory();

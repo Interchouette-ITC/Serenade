@@ -38,6 +38,8 @@ pub struct Post {
     pub embed_url: Option<String>,
     /// Optional inline image as a data URL (size-capped by the app).
     pub image_data: Option<String>,
+    /// Whether an image is available through the separate media route.
+    pub has_image: bool,
     /// Category label from the admin-managed list.
     pub category: String,
     /// Public like count.
@@ -79,6 +81,25 @@ pub struct NewPost {
     pub category: String,
 }
 
+pub const FEED_PAGE_SIZE: usize = 20;
+pub const COMMENT_PAGE_SIZE: usize = 10;
+
+pub struct FeedBatch {
+    pub posts: Vec<Post>,
+    pub ceiling: u64,
+    pub has_older: bool,
+    pub has_newer: bool,
+}
+
+pub struct CommentBatch {
+    pub comments: Vec<Comment>,
+    pub has_older: bool,
+    pub has_newer: bool,
+}
+
+const POST_SUMMARY: &str =
+    "id, body, embed_url, image_data IS NOT NULL, category, likes, created_at";
+
 fn sql_id(id: u64) -> i64 {
     i64::try_from(id).unwrap_or(i64::MAX)
 }
@@ -118,6 +139,8 @@ impl FeedStore {
             CREATE TABLE IF NOT EXISTS categories (
               name TEXT PRIMARY KEY
             );
+            CREATE INDEX IF NOT EXISTS comments_post_status_id
+              ON comments (post_id, status, id);
             ",
         )
         .expect("migrate MyFeed sqlite");
@@ -154,6 +177,7 @@ impl FeedStore {
     }
 
     /// Newest posts first.
+    #[cfg(test)]
     #[must_use]
     pub fn posts(&self) -> Vec<Post> {
         let conn = self.conn.lock().expect("feed lock");
@@ -165,6 +189,138 @@ impl FeedStore {
             .expect("prepare posts");
         let rows = stmt.query_map([], map_post).expect("query posts");
         rows.filter_map(Result::ok).collect()
+    }
+
+    pub fn latest_id(&self) -> rusqlite::Result<u64> {
+        self.conn.lock().expect("feed lock").query_row(
+            "SELECT COALESCE(MAX(id), 0) FROM posts",
+            [],
+            |row| row.get::<_, i64>(0).map(rust_id),
+        )
+    }
+
+    /// Indexed keyset window; images are never read into feed/search results.
+    pub fn feed_batch(
+        &self,
+        ceiling: u64,
+        before: Option<u64>,
+        after: Option<u64>,
+        around: Option<u64>,
+    ) -> rusqlite::Result<FeedBatch> {
+        let conn = self.conn.lock().expect("feed lock");
+        let (condition, boundary, order) = match (before, after, around) {
+            (Some(id), _, _) => ("id < ?2", id, "DESC"),
+            (_, Some(id), _) => ("id > ?2", id, "ASC"),
+            (_, _, Some(id)) => ("id <= ?2", id, "DESC"),
+            _ => ("id <= ?2", ceiling, "DESC"),
+        };
+        let sql = format!(
+            "SELECT {POST_SUMMARY} FROM posts WHERE id <= ?1 AND {condition}
+             ORDER BY id {order} LIMIT {FEED_PAGE_SIZE}"
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let mut posts = stmt
+            .query_map(params![sql_id(ceiling), sql_id(boundary)], map_summary)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        if after.is_some() {
+            posts.reverse();
+        }
+        let has_older = if let Some(post) = posts.last() {
+            conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM posts WHERE id < ?1)",
+                params![sql_id(post.id)],
+                |row| row.get(0),
+            )?
+        } else {
+            false
+        };
+        let has_newer = if let Some(post) = posts.first() {
+            conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM posts WHERE id > ?1 AND id <= ?2)",
+                params![sql_id(post.id), sql_id(ceiling)],
+                |row| row.get(0),
+            )?
+        } else {
+            false
+        };
+        Ok(FeedBatch {
+            posts,
+            ceiling,
+            has_older,
+            has_newer,
+        })
+    }
+
+    pub fn image_data(&self, id: u64) -> rusqlite::Result<Option<String>> {
+        self.conn
+            .lock()
+            .expect("feed lock")
+            .query_row(
+                "SELECT image_data FROM posts WHERE id = ?1",
+                params![sql_id(id)],
+                |row| row.get(0),
+            )
+            .optional()
+            .map(Option::flatten)
+    }
+
+    pub fn get_summary(&self, id: u64) -> rusqlite::Result<Option<Post>> {
+        self.conn
+            .lock()
+            .expect("feed lock")
+            .query_row(
+                &format!("SELECT {POST_SUMMARY} FROM posts WHERE id = ?1"),
+                params![sql_id(id)],
+                map_summary,
+            )
+            .optional()
+    }
+
+    pub fn comment_batch(
+        &self,
+        post_id: u64,
+        before: Option<u64>,
+        after: Option<u64>,
+    ) -> rusqlite::Result<CommentBatch> {
+        let conn = self.conn.lock().expect("feed lock");
+        let (condition, boundary, order) = before.map_or_else(
+            || ("id > ?2", after.unwrap_or(0), "ASC"),
+            |id| ("id < ?2", id, "DESC"),
+        );
+        let sql = format!(
+            "SELECT id, post_id, body, status FROM comments
+             WHERE post_id = ?1 AND status = 'approved' AND {condition}
+             ORDER BY id {order} LIMIT {COMMENT_PAGE_SIZE}"
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let mut comments = stmt
+            .query_map(params![sql_id(post_id), sql_id(boundary)], map_comment)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        if before.is_some() {
+            comments.reverse();
+        }
+        debug_assert!(comments.iter().all(|c| c.status == CommentStatus::Approved));
+        let exists = |condition: &str, id: u64| -> rusqlite::Result<bool> {
+            conn.query_row(
+                &format!(
+                    "SELECT EXISTS(SELECT 1 FROM comments
+                    WHERE post_id = ?1 AND status = 'approved' AND {condition})"
+                ),
+                params![sql_id(post_id), sql_id(id)],
+                |row| row.get(0),
+            )
+        };
+        let has_older = comments
+            .first()
+            .map_or(Ok(false), |c| exists("id < ?2", c.id))?;
+        let has_newer = comments
+            .last()
+            .map_or(Ok(false), |c| exists("id > ?2", c.id))?;
+        Ok(CommentBatch {
+            comments,
+            has_older,
+            has_newer,
+        })
     }
 
     /// Loads one post by id.
@@ -260,6 +416,7 @@ impl FeedStore {
     }
 
     /// Approved comments for `post_id`.
+    #[cfg(test)]
     #[must_use]
     pub fn approved_comments(&self, post_id: u64) -> Vec<Comment> {
         self.comments_where(post_id, CommentStatus::Approved)
@@ -279,6 +436,7 @@ impl FeedStore {
         rows.filter_map(Result::ok).collect()
     }
 
+    #[cfg(test)]
     fn comments_where(&self, post_id: u64, status: CommentStatus) -> Vec<Comment> {
         let status_sql = match status {
             CommentStatus::Pending => "pending",
@@ -321,6 +479,7 @@ impl FeedStore {
             id,
             body: new.body,
             embed_url: new.embed_url,
+            has_image: new.image_data.is_some(),
             image_data: new.image_data,
             category: new.category,
             likes: 0,
@@ -458,11 +617,26 @@ fn ensure_created_at_column(conn: &Connection) {
 }
 
 fn map_post(row: &rusqlite::Row<'_>) -> rusqlite::Result<Post> {
+    let image_data: Option<String> = row.get(3)?;
     Ok(Post {
         id: rust_id(row.get::<_, i64>(0)?),
         body: row.get(1)?,
         embed_url: row.get(2)?,
-        image_data: row.get(3)?,
+        has_image: image_data.is_some(),
+        image_data,
+        category: row.get(4)?,
+        likes: rust_id(row.get::<_, i64>(5)?),
+        created_at: row.get(6)?,
+    })
+}
+
+fn map_summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<Post> {
+    Ok(Post {
+        id: rust_id(row.get::<_, i64>(0)?),
+        body: row.get(1)?,
+        embed_url: row.get(2)?,
+        has_image: row.get(3)?,
+        image_data: None,
         category: row.get(4)?,
         likes: rust_id(row.get::<_, i64>(5)?),
         created_at: row.get(6)?,
@@ -481,6 +655,136 @@ fn map_comment(row: &rusqlite::Row<'_>) -> rusqlite::Result<Comment> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn archive_windows_are_bounded_stable_and_image_free() {
+        for count in [365, 3650, 10_000] {
+            let store = FeedStore::open_memory();
+            {
+                let mut conn = store.conn.lock().expect("feed lock");
+                let tx = conn.transaction().expect("fixture transaction");
+                {
+                    let mut insert = tx
+                        .prepare(
+                            "INSERT INTO posts (body, category, image_data) VALUES
+                        ('<p>fixture</p>', 'life', 'data:image/png;base64,aGVsbG8=')",
+                        )
+                        .expect("fixture insert");
+                    for _ in 0..count {
+                        insert.execute([]).expect("seed fixture");
+                    }
+                }
+                tx.commit().expect("commit fixture");
+            }
+            let ceiling = store.latest_id().expect("latest");
+            let new = store.add_post(NewPost {
+                body: "new during reading".into(),
+                embed_url: None,
+                image_data: None,
+                category: "life".into(),
+            });
+            assert!(store.delete_post(ceiling - 25));
+            let mut before = None;
+            let mut seen = Vec::new();
+            loop {
+                let batch = store
+                    .feed_batch(ceiling, before, None, None)
+                    .expect("batch");
+                assert!(batch.posts.len() <= FEED_PAGE_SIZE);
+                assert!(
+                    batch
+                        .posts
+                        .iter()
+                        .all(|p| p.image_data.is_none() && p.has_image)
+                );
+                assert!(batch.posts.windows(2).all(|pair| pair[0].id > pair[1].id));
+                seen.extend(batch.posts.iter().map(|p| p.id));
+                if !batch.has_older {
+                    break;
+                }
+                before = batch.posts.last().map(|p| p.id);
+            }
+            assert_eq!(seen.len(), count - 1);
+            assert!(seen.windows(2).all(|pair| pair[0] > pair[1]));
+            assert!(!seen.contains(&new.id));
+            let backward = store
+                .feed_batch(ceiling, None, Some(100), None)
+                .expect("newer window");
+            assert_eq!(backward.posts.last().expect("last").id, 101);
+            assert_eq!(backward.posts.len(), 20);
+            let anchor = store
+                .feed_batch(ceiling, None, None, Some(100))
+                .expect("anchor window");
+            assert_eq!(anchor.posts.first().expect("first").id, 100);
+            let conn = store.conn.lock().expect("feed lock");
+            let plan: String = conn
+                .query_row(
+                    "EXPLAIN QUERY PLAN SELECT id, body FROM posts
+                 WHERE id <= 10000 AND id < 100 ORDER BY id DESC LIMIT 20",
+                    [],
+                    |row| row.get(3),
+                )
+                .expect("post plan");
+            assert!(
+                plan.contains("SEARCH posts USING INTEGER PRIMARY KEY"),
+                "{plan}"
+            );
+        }
+    }
+
+    #[test]
+    fn comment_windows_are_indexed_bounded_and_moderated() {
+        let store = FeedStore::open_memory();
+        let post = store.add_post(NewPost {
+            body: "post".into(),
+            embed_url: None,
+            image_data: None,
+            category: "life".into(),
+        });
+        {
+            let mut conn = store.conn.lock().expect("feed lock");
+            let tx = conn.transaction().expect("transaction");
+            tx.execute(
+                "WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x + 1 FROM n WHERE x < 10000)
+                 INSERT INTO comments (post_id, body, status)
+                 SELECT ?1, 'comment', CASE WHEN x % 2 = 0 THEN 'approved' ELSE 'pending' END FROM n",
+                params![sql_id(post.id)],
+            ).expect("comments");
+            tx.commit().expect("commit");
+        }
+        let batch = store.comment_batch(post.id, None, None).expect("preview");
+        assert_eq!(batch.comments.len(), COMMENT_PAGE_SIZE);
+        assert!(
+            batch
+                .comments
+                .iter()
+                .all(|c| c.status == CommentStatus::Approved)
+        );
+        assert!(!batch.has_older);
+        assert!(batch.has_newer);
+        let next = store.comment_batch(post.id, None, Some(20)).expect("next");
+        assert_eq!(next.comments[0].id, 22);
+        let previous = store
+            .comment_batch(post.id, Some(22), None)
+            .expect("previous");
+        assert_eq!(
+            previous.comments.iter().map(|c| c.id).collect::<Vec<_>>(),
+            batch.comments.iter().map(|c| c.id).collect::<Vec<_>>()
+        );
+        let conn = store.conn.lock().expect("feed lock");
+        let plan: String = conn
+            .query_row(
+                "EXPLAIN QUERY PLAN SELECT id, body FROM comments
+             WHERE post_id = 1 AND status = 'approved' AND id > 20 ORDER BY id LIMIT 10",
+                [],
+                |row| row.get(3),
+            )
+            .expect("comment plan");
+        assert!(
+            plan.contains("SEARCH comments USING INDEX comments_post_status_id"),
+            "{plan}"
+        );
+    }
 
     #[test]
     fn moderation_likes_and_categories() {

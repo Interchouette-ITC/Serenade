@@ -1,0 +1,13 @@
+{
+  "name": "serenade-demo-html-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "check": "node scripts/build.mjs --check"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

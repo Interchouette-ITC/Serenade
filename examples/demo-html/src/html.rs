@@ -8,7 +8,7 @@ use serenade_view::{asset, escape_attr, escape_html, partial, path};
 use crate::embed::embed_html;
 use crate::emoji::picker_html;
 use crate::i18n::Ui;
-use crate::store::{Comment, FeedStore, Post};
+use crate::store::{Comment, CommentBatch, FeedBatch, Post};
 
 const BOOTSTRAP_CSS: &str =
     "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css";
@@ -21,8 +21,8 @@ const QUILL_JS: &str = "https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js";
 #[must_use]
 pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> String {
     let open_flag = if composer_open { "1" } else { "0" };
-    let css = asset("myfeed.css?v=7").unwrap_or_else(|_| "/assets/myfeed.css?v=7".into());
-    let js = asset("clitorine.js?v=5").unwrap_or_else(|_| "/assets/clitorine.js?v=5".into());
+    let css = asset("myfeed.css?v=8").unwrap_or_else(|_| "/assets/myfeed.css?v=8".into());
+    let js = asset("clitorine.js?v=7").unwrap_or_else(|_| "/assets/clitorine.js?v=7".into());
     format!(
         r#"<!DOCTYPE html>
 <html lang="{lang}">
@@ -83,16 +83,11 @@ fn locale_switcher(ui: &Ui<'_>, routes: &RouteCollection) -> String {
 pub struct FeedView<'a> {
     /// Translated chrome.
     pub ui: &'a Ui<'a>,
-    /// Live store (posts / comments).
-    pub store: &'a FeedStore,
+    /// Bounded, already-rendered feed window.
+    pub feed_html: &'a str,
     /// Composer HTML.
     pub post_form_html: &'a str,
-    /// Per-post comment forms.
-    pub comment_forms: &'a [(u64, String)],
-    /// Per-post like forms.
-    pub like_forms: &'a [(u64, String)],
-    /// Per-post admin Edit/Delete (empty when visitor).
-    pub admin_forms: &'a [(u64, String)],
+    pub admin: bool,
     /// Optional flash message.
     pub flash: Option<&'a str>,
     /// Flash is an error.
@@ -107,7 +102,6 @@ pub struct FeedView<'a> {
 #[must_use]
 pub fn feed_page(view: &FeedView<'_>) -> String {
     let ui = view.ui;
-    let posts_html = render_wall(view);
     let flash_html = view.flash.map_or(String::new(), |msg| {
         let class = if view.flash_err {
             "alert alert-danger"
@@ -150,9 +144,17 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         </div>
       </div>
     </section>
-    <section id="wall" class="d-flex flex-column gap-4">
-      {posts_html}
-    </section>
+    <form action="/" method="get" class="d-flex gap-2 mb-3">
+      <label for="feed-jump" class="visually-hidden">{jump}</label>
+      <input id="feed-jump" name="around" type="number" min="1" class="form-control" placeholder="{jump}" />
+      <button class="btn btn-outline-secondary" type="submit">{jump}</button>
+    </form>
+    <div id="feed-controller" data-loading="{loading}" data-error="{load_error}"
+      data-blocked="{blocked}" data-missing="{missing}">
+      <a href="/" id="feed-new-posts" class="btn btn-primary mb-3" hidden>{new_posts}</a>
+      <p id="feed-status" role="status" aria-live="polite"></p>
+      {feed_html}
+    </div>
   </main>
   <footer class="border-top pt-3 mt-4">
     <p class="mb-0 text-center text-secondary small">
@@ -183,11 +185,18 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         footer_about = escape_html(&ui.t("footer_about")),
         footer_stack = escape_html(&ui.t("footer_stack")),
         footer_scroll = escape_html(&ui.t("footer_scroll")),
-        delete_modal = if view.admin_forms.is_empty() {
-            String::new()
-        } else {
+        delete_modal = if view.admin {
             delete_post_modal(ui)
+        } else {
+            String::new()
         },
+        feed_html = view.feed_html,
+        jump = escape_attr(&ui.t("feed_jump")),
+        loading = escape_attr(&ui.t("feed_loading")),
+        load_error = escape_attr(&ui.t("feed_error")),
+        blocked = escape_attr(&ui.t("feed_blocked")),
+        missing = escape_attr(&ui.t("feed_missing")),
+        new_posts = escape_html(&ui.t("feed_new_posts")),
         about = about_modal(ui),
     );
     document("MyFeed", &body, view.composer_open, ui.locale().language())
@@ -307,42 +316,46 @@ pub fn search_page(
     )
 }
 
-fn render_wall(view: &FeedView<'_>) -> String {
-    let posts = view.store.posts();
-    if posts.is_empty() {
-        return format!(
-            r#"<p class="text-secondary mb-0">{msg}</p>"#,
-            msg = escape_html(&view.ui.t("empty_wall")),
-        );
-    }
-    let mut posts_html = String::new();
-    for post in &posts {
-        let comments = view.store.approved_comments(post.id);
-        let comment_form = view
-            .comment_forms
-            .iter()
-            .find(|(id, _)| *id == post.id)
-            .map_or("", |(_, html)| html.as_str());
-        let like_form = view
-            .like_forms
-            .iter()
-            .find(|(id, _)| *id == post.id)
-            .map_or("", |(_, html)| html.as_str());
-        let admin_actions = view
-            .admin_forms
-            .iter()
-            .find(|(id, _)| *id == post.id)
-            .map_or("", |(_, html)| html.as_str());
-        posts_html.push_str(&post_card(
-            view.ui,
-            post,
-            &comments,
-            comment_form,
-            like_form,
-            admin_actions,
-        ));
-    }
-    posts_html
+pub fn feed_window(ui: &Ui<'_>, batch: &FeedBatch, cards: &str) -> String {
+    let newest = batch.posts.first().map_or(0, |post| post.id);
+    let oldest = batch.posts.last().map_or(0, |post| post.id);
+    let link = |direction: &str, id: u64, available: bool, label: &str| {
+        format!(
+            r#"<a data-feed-load="{direction}" class="btn btn-outline-primary my-3"
+            href="/?{param}={id}&amp;ceiling={ceiling}" {hidden}>{label}</a>"#,
+            param = if direction == "older" {
+                "before"
+            } else {
+                "after"
+            },
+            ceiling = batch.ceiling,
+            hidden = if available { "" } else { "hidden" },
+            label = escape_html(&ui.t(label)),
+        )
+    };
+    format!(
+        r#"<section id="feed-window" data-ceiling="{ceiling}" data-newest="{newest}"
+        data-oldest="{oldest}" data-has-older="{has_older}" data-has-newer="{has_newer}">
+        <div data-feed-spacer="top" aria-hidden="true"></div>
+        {newer}
+        <section id="wall" class="d-flex flex-column gap-4">{cards}{empty}</section>
+        {older}
+        <div data-feed-spacer="bottom" aria-hidden="true"></div>
+        <p data-feed-end {end_hidden} class="text-secondary">{end}</p>
+        </section>"#,
+        ceiling = batch.ceiling,
+        has_older = batch.has_older,
+        has_newer = batch.has_newer,
+        newer = link("newer", newest, batch.has_newer, "feed_newer"),
+        older = link("older", oldest, batch.has_older, "feed_more"),
+        empty = if batch.posts.is_empty() {
+            escape_html(&ui.t("empty_wall"))
+        } else {
+            String::new()
+        },
+        end_hidden = if batch.has_older { "hidden" } else { "" },
+        end = escape_html(&ui.t("feed_end")),
+    )
 }
 
 fn delete_post_modal(ui: &Ui<'_>) -> String {
@@ -402,10 +415,10 @@ fn about_modal(ui: &Ui<'_>) -> String {
     )
 }
 
-fn post_card(
+pub fn post_card(
     ui: &Ui<'_>,
     post: &Post,
-    comments: &[Comment],
+    comments: &CommentBatch,
     comment_form: &str,
     like_form: &str,
     admin_actions: &str,
@@ -415,31 +428,15 @@ fn post_card(
         .as_deref()
         .and_then(embed_html)
         .unwrap_or_default();
-    let image = post.image_data.as_deref().map_or(String::new(), |data| {
-        if data.starts_with("data:image/") && data.len() <= 1_398_200 {
-            format!(
-                r#"<div class="embed-media my-2"><img class="img-fluid rounded" src="{src}" alt="posted image" loading="lazy" /></div>"#,
-                src = escape_attr(data)
-            )
-        } else {
-            String::new()
-        }
-    });
-    let mut comments_html = String::new();
-    for comment in comments {
-        let _ = write!(
-            comments_html,
-            r#"<p class="mb-2 small">{body}</p>"#,
-            body = escape_html(&comment.body)
-        );
-    }
-    if comments_html.is_empty() {
-        let _ = write!(
-            comments_html,
-            r#"<p class="text-secondary small mb-2">{msg}</p>"#,
-            msg = escape_html(&ui.t("no_comments"))
-        );
-    }
+    let image = if post.has_image {
+        format!(
+            r#"<div class="feed-image embed-media my-2"><img class="img-fluid rounded" src="/posts/{id}/image" alt="posted image" loading="lazy" decoding="async" /></div>"#,
+            id = post.id,
+        )
+    } else {
+        String::new()
+    };
+    let comments_html = comment_window(ui, post.id, comments);
     let when = if post.created_at.is_empty() {
         String::new()
     } else {
@@ -450,7 +447,7 @@ fn post_card(
 <article class="card post-card" id="post-{id}">
   <div class="card-body p-4">
     <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-      <p class="text-secondary small mb-0">Post #{id} · {category}{when}</p>
+      <p class="text-secondary small mb-0"><a href="/posts/{id}">Post #{id}</a> · {category}{when}</p>
       <div class="d-flex flex-wrap align-items-center gap-2">
         <span class="badge text-bg-light border" data-like-count>{likes}</span>
         {like_form}
@@ -460,8 +457,10 @@ fn post_card(
     <div class="post-body mb-2">{body}</div>
     {image}
     {embed}
+    {release_media}
     <div class="border-top pt-3 mt-3">
       <h3 class="h6">{comments_title}</h3>
+      <div data-comment-status role="status" aria-live="polite"></div>
       {comments_html}
       {comment_form}
     </div>
@@ -473,7 +472,75 @@ fn post_card(
         likes = escape_html(&ui.tn("likes", i64::try_from(post.likes).unwrap_or(0))),
         comments_title = escape_html(&ui.t("comments")),
         body = post.body,
+        release_media = if embed.contains("<iframe") {
+            format!(
+                r#"<button type="button" data-release-media class="btn btn-sm btn-outline-secondary mb-2">{}</button>"#,
+                escape_html(&ui.t("feed_release_media"))
+            )
+        } else {
+            String::new()
+        },
     )
+}
+
+pub fn comment_window(ui: &Ui<'_>, post_id: u64, batch: &CommentBatch) -> String {
+    let mut html = String::from("<div data-comment-window>");
+    for comment in &batch.comments {
+        let _ = write!(
+            html,
+            r#"<p class="mb-2 small" data-comment-id="{id}">{body}</p>"#,
+            id = comment.id,
+            body = escape_html(&comment.body),
+        );
+    }
+    if batch.comments.is_empty() {
+        let _ = write!(
+            html,
+            r#"<p class="text-secondary small">{}</p>"#,
+            escape_html(&ui.t("no_comments"))
+        );
+    }
+    for (parameter, available, id, label) in [
+        (
+            "before",
+            batch.has_older,
+            batch.comments.first().map_or(0, |c| c.id),
+            "comments_previous",
+        ),
+        (
+            "after",
+            batch.has_newer,
+            batch.comments.last().map_or(0, |c| c.id),
+            "comments_more",
+        ),
+    ] {
+        if available {
+            let _ = write!(
+                html,
+                r#"<a data-comments-load href="/posts/{post_id}/comments?{parameter}={id}" class="btn btn-sm btn-outline-secondary me-2">{label}</a>"#,
+                label = escape_html(&ui.t(label)),
+            );
+        }
+    }
+    html.push_str("</div>");
+    html
+}
+
+pub fn single_post_page(ui: &Ui<'_>, card: &str, admin: bool) -> String {
+    let body = format!(
+        r#"<main class="myfeed-shell" data-feed-labels data-loading="{loading}" data-error="{error}">
+        <nav class="mb-3"><a href="/">{feed}</a></nav>
+        {card}</main>{modal}"#,
+        feed = escape_html(&ui.t("nav_feed")),
+        loading = escape_attr(&ui.t("feed_loading")),
+        error = escape_attr(&ui.t("feed_error")),
+        modal = if admin {
+            delete_post_modal(ui)
+        } else {
+            String::new()
+        },
+    );
+    document("MyFeed", &body, false, ui.locale().language())
 }
 
 /// Admin page with logout, comment queue, and category manager.

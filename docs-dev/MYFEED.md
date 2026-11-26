@@ -29,6 +29,12 @@ Symfony Demo / Fast Track: framework forms, security habits, HTML pages - not a 
 ## Surfaces
 
 - `/` feed + expandable composer + likes + comments
+- `GET /?before={id}&ceiling={id}` older feed batch; `after={id}` loads toward newer posts
+- `GET /?around={id}` jump to an old post without loading the archive
+- `GET /feed/latest` lightweight latest-post id for hourly update checks
+- `GET /posts/{id}` direct server-rendered post page
+- `GET /posts/{id}/image` separately served SQLite upload, with cache revalidation
+- `GET /posts/{id}/comments?after={id}` next approved-comment window; `before={id}` goes back
 - `GET /search?q=` in-memory post search (body + category)
 - `GET /locale/{code}` sticky UI locale cookie (`en` / `fr`); post bodies stay author language
 - `POST /posts` create post (optional allowlisted media)
@@ -45,5 +51,68 @@ make html
 # or: make myfeed  (legacy alias)
 # http://127.0.0.1:8080/
 ```
+
+## Editing browser code
+
+Clitorine's entry point is `assets/clitorine.js`; the small modules in
+`assets/clitorine/` separate the composer, interactions, feed window, navigation,
+updates, and card/media handling. Edit those sources, not the generated
+`assets/clitorine.min.js`.
+
+From `examples/demo-html`, install the editing tool once and rebuild:
+
+```bash
+npm ci
+npm run build
+```
+
+`npm run watch` rebuilds automatically while editing. `npm run check` verifies
+that the generated file matches the sources without writing files.
+
+The generated bundle is kept alongside the sources, so ordinary Cargo and
+Docker builds do not require Node/npm. The existing `/assets/clitorine.js` URL
+serves that single minified bundle; no modules are fetched separately by the
+browser. After rebuilding JavaScript, restart through `cargo run` or `make html`
+so the Rust binary embeds the updated asset. No Trunk or TypeScript is involved.
+
+## Continuous scrolling and resource limits
+
+Clitorine progressively enhances the server-rendered feed. The first page and
+each subsequent batch contain at most **20 posts**. Scrolling near the bottom
+loads older posts automatically; scrolling back re-fetches newer windows.
+Accessible Load more/Load newer links also work without JavaScript.
+
+The browser keeps at most **60 post cards** mounted. Far-away cards and their
+media are removed; bounded window metadata and spacer heights preserve the
+reading position without retaining the whole archive. Focused cards, unsent
+comments, active requests, and playing local videos block eviction rather than
+lose work or exceed the limit. A focused embedded player is pinned until its
+unload control is used. External players and browser-managed caches do not have
+an application-enforceable exact memory cap.
+
+Approved comments display **10 at a time**, with next/previous controls. Each
+comment request replaces that bounded window instead of indefinitely appending
+comments. New comments still require owner approval.
+
+Feed reads use primary-key cursors, not OFFSET, and indexed per-post comment
+queries. A reading-session ceiling excludes new insertions from older batches.
+Images are omitted from feed/search SQL projections and HTML: existing base64
+uploads remain in SQLite and are delivered through individual image URLs.
+This does not migrate uploads or change their disk encoding. The text search
+index still grows with the searchable archive.
+
+The visible tab checks for newer posts **once per hour**, never while hidden.
+A New posts button lets the reader return to the latest feed; it does not
+automatically insert posts or move the current reading position. Browser Back
+restores the visible post and offset after Search or Edit. Search uses direct
+post pages, and Clitorine resolves legacy `/#post-{id}` links with a bounded
+around-post request. Without JavaScript, use a direct post URL or the post-jump
+form; URL fragments are not sent to the server.
+
+For hosting, set a persistent `MYFEED_DB` path and back up that SQLite database;
+it contains uploads as well as posts and comments. Use your own
+`MYFEED_CSRF_SECRET` and `MYFEED_ADMIN_TOKEN`, and disable the development
+profiler with `MYFEED_PROFILER=0`. No separate upload folder or external service
+is required.
 
 Embeds: YouTube (nocookie embed), SoundCloud, direct image / `.mp4` URLs. See [FORMS.md](FORMS.md), [VIEW.md](VIEW.md), [SECURITY.md](SECURITY.md), [I18N.md](I18N.md), [SEARCH.md](SEARCH.md), and [ADMIN.md](ADMIN.md).
