@@ -970,6 +970,8 @@ mod tests {
         assert_eq!(html.matches("<article ").count(), 20);
         assert!(!html.contains("data:image/"));
         assert!(html.contains("/posts/25/image"));
+        assert!(html.contains("data-image-preview"));
+        assert!(html.contains("id=\"image-modal\""));
         assert!(html.len() < 150_000, "initial HTML: {} bytes", html.len());
         let fragment = get(&state, "/", "before=6&ceiling=25", true).expect("fragment");
         let html = fragment.body_str().expect("fragment html");
@@ -977,8 +979,15 @@ mod tests {
         assert!(!html.contains("<html"));
         assert!(!html.contains("<script"));
         assert!(!html.contains("data:image/"));
+        assert!(html.contains("data-image-preview"));
+        assert!(!html.contains("id=\"image-modal\""));
         assert!(html.contains("data-has-older=\"false\""));
         let old = get(&state, "/posts/1", "", false).expect("old post");
+        assert!(
+            old.body_str()
+                .expect("post html")
+                .contains("id=\"image-modal\"")
+        );
         assert_eq!(
             old.body_str()
                 .expect("post html")

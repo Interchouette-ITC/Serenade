@@ -16,6 +16,9 @@ cargo run -p serenade-demo-html
 
 Open <http://127.0.0.1:8080/>.
 
+Click a post image to view it at its original size in a modal. Images larger
+than the viewport can be scrolled; the image link also works without JavaScript.
+
 ### Docker
 
 From the repository root, build and run MyFeed with Compose:

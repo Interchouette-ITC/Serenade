@@ -21,8 +21,8 @@ const QUILL_JS: &str = "https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js";
 #[must_use]
 pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> String {
     let open_flag = if composer_open { "1" } else { "0" };
-    let css = asset("myfeed.css?v=8").unwrap_or_else(|_| "/assets/myfeed.css?v=8".into());
-    let js = asset("clitorine.js?v=7").unwrap_or_else(|_| "/assets/clitorine.js?v=7".into());
+    let css = asset("myfeed.css?v=9").unwrap_or_else(|_| "/assets/myfeed.css?v=9".into());
+    let js = asset("clitorine.js?v=8").unwrap_or_else(|_| "/assets/clitorine.js?v=8".into());
     format!(
         r#"<!DOCTYPE html>
 <html lang="{lang}">
@@ -173,6 +173,7 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
 </div>
 {delete_modal}
 {about}
+{image_modal}
 "#,
         tagline = public_tagline(ui),
         langs = locale_switcher(ui, view.routes),
@@ -213,6 +214,7 @@ pub fn feed_page(view: &FeedView<'_>) -> String {
         } else {
             about_modal(ui)
         },
+        image_modal = image_modal(ui),
     );
     document("MyFeed", &body, view.composer_open, ui.locale().language())
 }
@@ -427,6 +429,23 @@ fn about_modal(ui: &Ui<'_>) -> String {
     )
 }
 
+fn image_modal(ui: &Ui<'_>) -> String {
+    format!(
+        r#"<div class="modal fade" id="image-modal" tabindex="-1" aria-label="{title}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered image-modal-dialog">
+    <div class="modal-content image-modal-content">
+      <div class="modal-header border-0 py-2">
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="{close}"></button>
+      </div>
+      <div class="modal-body image-modal-body"><img alt="" /></div>
+    </div>
+  </div>
+</div>"#,
+        title = escape_attr(&ui.t("image_view")),
+        close = escape_attr(&ui.t("close")),
+    )
+}
+
 pub fn post_card(
     ui: &Ui<'_>,
     post: &Post,
@@ -442,8 +461,9 @@ pub fn post_card(
         .unwrap_or_default();
     let image = if post.has_image {
         format!(
-            r#"<div class="feed-image embed-media my-2"><img class="img-fluid rounded" src="/posts/{id}/image" alt="posted image" loading="lazy" decoding="async" /></div>"#,
+            r#"<div class="feed-image embed-media my-2"><a href="/posts/{id}/image" data-image-preview aria-label="{label}"><img class="img-fluid rounded" src="/posts/{id}/image" alt="posted image" loading="lazy" decoding="async" /></a></div>"#,
             id = post.id,
+            label = escape_attr(&ui.t("image_view")),
         )
     } else {
         String::new()
@@ -533,7 +553,7 @@ pub fn single_post_page(ui: &Ui<'_>, card: &str, admin: bool) -> String {
     let body = format!(
         r#"<main class="myfeed-shell" data-feed-labels data-loading="{loading}" data-error="{error}">
         <nav class="mb-3"><a href="/">{feed}</a></nav>
-        {card}</main>{modal}"#,
+        {card}</main>{modal}{image_modal}"#,
         feed = escape_html(&ui.t("nav_feed")),
         loading = escape_attr(&ui.t("feed_loading")),
         error = escape_attr(&ui.t("feed_error")),
@@ -542,6 +562,7 @@ pub fn single_post_page(ui: &Ui<'_>, card: &str, admin: bool) -> String {
         } else {
             String::new()
         },
+        image_modal = image_modal(ui),
     );
     document("MyFeed", &body, false, ui.locale().language())
 }

@@ -158,8 +158,43 @@ function bindComments() {
   });
 }
 
+export function opensImagePreview(event, link) {
+  return link.matches("[data-image-preview]") &&
+    !event.defaultPrevented && event.button === 0 &&
+    !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey &&
+    typeof bootstrap !== "undefined" && !!byId("image-modal");
+}
+
+function bindImagePreview() {
+  const modal = byId("image-modal");
+  if (!modal || typeof bootstrap === "undefined") {
+    return;
+  }
+  const image = modal.querySelector("img");
+  let opener = null;
+  document.addEventListener("click", function (event) {
+    const link = event.target.closest("a[data-image-preview]");
+    if (!link || !opensImagePreview(event, link)) {
+      return;
+    }
+    event.preventDefault();
+    opener = link;
+    image.src = link.href;
+    image.alt = link.querySelector("img").alt;
+    bootstrap.Modal.getOrCreateInstance(modal).show(link);
+  });
+  modal.addEventListener("hidden.bs.modal", function () {
+    image.removeAttribute("src");
+    if (opener && opener.isConnected) {
+      opener.focus();
+    }
+    opener = null;
+  });
+}
+
 export function bindInteractions() {
   bindAjaxForms();
   bindDeleteModal();
   bindComments();
+  bindImagePreview();
 }

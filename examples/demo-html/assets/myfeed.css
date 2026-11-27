@@ -288,10 +288,38 @@ html:has(#feed-controller) {
   height: min(28rem, 65vw);
 }
 
+.feed-image a {
+  display: block;
+  height: 100%;
+  cursor: zoom-in;
+}
+
 .feed-image img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.image-modal-dialog {
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  margin: 1rem auto;
+}
+
+.image-modal-content {
+  background: #fff;
+  border: 0;
+}
+
+.image-modal-body {
+  max-height: calc(100dvh - 5rem);
+  overflow: auto;
+  padding: 0;
+}
+
+.image-modal-body img {
+  display: block;
+  max-width: none;
 }
 
 #feed-window [hidden],

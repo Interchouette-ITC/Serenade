@@ -1,5 +1,6 @@
 import { byId } from "./dom.js";
 import { retainedInteraction } from "./feed-cards.js";
+import { opensImagePreview } from "./interactions.js";
 
 const stateKey = "myfeedPosition";
 
@@ -118,6 +119,7 @@ export function bindFeedNavigation(feed) {
       if (link && !link.matches("[data-feed-load], [data-comments-load]")) {
         feed.savePosition();
         if (
+          !opensImagePreview(event, link) &&
           link.origin === location.origin &&
           link.pathname !== location.pathname
         ) {
