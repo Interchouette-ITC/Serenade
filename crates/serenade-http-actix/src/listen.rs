@@ -69,6 +69,28 @@ pub async fn listen(addr: impl ToSocketAddrs, kernel: AsyncHttpKernel) -> std::i
     await_bound(bind_server(addr, kernel)?).await
 }
 
+/// Serves the kernel with a maximum request body size in bytes.
+///
+/// Unlike [`listen`], which uses Actix's default 256 KiB limit, this permits
+/// applications to set a limit suitable for their own request bodies.
+///
+/// # Errors
+///
+/// Propagates bind and server IO errors.
+#[allow(clippy::future_not_send)]
+pub async fn listen_with_payload_limit(
+    addr: impl ToSocketAddrs,
+    kernel: AsyncHttpKernel,
+    max_bytes: usize,
+) -> std::io::Result<()> {
+    let data = web::Data::new(kernel);
+    let server =
+        HttpServer::new(move || app(data.clone()).app_data(web::PayloadConfig::new(max_bytes)))
+            .bind(addr)?
+            .run();
+    await_bound(server).await
+}
+
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
 #[allow(clippy::future_not_send)]
 async fn serenade_service(

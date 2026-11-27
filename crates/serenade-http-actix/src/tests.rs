@@ -74,6 +74,38 @@ async fn listen_app_default_service_dispatches_kernel() {
 }
 
 #[actix_web::test]
+async fn configured_payload_limit_accepts_image_sized_bodies_and_rejects_larger_ones() {
+    let kernel = AsyncHttpKernel::from_sync(|request: &mut Request| {
+        Ok(Response::text(200, request.body().len().to_string()))
+    });
+    let max_body = 2 * 1024 * 1024;
+    let service = actix_test::init_service(
+        app(web::Data::new(kernel)).app_data(web::PayloadConfig::new(max_body)),
+    )
+    .await;
+
+    for size in [600 * 1024, 1024 * 1024 + 1024] {
+        let request = actix_test::TestRequest::post()
+            .set_payload(vec![0_u8; size])
+            .to_request();
+        let response = actix_test::call_service(&service, request).await;
+        assert_eq!(response.status(), 200);
+        assert_eq!(
+            actix_test::read_body(response).await.as_ref(),
+            size.to_string().as_bytes()
+        );
+    }
+
+    let request = actix_test::TestRequest::post()
+        .set_payload(vec![0_u8; max_body + 1])
+        .to_request();
+    assert_eq!(
+        actix_test::call_service(&service, request).await.status(),
+        413
+    );
+}
+
+#[actix_web::test]
 async fn async_dispatch_awaits_controller() {
     use serenade_http::box_future;
 
