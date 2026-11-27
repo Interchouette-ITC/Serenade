@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["admin_path","favicon_response","handle","routes","run","seed_if_empty","theme_asset_response","theme_css_response","validate_theme_files"]};
+window.SIDEBAR_ITEMS = {"fn":["admin_path","favicon_response","handle","load_translator","preload_theme_image","routes","run","seed_if_empty","theme_asset_response","theme_asset_type","theme_css_response","theme_preload_image","validate_theme_files"]};
