@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -166,11 +167,16 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         .map_or("", String::as_str);
 
     match route {
-        "feed" => feed_with_flash(state, request, None, false, false),
+        "feed" => feed_with_flash(state, request, None, false, false)
+            .map(|response| preload_theme_image(state, request, response)),
         "feed_latest" => handle_latest(state),
         "post_show" | "comments_show" => handle_post_get(state, request),
         "post_image" => handle_post_image(state, request),
-        "search" => Ok(handle_search(state, request)),
+        "search" => Ok(preload_theme_image(
+            state,
+            request,
+            handle_search(state, request),
+        )),
         "post_create" => handle_post_create(state, request),
         "comment_create" => handle_comment_create(state, request),
         "post_like" => handle_like(state, request),
@@ -213,6 +219,38 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
     }
 }
 
+fn preload_theme_image(state: &AppState, request: &Request, response: Response) -> Response {
+    if crate::feed::wants_ajax(request) || response.status() != 200 {
+        return response;
+    }
+    match &state.theme_preload_image {
+        Some(name) => response.with_header(
+            "link",
+            format!("</assets/theme/{name}>; rel=preload; as=image"),
+        ),
+        None => response,
+    }
+}
+
+fn theme_asset_type(name: &str) -> Option<&'static str> {
+    let (stem, extension) = name.rsplit_once('.')?;
+    if stem.is_empty()
+        || !stem
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+    {
+        return None;
+    }
+    match extension {
+        "png" => Some("image/png"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "webp" => Some("image/webp"),
+        "gif" => Some("image/gif"),
+        "js" => Some("text/javascript; charset=utf-8"),
+        _ => None,
+    }
+}
+
 fn favicon_response(state: &AppState) -> Response {
     let Some(path) = &state.favicon_file else {
         return asset_response("image/x-icon", include_bytes!("../assets/favicon.ico"));
@@ -236,22 +274,7 @@ fn theme_asset_response(state: &AppState, request: &Request) -> Result<Response,
         .attributes()
         .get::<String>("name")
         .ok_or_else(not_found)?;
-    let (stem, extension) = name.rsplit_once('.').ok_or_else(not_found)?;
-    if stem.is_empty()
-        || !stem
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
-    {
-        return Err(not_found());
-    }
-    let content_type = match extension {
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "webp" => "image/webp",
-        "gif" => "image/gif",
-        "js" => "text/javascript; charset=utf-8",
-        _ => return Err(not_found()),
-    };
+    let content_type = theme_asset_type(name).ok_or_else(not_found)?;
     let path = state
         .theme_css
         .as_ref()
@@ -268,6 +291,22 @@ fn theme_asset_response(state: &AppState, request: &Request) -> Result<Response,
         }
     }
     match std::fs::read(&path) {
+        Ok(bytes) if content_type.starts_with("image/") => {
+            let mut hash = std::collections::hash_map::DefaultHasher::new();
+            bytes.hash(&mut hash);
+            content_type.hash(&mut hash);
+            let etag = format!("\"{:x}\"", hash.finish());
+            let response = if request.headers().get("if-none-match") == Some(etag.as_str()) {
+                Response::new(304)
+            } else {
+                Response::new(200)
+                    .with_header("content-type", content_type)
+                    .with_body(bytes)
+            };
+            Ok(response
+                .with_header("etag", etag)
+                .with_header("cache-control", "no-cache"))
+        }
         Ok(bytes) => Ok(Response::new(200)
             .with_header("content-type", content_type)
             .with_header("cache-control", "no-store")
@@ -352,36 +391,32 @@ fn validate_theme_files(
     }
 }
 
-pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let bind = std::env::var("MYFEED_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_owned());
-    let csrf_secret =
-        std::env::var("MYFEED_CSRF_SECRET").unwrap_or_else(|_| DEFAULT_CSRF.to_owned());
-    let admin_token =
-        std::env::var("MYFEED_ADMIN_TOKEN").unwrap_or_else(|_| DEFAULT_ADMIN.to_owned());
-    let admin_path = match std::env::var("MYFEED_ADMIN_PATH") {
-        Ok(value) => admin_path(&value)?,
-        Err(std::env::VarError::NotPresent) => "/admin".to_owned(),
-        Err(error) => return Err(format!("invalid MYFEED_ADMIN_PATH: {error}").into()),
-    };
-    let theme_css = std::env::var_os("MYFEED_THEME_CSS").map(PathBuf::from);
-    let footer_html = std::env::var_os("MYFEED_FOOTER_FILE")
-        .map(PathBuf::from)
-        .map(|path| {
-            std::fs::read_to_string(&path).map_err(|error| {
-                format!(
-                    "MYFEED_FOOTER_FILE={} could not be read: {error}",
-                    path.display()
-                )
-            })
-        })
-        .transpose()?;
-    let favicon_file = validate_theme_files(theme_css.as_deref())?;
+fn theme_preload_image(
+    theme_css: Option<&Path>,
+    configured: Option<String>,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    if let Some(name) = configured {
+        if !theme_asset_type(&name).is_some_and(|kind| kind.starts_with("image/"))
+            || theme_css.is_none()
+        {
+            return Err("MYFEED_THEME_PRELOAD_IMAGE must name a supported theme image and requires MYFEED_THEME_CSS".into());
+        }
+        return Ok(Some(name));
+    }
 
-    let db_path = std::env::var("MYFEED_DB").unwrap_or_else(|_| ".myfeed.sqlite".to_owned());
-    let store = FeedStore::open(db_path);
-    seed_if_empty(&store);
-    let index = MemorySearchAdapter::new();
-    rebuild_search_index(&store, &index)?;
+    let Some(theme_css) = theme_css else {
+        return Ok(None);
+    };
+    let path = theme_css.with_file_name("header.webp");
+    match std::fs::symlink_metadata(&path) {
+        Ok(metadata) if metadata.file_type().is_file() => Ok(Some("header.webp".into())),
+        Ok(_) => Ok(None),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!("check theme header {}: {error}", path.display()).into()),
+    }
+}
+
+fn load_translator() -> Result<Translator, Box<dyn std::error::Error>> {
     let translations = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations");
     if !is_dir(&translations) {
         return Err(format!("translations dir missing: {}", translations.display()).into());
@@ -400,6 +435,46 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     translator
         .load_path(&translations)
         .map_err(|err| format!("load translations: {err}"))?;
+    Ok(translator)
+}
+
+pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+    let bind = std::env::var("MYFEED_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_owned());
+    let csrf_secret =
+        std::env::var("MYFEED_CSRF_SECRET").unwrap_or_else(|_| DEFAULT_CSRF.to_owned());
+    let admin_token =
+        std::env::var("MYFEED_ADMIN_TOKEN").unwrap_or_else(|_| DEFAULT_ADMIN.to_owned());
+    let admin_path = match std::env::var("MYFEED_ADMIN_PATH") {
+        Ok(value) => admin_path(&value)?,
+        Err(std::env::VarError::NotPresent) => "/admin".to_owned(),
+        Err(error) => return Err(format!("invalid MYFEED_ADMIN_PATH: {error}").into()),
+    };
+    let theme_css = std::env::var_os("MYFEED_THEME_CSS").map(PathBuf::from);
+    let configured_preload_image = match std::env::var("MYFEED_THEME_PRELOAD_IMAGE") {
+        Ok(name) => Some(name),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(error) => return Err(format!("invalid MYFEED_THEME_PRELOAD_IMAGE: {error}").into()),
+    };
+    let theme_preload_image = theme_preload_image(theme_css.as_deref(), configured_preload_image)?;
+    let footer_html = std::env::var_os("MYFEED_FOOTER_FILE")
+        .map(PathBuf::from)
+        .map(|path| {
+            std::fs::read_to_string(&path).map_err(|error| {
+                format!(
+                    "MYFEED_FOOTER_FILE={} could not be read: {error}",
+                    path.display()
+                )
+            })
+        })
+        .transpose()?;
+    let favicon_file = validate_theme_files(theme_css.as_deref())?;
+
+    let db_path = std::env::var("MYFEED_DB").unwrap_or_else(|_| ".myfeed.sqlite".to_owned());
+    let store = FeedStore::open(db_path);
+    seed_if_empty(&store);
+    let index = MemorySearchAdapter::new();
+    rebuild_search_index(&store, &index)?;
+    let translator = load_translator()?;
     let negotiator = LocaleNegotiator::new(Locale::new("en").expect("en"))
         .with_allowed(vec![
             Locale::new("en").expect("en"),
@@ -421,12 +496,13 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         index,
         csrf: HmacCsrfTokenManager::new(csrf_secret.as_bytes()),
         matcher: UrlMatcher::new(routes(&admin_path)?),
-        admin_token: admin_token.clone(),
+        admin_token,
         translator,
         negotiator,
         profiler: Arc::clone(&profiler_store),
         notifier: NullTransport::new(),
         theme_css,
+        theme_preload_image,
         footer_html,
         show_admin_link: admin_path == "/admin",
         favicon_file,
@@ -445,7 +521,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("demo-html listening on http://{bind}/");
-    println!("Admin: open {admin_path} and sign in with token `{admin_token}`");
+    println!("Admin: open {admin_path} and sign in with the configured token");
     if profiler_enabled {
         println!("Profiler: http://{bind}/_profiler (disable with MYFEED_PROFILER=0)");
     }
@@ -497,6 +573,7 @@ mod tests {
             profiler: Arc::new(ProfileStore::new(50)),
             notifier: NullTransport::new(),
             theme_css: None,
+            theme_preload_image: None,
             footer_html: None,
             show_admin_link: true,
             favicon_file: None,
@@ -752,7 +829,24 @@ mod tests {
         let response = get(&state, "/assets/theme/header.webp", "", false).expect("image");
         assert_eq!(response.body(), b"example image");
         assert_eq!(response.headers().get("content-type"), Some("image/webp"));
-        assert_eq!(response.headers().get("cache-control"), Some("no-store"));
+        assert_eq!(response.headers().get("cache-control"), Some("no-cache"));
+        let etag = response
+            .headers()
+            .get("etag")
+            .expect("image etag")
+            .to_owned();
+        let mut request = Request::new(Method::Get, "/assets/theme/header.webp")
+            .with_header("if-none-match", &etag);
+        let unchanged = handle(&state, &mut request).expect("unchanged image");
+        assert_eq!(unchanged.status(), 304);
+        assert_eq!(unchanged.body(), b"");
+        std::fs::write(&image, b"changed image").expect("replace image");
+        let mut request = Request::new(Method::Get, "/assets/theme/header.webp")
+            .with_header("if-none-match", &etag);
+        let changed = handle(&state, &mut request).expect("changed image");
+        assert_eq!(changed.status(), 200);
+        assert_eq!(changed.body(), b"changed image");
+        assert_ne!(changed.headers().get("etag"), Some(etag.as_str()));
 
         let script = directory.join("decor.js");
         std::fs::write(&script, b"example script").expect("write script");
@@ -762,6 +856,7 @@ mod tests {
             response.headers().get("content-type"),
             Some("text/javascript; charset=utf-8")
         );
+        assert_eq!(response.headers().get("cache-control"), Some("no-store"));
 
         for path in [
             "/assets/theme/missing.png",
@@ -779,6 +874,58 @@ mod tests {
         }
         std::fs::remove_file(script).expect("remove script");
         std::fs::remove_file(image).expect("remove image");
+        std::fs::remove_dir(directory).expect("remove theme directory");
+    }
+
+    #[test]
+    fn configured_theme_image_is_preloaded_only_on_full_public_headers() {
+        let mut state = state();
+        let response = get(&state, "/", "", false).expect("feed");
+        assert_eq!(response.headers().get("link"), None);
+        state.theme_preload_image = Some("header.webp".into());
+        for path in ["/", "/search"] {
+            let response = get(&state, path, "", false).expect("public page");
+            assert_eq!(
+                response.headers().get("link"),
+                Some("</assets/theme/header.webp>; rel=preload; as=image")
+            );
+        }
+        let fragment = get(&state, "/", "", true).expect("feed fragment");
+        assert_eq!(fragment.headers().get("link"), None);
+        let admin = get(&state, "/admin", "", false).expect("admin");
+        assert_eq!(admin.headers().get("link"), None);
+    }
+
+    #[test]
+    fn default_theme_preload_uses_existing_header_unless_overridden() {
+        let directory = std::env::temp_dir().join(format!(
+            "serenade-myfeed-theme-preload-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).expect("create theme directory");
+        let theme = directory.join("theme.css");
+        assert_eq!(
+            theme_preload_image(Some(&theme), None).expect("missing header"),
+            None
+        );
+        assert_eq!(theme_preload_image(None, None).expect("no theme"), None);
+        let header = directory.join("header.webp");
+        std::fs::write(&header, b"image").expect("write header");
+        assert_eq!(
+            theme_preload_image(Some(&theme), None)
+                .expect("default header")
+                .as_deref(),
+            Some("header.webp")
+        );
+        assert_eq!(
+            theme_preload_image(Some(&theme), Some("other.png".into()))
+                .expect("custom header")
+                .as_deref(),
+            Some("other.png")
+        );
+        assert!(theme_preload_image(Some(&theme), Some("../header.webp".into())).is_err());
+        assert!(theme_preload_image(None, Some("header.webp".into())).is_err());
+        std::fs::remove_file(header).expect("remove header");
         std::fs::remove_dir(directory).expect("remove theme directory");
     }
 
