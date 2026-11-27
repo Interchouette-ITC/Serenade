@@ -416,6 +416,28 @@ fn theme_preload_image(
     }
 }
 
+fn load_translator() -> Result<Translator, Box<dyn std::error::Error>> {
+    let translations = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations");
+    if !is_dir(&translations) {
+        return Err(format!("translations dir missing: {}", translations.display()).into());
+    }
+    let catalogs = Finder::new()
+        .in_path(&translations)
+        .files()
+        .name("*.toml")
+        .collect()
+        .map_err(|err| format!("find translations: {err}"))?;
+    if catalogs.is_empty() {
+        return Err("no translation toml files found".into());
+    }
+    let mut translator = Translator::new(Locale::new("en").expect("en"))
+        .with_fallbacks(vec![Locale::new("en").expect("en")]);
+    translator
+        .load_path(&translations)
+        .map_err(|err| format!("load translations: {err}"))?;
+    Ok(translator)
+}
+
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let bind = std::env::var("MYFEED_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_owned());
     let csrf_secret =
@@ -452,24 +474,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     seed_if_empty(&store);
     let index = MemorySearchAdapter::new();
     rebuild_search_index(&store, &index)?;
-    let translations = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations");
-    if !is_dir(&translations) {
-        return Err(format!("translations dir missing: {}", translations.display()).into());
-    }
-    let catalogs = Finder::new()
-        .in_path(&translations)
-        .files()
-        .name("*.toml")
-        .collect()
-        .map_err(|err| format!("find translations: {err}"))?;
-    if catalogs.is_empty() {
-        return Err("no translation toml files found".into());
-    }
-    let mut translator = Translator::new(Locale::new("en").expect("en"))
-        .with_fallbacks(vec![Locale::new("en").expect("en")]);
-    translator
-        .load_path(&translations)
-        .map_err(|err| format!("load translations: {err}"))?;
+    let translator = load_translator()?;
     let negotiator = LocaleNegotiator::new(Locale::new("en").expect("en"))
         .with_allowed(vec![
             Locale::new("en").expect("en"),
@@ -834,7 +839,7 @@ mod tests {
             .with_header("if-none-match", &etag);
         let unchanged = handle(&state, &mut request).expect("unchanged image");
         assert_eq!(unchanged.status(), 304);
-        assert!(unchanged.body().is_empty());
+        assert_eq!(unchanged.body(), b"");
         std::fs::write(&image, b"changed image").expect("replace image");
         let mut request = Request::new(Method::Get, "/assets/theme/header.webp")
             .with_header("if-none-match", &etag);
