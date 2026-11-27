@@ -4,7 +4,7 @@ use serenade_http::{AsyncHttpKernel, HttpKernel, Method, Request, Response};
 
 use super::{
     app, await_bound, bind_server, conversion_error, dispatch, dispatch_async, from_actix, listen,
-    to_actix, version,
+    listen_with_payload_limit, to_actix, version,
 };
 
 /// Actix `HttpRequest` is `!Send`; clippy nursery flags the resulting future.
@@ -75,34 +75,78 @@ async fn listen_app_default_service_dispatches_kernel() {
 
 #[actix_web::test]
 async fn configured_payload_limit_accepts_image_sized_bodies_and_rejects_larger_ones() {
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+
+    let probe = TcpListener::bind("127.0.0.1:0").expect("bind probe");
+    let addr = probe.local_addr().expect("addr");
+    drop(probe);
+
     let kernel = AsyncHttpKernel::from_sync(|request: &mut Request| {
         Ok(Response::text(200, request.body().len().to_string()))
     });
     let max_body = 2 * 1024 * 1024;
-    let service = actix_test::init_service(
-        app(web::Data::new(kernel)).app_data(web::PayloadConfig::new(max_body)),
-    )
-    .await;
-
-    for size in [600 * 1024, 1024 * 1024 + 1024] {
-        let request = actix_test::TestRequest::post()
-            .set_payload(vec![0_u8; size])
-            .to_request();
-        let response = actix_test::call_service(&service, request).await;
-        assert_eq!(response.status(), 200);
-        assert_eq!(
-            actix_test::read_body(response).await.as_ref(),
-            size.to_string().as_bytes()
+    let server =
+        actix_web::rt::spawn(
+            async move { listen_with_payload_limit(addr, kernel, max_body).await },
         );
-    }
 
-    let request = actix_test::TestRequest::post()
-        .set_payload(vec![0_u8; max_body + 1])
-        .to_request();
-    assert_eq!(
-        actix_test::call_service(&service, request).await.status(),
-        413
-    );
+    let result = tokio::task::spawn_blocking(move || {
+        let sizes = [600 * 1024, 1024 * 1024 + 1024, max_body, max_body + 1];
+        let mut responses = Vec::new();
+        for size in sizes {
+            let mut stream = (0..50)
+                .find_map(|_| {
+                    TcpStream::connect(addr).map_or_else(
+                        |_| {
+                        std::thread::sleep(Duration::from_millis(20));
+                        None
+                        },
+                        Some,
+                    )
+                })
+                .expect("listener did not become ready");
+            stream
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .expect("read timeout");
+            stream
+                .set_write_timeout(Some(Duration::from_secs(5)))
+                .expect("write timeout");
+            write!(
+                stream,
+                "POST / HTTP/1.1\r\nHost: {addr}\r\nContent-Length: {size}\r\nConnection: close\r\n\r\n"
+            )
+            .expect("write request headers");
+            if size <= max_body {
+                stream.write_all(&vec![0_u8; size]).expect("write body");
+            }
+            let mut response = String::new();
+            stream.read_to_string(&mut response).expect("read response");
+            responses.push(response);
+        }
+        responses
+    })
+    .await;
+    server.abort();
+    let _ = server.await;
+    let responses = result.expect("request task");
+    for (response, size) in responses
+        .iter()
+        .zip([600 * 1024, 1024 * 1024 + 1024, max_body])
+    {
+        assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+        assert!(response.ends_with(&size.to_string()), "{response}");
+    }
+    assert!(responses[3].starts_with("HTTP/1.1 413"), "{}", responses[3]);
+}
+
+#[actix_web::test]
+async fn configured_payload_listener_propagates_bind_error() {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+    let addr = listener.local_addr().expect("addr");
+    let kernel = AsyncHttpKernel::from_sync(|_: &mut Request| Ok(Response::text(200, "unused")));
+    assert!(listen_with_payload_limit(addr, kernel, 1024).await.is_err());
 }
 
 #[actix_web::test]
