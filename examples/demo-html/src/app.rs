@@ -35,8 +35,8 @@ use crate::posts::{
 };
 use crate::search::{handle_search, rebuild_search_index};
 use crate::state::{
-    AppState, DEFAULT_ADMIN, DEFAULT_BIND, DEFAULT_CSRF, LOCALE_COOKIE, handle_locale_set,
-    is_admin, ui_for,
+    AppState, DEFAULT_ADMIN, DEFAULT_BIND, DEFAULT_CSRF, LOCALE_COOKIE, MAX_IMAGE_BYTES,
+    handle_locale_set, is_admin, ui_for,
 };
 use crate::store::{FeedStore, NewPost};
 
@@ -527,7 +527,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(serenade_http_actix::listen(bind, async_kernel))?;
+    runtime.block_on(serenade_http_actix::listen_with_payload_limit(
+        bind,
+        async_kernel,
+        2 * MAX_IMAGE_BYTES,
+    ))?;
     Ok(())
 }
 
@@ -586,6 +590,44 @@ mod tests {
             request = request.with_header("x-myfeed-ajax", "1");
         }
         handle(state, &mut request)
+    }
+
+    #[test]
+    fn editing_accepts_images_up_to_the_one_mib_limit() {
+        use serenade_security::CsrfTokenManager;
+
+        let state = state();
+        seed_if_empty(&state.store);
+        let token = state.csrf.get_token("edit-2").expect("CSRF token");
+        let boundary = "myfeed-test-boundary";
+        for size in [600 * 1024, MAX_IMAGE_BYTES, MAX_IMAGE_BYTES + 1] {
+            let mut body = format!(
+                "--{boundary}\r\nContent-Disposition: form-data; name=\"_token\"\r\n\r\n{}\r\n\
+                 --{boundary}\r\nContent-Disposition: form-data; name=\"body\"\r\n\r\n<p>edited</p>\r\n\
+                 --{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"image.png\"\r\n\
+                 Content-Type: image/png\r\n\r\n",
+                token.value()
+            )
+            .into_bytes();
+            body.extend(vec![b'a'; size]);
+            body.extend(format!("\r\n--{boundary}--\r\n").as_bytes());
+            let mut request = Request::new(Method::Post, "/admin/posts/2/edit")
+                .with_header("Authorization", format!("Bearer {DEFAULT_ADMIN}"))
+                .with_header(
+                    "content-type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
+                .with_body(body);
+            let response = handle(&state, &mut request).expect("edit response");
+            let expected = if size <= MAX_IMAGE_BYTES {
+                "/posts/2"
+            } else {
+                "/admin/posts/2/edit"
+            };
+            assert_eq!(response.headers().get("location"), Some(expected));
+            let image = get(&state, "/posts/2/image", "", false).expect("stored image");
+            assert_eq!(image.body().len(), size.min(MAX_IMAGE_BYTES));
+        }
     }
 
     #[test]
