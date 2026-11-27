@@ -32,6 +32,7 @@ pub struct AppState {
     /// Wave 29 notifier dogfood (Null discards after validate).
     pub notifier: NullTransport,
     pub theme_css: Option<PathBuf>,
+    pub theme_preload_image: Option<String>,
     pub footer_html: Option<String>,
     pub show_admin_link: bool,
     pub favicon_file: Option<PathBuf>,

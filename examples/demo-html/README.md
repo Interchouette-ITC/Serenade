@@ -58,9 +58,15 @@ instead of the default icon.
 
 Theme assets placed alongside the stylesheet can be referenced as
 `/assets/theme/filename.webp` or `/assets/theme/filename.js` (PNG, JPEG, WebP,
-GIF and JavaScript are supported). These files are public and are served without
-caching; filenames use letters, digits, hyphens or underscores before the
-extension. Symbolic links are not served. Only use JavaScript from trusted sources.
+GIF and JavaScript are supported). These files are public; images are cached
+with revalidation, while JavaScript is served without caching. Filenames use
+letters, digits, hyphens or underscores before the extension. Symbolic links
+are not served. Only use JavaScript from trusted sources.
+
+If `header.webp` exists alongside the configured theme stylesheet at startup,
+it is preloaded on full feed and search pages. Set `MYFEED_THEME_PRELOAD_IMAGE`
+to a different theme image filename to override it. This requires
+`MYFEED_THEME_CSS` and should match the image used by the theme.
 
 ### Optional performance profiling
 
@@ -80,6 +86,7 @@ See [`docs-dev/PERF.md`](../../docs-dev/PERF.md) and [hotpath.rs](https://hotpat
 | `MYFEED_ADMIN_PATH`  | `admin`            | Admin URL segment; hides public admin links when changed |
 | `MYFEED_DB`          | `.myfeed.sqlite`   | SQLite file (posts survive restarts) |
 | `MYFEED_THEME_CSS`   | (unset)            | Optional CSS file appended to MyFeed |
+| `MYFEED_THEME_PRELOAD_IMAGE` | `header.webp` if present | Override the theme image preloaded on public headers |
 | `MYFEED_FOOTER_FILE` | (unset)            | Optional trusted HTML file for the feed footer |
 
 ## What you get
