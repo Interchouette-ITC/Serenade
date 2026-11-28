@@ -5,6 +5,7 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
+use crate::preview::LinkPreview;
 use rusqlite::{Connection, OptionalExtension, params};
 use serenade_string::slug;
 
@@ -34,7 +35,7 @@ pub struct Post {
     pub id: u64,
     /// Sanitized rich HTML (Quill); never raw untrusted markup.
     pub body: String,
-    /// Optional embed / media URL (validated against allowlist before store).
+    /// Optional validated HTTP(S) article or media URL.
     pub embed_url: Option<String>,
     /// Optional inline image as a data URL (size-capped by the app).
     pub image_data: Option<String>,
@@ -138,6 +139,11 @@ impl FeedStore {
             );
             CREATE TABLE IF NOT EXISTS categories (
               name TEXT PRIMARY KEY
+            );
+            CREATE TABLE IF NOT EXISTS link_previews (
+              url TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              image_url TEXT
             );
             CREATE INDEX IF NOT EXISTS comments_post_status_id
               ON comments (post_id, status, id);
@@ -262,6 +268,32 @@ impl FeedStore {
             )
             .optional()
             .map(Option::flatten)
+    }
+
+    pub fn link_preview(&self, url: &str) -> rusqlite::Result<Option<LinkPreview>> {
+        self.conn
+            .lock()
+            .expect("feed lock")
+            .query_row(
+                "SELECT title, image_url FROM link_previews WHERE url = ?1",
+                params![url],
+                |row| {
+                    Ok(LinkPreview {
+                        title: row.get(0)?,
+                        image_url: row.get(1)?,
+                    })
+                },
+            )
+            .optional()
+    }
+
+    pub fn save_link_preview(&self, url: &str, preview: &LinkPreview) -> rusqlite::Result<()> {
+        self.conn.lock().expect("feed lock").execute(
+            "INSERT INTO link_previews (url, title, image_url) VALUES (?1, ?2, ?3)
+             ON CONFLICT(url) DO UPDATE SET title = excluded.title, image_url = excluded.image_url",
+            params![url, preview.title, preview.image_url],
+        )?;
+        Ok(())
     }
 
     pub fn get_summary(&self, id: u64) -> rusqlite::Result<Option<Post>> {
@@ -457,7 +489,7 @@ impl FeedStore {
             .collect()
     }
 
-    /// Adds a post; media already allowlist / size-checked by the caller.
+    /// Adds a post; URLs and media already validated by the caller.
     pub fn add_post(&self, new: NewPost) -> Post {
         let conn = self.conn.lock().expect("feed lock");
         conn.execute(
@@ -655,6 +687,32 @@ fn map_comment(row: &rusqlite::Row<'_>) -> rusqlite::Result<Comment> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn article_preview_survives_reopening_database() {
+        let directory = std::env::temp_dir().join(format!("myfeed-preview-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("preview.sqlite");
+        let preview = LinkPreview {
+            title: "Article title".into(),
+            image_url: Some("https://example.com/thumbnail.jpg".into()),
+        };
+        {
+            let store = FeedStore::open(&path);
+            store
+                .save_link_preview("https://example.com/article", &preview)
+                .unwrap();
+        }
+        {
+            let store = FeedStore::open(&path);
+            assert_eq!(
+                store.link_preview("https://example.com/article").unwrap(),
+                Some(preview)
+            );
+        }
+        std::fs::remove_file(&path).unwrap();
+        std::fs::remove_dir(&directory).unwrap();
+    }
 
     #[test]
     fn archive_windows_are_bounded_stable_and_image_free() {

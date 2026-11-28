@@ -154,7 +154,7 @@ fn admin_path(value: &str) -> Result<String, String> {
     Ok(format!("/{segment}"))
 }
 
-fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError> {
+async fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError> {
     if let Some(response) = try_handle_profiler(&state.profiler, "/_profiler", request) {
         return Ok(response);
     }
@@ -177,7 +177,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
             request,
             handle_search(state, request),
         )),
-        "post_create" => handle_post_create(state, request),
+        "post_create" => handle_post_create(state, request).await,
         "comment_create" => handle_comment_create(state, request),
         "post_like" => handle_like(state, request),
         "admin" => handle_admin_get(state, request),
@@ -186,7 +186,7 @@ fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError
         "admin_approve" => handle_admin_moderation(state, request, true),
         "admin_reject" => handle_admin_moderation(state, request, false),
         "admin_post_edit_get" => handle_post_edit_get(state, request),
-        "admin_post_edit_post" => handle_post_edit_post(state, request),
+        "admin_post_edit_post" => handle_post_edit_post(state, request).await,
         "admin_post_delete" => handle_post_delete(state, request),
         "asset_css" => Ok(theme_css_response(state)),
         "asset_theme" => theme_asset_response(state, request),
@@ -509,8 +509,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let state_for_handler = Arc::clone(&state);
-    let mut async_kernel = AsyncHttpKernel::from_sync(move |request: &mut Request| {
-        handle(state_for_handler.as_ref(), request)
+    let mut async_kernel = AsyncHttpKernel::from_async_fn(move |request: &mut Request| {
+        let state = Arc::clone(&state_for_handler);
+        Box::pin(async move { handle(state.as_ref(), request).await })
     });
     async_kernel.push_middleware(serenade_minify::HtmlMinifier);
     if profiler_enabled {
@@ -539,6 +540,70 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use crate::state::MAX_IMAGE_BYTES;
+
+    fn handle(state: &AppState, request: &mut Request) -> Result<Response, HttpError> {
+        tokio::runtime::Runtime::new()
+            .expect("test runtime")
+            .block_on(super::handle(state, request))
+    }
+
+    #[test]
+    fn article_create_and_edit_use_persisted_previews_and_allow_link_only_posts() {
+        use crate::preview::LinkPreview;
+        use serenade_security::CsrfTokenManager;
+
+        let state = state();
+        let url = "https://www.phoronix.com/news/Codex-R600-UVD-FIx-Linux-7.5";
+        state
+            .store
+            .save_link_preview(
+                url,
+                &LinkPreview {
+                    title: "Codex R600 UVD fix".into(),
+                    image_url: Some("https://www.phoronix.com/thumbnail.jpg".into()),
+                },
+            )
+            .unwrap();
+        let token = state.csrf.get_token("post").unwrap();
+        let mut request = Request::new(Method::Post, "/posts")
+            .with_header("content-type", "application/x-www-form-urlencoded")
+            .with_body(format!(
+                "_token={}&body=&embed_url={url}&category=Work",
+                token.value()
+            ));
+        assert_eq!(handle(&state, &mut request).unwrap().status(), 303);
+        let post = state.store.get_post(1).unwrap();
+        assert_eq!(post.embed_url.as_deref(), Some(url));
+        for path in ["/", "/posts/1"] {
+            let html = get(&state, path, "", false).unwrap();
+            let html = html.body_str().unwrap();
+            assert!(html.contains("Codex R600 UVD fix"));
+            assert!(html.contains("thumbnail.jpg"));
+            assert!(html.contains(&format!("href=\"{url}\"")));
+        }
+        let token = state.csrf.get_token("edit-1").unwrap();
+        let mut edit = Request::new(Method::Post, "/admin/posts/1/edit")
+            .with_header("Authorization", DEFAULT_ADMIN)
+            .with_header("content-type", "application/x-www-form-urlencoded")
+            .with_body(format!(
+                "_token={}&body=Edited&embed_url={url}&category=Work",
+                token.value()
+            ));
+        assert_eq!(handle(&state, &mut edit).unwrap().status(), 303);
+        assert_eq!(state.store.get_post(1).unwrap().body, "Edited");
+
+        for (body, link) in [("", ""), ("text", "javascript:alert(1)")] {
+            let token = state.csrf.get_token("post").unwrap();
+            let mut request = Request::new(Method::Post, "/posts")
+                .with_header("content-type", "application/x-www-form-urlencoded")
+                .with_body(format!(
+                    "_token={}&body={body}&embed_url={link}&category=Work",
+                    token.value()
+                ));
+            assert_eq!(handle(&state, &mut request).unwrap().status(), 400);
+            assert_eq!(state.store.posts().len(), 1);
+        }
+    }
 
     #[test]
     fn fresh_demo_includes_meet_serenade_without_duplicates() {

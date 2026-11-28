@@ -1,10 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { hasComposerDraft } from "../assets/clitorine/composer.js";
 
 import {
   protectedCard,
   retainedInteraction,
 } from "../assets/clitorine/feed-cards.js";
+
+test("link-only composer drafts block navigation to new posts", () => {
+  const link = { value: "" };
+  globalThis.document = { getElementById: () => link };
+  try {
+    assert.equal(hasComposerDraft(), false);
+    link.value = "https://www.phoronix.com/news/article";
+    assert.equal(hasComposerDraft(), true);
+    link.value = "   ";
+    assert.equal(hasComposerDraft(), false);
+  } finally {
+    delete globalThis.document;
+  }
+});
 
 test("off-screen focused players no longer pin a card", () => {
   const player = { matches: (selector) => selector === "iframe" };

@@ -92,7 +92,7 @@ pub fn build_post_bind_form(name: impl Into<String>, categories: &[String]) -> F
         .field_config(
             "body",
             FieldConfig::Hidden(HiddenOptions::default()),
-            not_blank(),
+            vec![],
         )
         .field("embed_url", vec![])
         .field_config("image", FieldConfig::File(image_file_options()), vec![])
@@ -118,7 +118,7 @@ fn build_composer_form(
         .field_config(
             "body",
             FieldConfig::Hidden(HiddenOptions::default()),
-            not_blank(),
+            vec![],
         )
         .field("embed_url", vec![])
         .field_config("image", FieldConfig::File(image_file_options()), vec![])
@@ -193,8 +193,9 @@ fn build_composer_form(
   <label class="form-label" for="image">Media (image) - optional</label>
   <div class="composer-file">{image_widget}</div>
   <div id="media-preview" class="mt-2">{existing_preview}</div>
-  <label class="form-label mt-3" for="embed_url">…or paste a link instead</label>
-  <input type="url" class="form-control" id="embed_url" name="embed_url" value="{embed_value}" placeholder="https://… (.mp4, YouTube, .jpg)" />
+  <label class="form-label mt-3" for="embed_url">…or paste an article or media link</label>
+  <input type="url" class="form-control" id="embed_url" name="embed_url" value="{embed_value}" placeholder="https://… (article, YouTube, SoundCloud, image, .mp4)" />
+  <div class="form-text">Articles show a clickable preview with the website's title and thumbnail when available.</div>
 </div>
 
 <div class="mb-3">

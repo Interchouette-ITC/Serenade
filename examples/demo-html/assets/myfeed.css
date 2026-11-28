@@ -12,6 +12,43 @@
   --bs-link-hover-color: #45266a;
 }
 
+.article-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  border: 1px solid var(--mf-line);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.article-preview > img {
+  width: 9rem;
+  max-width: 35%;
+  height: 7rem;
+  object-fit: cover;
+}
+
+.article-preview-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.article-preview-text > span {
+  color: var(--mf-muted);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.article-preview:hover,
+.article-preview:focus-visible {
+  border-color: var(--mf-primary);
+}
+
 .composer-textarea textarea {
   display: block;
   width: 100%;

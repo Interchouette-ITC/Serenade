@@ -13,6 +13,7 @@ mod forms;
 mod html;
 mod i18n;
 mod posts;
+mod preview;
 mod sanitize;
 mod search;
 mod state;

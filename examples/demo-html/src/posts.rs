@@ -8,6 +8,7 @@ use crate::embed::is_allowed_embed;
 use crate::feed::feed_with_flash;
 use crate::forms::{build_edit_form, build_login_form, build_post_bind_form};
 use crate::html::{admin_login_page, edit_post_page, html_response, redirect};
+use crate::preview;
 use crate::sanitize::{plain_len, sanitize_post_html};
 use crate::search::{index_delete, index_upsert};
 use crate::state::{AppState, MAX_BODY_CHARS, MAX_IMAGE_BYTES, MAX_IMAGE_DATA, is_admin, ui_for};
@@ -118,17 +119,17 @@ fn parse_new_post(
 ) -> Result<NewPost, &'static str> {
     let raw_body = form.get("body").unwrap_or("").trim();
     let body = sanitize_post_html(raw_body);
-    if plain_len(&body) == 0 || plain_len(&body) > MAX_BODY_CHARS {
-        return Err("Post body is required (max 2000 characters).");
-    }
     let embed_raw = form.get("embed_url").unwrap_or("").trim();
     let embed_url = if embed_raw.is_empty() {
         None
-    } else if is_allowed_embed(embed_raw) {
+    } else if preview::web_url(embed_raw).is_some() {
         Some(embed_raw.to_owned())
     } else {
-        return Err("Media URL must be YouTube, SoundCloud, image, or .mp4.");
+        return Err("Link must be a valid HTTP or HTTPS URL.");
     };
+    if (plain_len(&body) == 0 && embed_url.is_none()) || plain_len(&body) > MAX_BODY_CHARS {
+        return Err("Post text or a link is required (max 2000 characters).");
+    }
     let image_data = if let Some(file) = form.file("image") {
         Some(uploaded_image_to_data_url(file)?)
     } else if let Some(existing) = existing_image {
@@ -155,12 +156,46 @@ fn parse_new_post(
     })
 }
 
-pub fn handle_post_create(state: &AppState, request: &Request) -> Result<Response, HttpError> {
+async fn cache_article_preview(state: &AppState, new: &NewPost) -> Result<(), HttpError> {
+    let Some(url) = new
+        .embed_url
+        .as_deref()
+        .filter(|url| !is_allowed_embed(url))
+    else {
+        return Ok(());
+    };
+    let database_error = |err: rusqlite::Error| {
+        tracing::error!(%err, "MyFeed article preview database failure");
+        HttpError::failed("Could not save article preview.")
+    };
+    if state
+        .store
+        .link_preview(url)
+        .map_err(database_error)?
+        .is_some()
+    {
+        return Ok(());
+    }
+    match preview::fetch(url).await {
+        Ok(preview) => state
+            .store
+            .save_link_preview(url, &preview)
+            .map_err(database_error)?,
+        Err(err) => tracing::warn!(%err, "Article preview unavailable; retaining clickable link"),
+    }
+    Ok(())
+}
+
+pub async fn handle_post_create(
+    state: &AppState,
+    request: &Request,
+) -> Result<Response, HttpError> {
     let categories = state.store.categories();
     let mut form = build_post_bind_form("post", &categories);
     match form.handle_request(request, &state.csrf) {
         Ok(FormStatus::Bound) if form.is_valid() => match parse_new_post(state, &form, None) {
             Ok(new) => {
+                cache_article_preview(state, &new).await?;
                 let post = state.store.add_post(new);
                 index_upsert(state, &post);
                 Ok(redirect("/"))
@@ -221,7 +256,10 @@ pub fn handle_post_edit_get(state: &AppState, request: &Request) -> Result<Respo
     ))
 }
 
-pub fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Response, HttpError> {
+pub async fn handle_post_edit_post(
+    state: &AppState,
+    request: &Request,
+) -> Result<Response, HttpError> {
     if !is_admin(request, &state.admin_token) {
         let login = build_login_form(&state.csrf, state.matcher.collection())?;
         return Ok(html_response(
@@ -246,6 +284,7 @@ pub fn handle_post_edit_post(state: &AppState, request: &Request) -> Result<Resp
         Ok(FormStatus::Bound) if form.is_valid() => {
             match parse_new_post(state, &form, existing_image.as_deref()) {
                 Ok(new) => {
+                    cache_article_preview(state, &new).await?;
                     let _ = state.store.update_post(id, &new);
                     if let Some(post) = state.store.get_post(id) {
                         index_upsert(state, &post);
