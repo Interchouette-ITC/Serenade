@@ -105,6 +105,13 @@ fn render_card(
     } else {
         String::new()
     };
+    let preview = post
+        .embed_url
+        .as_deref()
+        .map(|url| state.store.link_preview(url))
+        .transpose()
+        .map_err(|err| store_error(&err))?
+        .flatten();
     Ok(post_card(
         ui,
         post,
@@ -112,6 +119,7 @@ fn render_card(
         &comment_form,
         &like_form,
         &admin_form,
+        preview.as_ref(),
     ))
 }
 

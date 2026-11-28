@@ -1,10 +1,15 @@
 //! Embed / media URL allowlist (`YouTube`, `SoundCloud`, direct image / mp4).
 
-use serenade_form::escape_attr;
+use serenade_form::{escape_attr, escape_html};
+
+use crate::preview::{LinkPreview, web_url};
 
 /// Returns `true` when `url` may be embedded or shown as media.
 #[must_use]
 pub fn is_allowed_embed(url: &str) -> bool {
+    if web_url(url).is_none() {
+        return false;
+    }
     if is_allowed_image_or_video(url) {
         return true;
     }
@@ -70,18 +75,36 @@ fn is_allowed_image_or_video(url: &str) -> bool {
 }
 
 fn looks_like_image(url: &str) -> bool {
-    let lower = url.to_ascii_lowercase();
-    (lower.starts_with("https://") || lower.starts_with("http://"))
-        && (lower.contains(".jpg")
-            || lower.contains(".jpeg")
-            || lower.contains(".png")
-            || lower.contains(".webp")
-            || lower.contains(".gif"))
+    web_url(url).is_some_and(|url| {
+        let path = url.path().to_ascii_lowercase();
+        [".jpg", ".jpeg", ".png", ".webp", ".gif"]
+            .iter()
+            .any(|extension| path.ends_with(extension))
+    })
 }
 
 fn looks_like_mp4(url: &str) -> bool {
-    let lower = url.to_ascii_lowercase();
-    (lower.starts_with("https://") || lower.starts_with("http://")) && lower.contains(".mp4")
+    web_url(url).is_some_and(|url| url.path().to_ascii_lowercase().ends_with(".mp4"))
+}
+
+pub fn article_html(raw: &str, preview: Option<&LinkPreview>) -> Option<String> {
+    let url = web_url(raw)?;
+    let title = preview.map_or(raw, |preview| preview.title.as_str());
+    let image = preview
+        .and_then(|preview| preview.image_url.as_deref())
+        .filter(|image| web_url(image).is_some())
+        .map_or(String::new(), |image| {
+            format!(
+                r#"<img src="{}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />"#,
+                escape_attr(image)
+            )
+        });
+    Some(format!(
+        r#"<a class="article-preview" href="{href}" target="_blank" rel="noopener noreferrer">{image}<span class="article-preview-text"><strong>{title}</strong><span>{host}</span></span></a>"#,
+        href = escape_attr(raw),
+        title = escape_html(title),
+        host = escape_html(url.host_str()?),
+    ))
 }
 
 fn is_soundcloud(url: &str) -> bool {
@@ -190,5 +213,29 @@ mod tests {
         assert!(!is_allowed_embed("javascript:alert(1)"));
         assert!(embed_html("https://youtu.be/dQw4w9WgXcQ").is_some());
         assert!(embed_html("https://evil.example").is_none());
+    }
+
+    #[test]
+    fn article_cards_escape_metadata_and_keep_media_separate() {
+        let url = "https://www.phoronix.com/news/Codex-R600-UVD-FIx-Linux-7.5";
+        assert!(web_url(url).is_some());
+        assert!(embed_html(url).is_none());
+        let preview = LinkPreview {
+            title: "<script>alert(1)</script>".into(),
+            image_url: Some("https://example.com/thumbnail.jpg?a=1&b=2".into()),
+        };
+        let html = article_html(url, Some(&preview)).unwrap();
+        assert!(html.contains(&format!("href=\"{url}\"")));
+        assert!(html.contains("&lt;script&gt;"));
+        assert!(html.contains("thumbnail.jpg?a=1&amp;b=2"));
+        assert!(!html.contains("<iframe"));
+        assert!(article_html(url, None).unwrap().contains(url));
+        assert!(article_html("javascript:alert(1)", None).is_none());
+        assert!(embed_html("https://example.com/article?image=pic.jpg").is_none());
+        assert!(
+            embed_html("https://example.com/pic.jpg?v=1")
+                .unwrap()
+                .contains("<img")
+        );
     }
 }

@@ -1,4 +1,5 @@
 .git
+.github_credentials
 .env
 .env.*
 !.env.example

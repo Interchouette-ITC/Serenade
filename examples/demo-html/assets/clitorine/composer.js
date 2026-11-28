@@ -13,7 +13,10 @@ const EMOJI_ICON =
 let quill = null;
 
 export function hasComposerDraft() {
-  return quill !== null && quill.getText().trim() !== "";
+  return (
+    (quill !== null && quill.getText().trim() !== "") ||
+    (byId("embed_url")?.value.trim() ?? "") !== ""
+  );
 }
 
 function openComposer() {

@@ -5,9 +5,10 @@ use std::fmt::Write as _;
 use serenade_http::RouteCollection;
 use serenade_view::{asset, escape_attr, escape_html, partial, path};
 
-use crate::embed::embed_html;
+use crate::embed::{article_html, embed_html};
 use crate::emoji::picker_html;
 use crate::i18n::Ui;
+use crate::preview::LinkPreview;
 use crate::store::{Comment, CommentBatch, FeedBatch, Post};
 
 const BOOTSTRAP_CSS: &str =
@@ -21,8 +22,8 @@ const QUILL_JS: &str = "https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js";
 #[must_use]
 pub fn document(title: &str, body: &str, composer_open: bool, lang: &str) -> String {
     let open_flag = if composer_open { "1" } else { "0" };
-    let css = asset("myfeed.css?v=9").unwrap_or_else(|_| "/assets/myfeed.css?v=9".into());
-    let js = asset("clitorine.js?v=8").unwrap_or_else(|_| "/assets/clitorine.js?v=8".into());
+    let css = asset("myfeed.css?v=10").unwrap_or_else(|_| "/assets/myfeed.css?v=10".into());
+    let js = asset("clitorine.js?v=9").unwrap_or_else(|_| "/assets/clitorine.js?v=9".into());
     format!(
         r#"<!DOCTYPE html>
 <html lang="{lang}">
@@ -453,11 +454,12 @@ pub fn post_card(
     comment_form: &str,
     like_form: &str,
     admin_actions: &str,
+    preview: Option<&LinkPreview>,
 ) -> String {
     let embed = post
         .embed_url
         .as_deref()
-        .and_then(embed_html)
+        .and_then(|url| embed_html(url).or_else(|| article_html(url, preview)))
         .unwrap_or_default();
     let image = if post.has_image {
         format!(
